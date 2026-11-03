@@ -51,15 +51,16 @@ export function validateParams(raw) {
 export function initForm(root, onChange) {
   const inputs = {}, errs = {};
   for (const p of PARAMS) {
-    const row = document.createElement('label');
-    row.className = 'field';
-    row.innerHTML = `<span class="field-label">${p.label} <i>${p.sym}</i></span>
-      <span class="field-input"><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
-        name="${p.key}" value="${formatNumber(p.def)}" aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></span>
-      <span class="field-err" id="err-${p.key}" role="alert"></span>`;
-    root.appendChild(row);
-    inputs[p.key] = row.querySelector('input');
-    errs[p.key] = row.querySelector('.field-err');
+    const fld = document.createElement('div');
+    fld.className = 'fld';
+    fld.id = `w-${p.key}`;
+    fld.innerHTML = `<label class="fl" for="in-${p.key}"><span class="t">${p.label}</span><i>${p.sym}</i></label>
+      <div class="ibox"><input id="in-${p.key}" name="${p.key}" inputmode="decimal" autocomplete="off" spellcheck="false"
+        value="${formatNumber(p.def)}" aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
+      <span class="ferr" id="err-${p.key}" role="alert" hidden></span>`;
+    root.appendChild(fld);
+    inputs[p.key] = fld.querySelector('input');
+    errs[p.key] = fld.querySelector('.ferr');
   }
 
   let last = validateParams(readRaw()).values;
@@ -73,6 +74,8 @@ export function initForm(root, onChange) {
     for (const p of PARAMS) {
       const e = r.errors[p.key] || '';
       errs[p.key].textContent = e;
+      errs[p.key].hidden = !e;
+      errs[p.key].parentElement.classList.toggle('bad', !!e);
       inputs[p.key].toggleAttribute('aria-invalid', !!e);
     }
     if (r.ok) { last = r.values; onChange(r.values); }

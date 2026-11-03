@@ -3,7 +3,7 @@
 // (x, y, z)three = (x, z, −y) — a −90° rotation about X, no reflection.
 // Strings shown in the UI (self-check results, labels) are in Russian.
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createOrbit, rotate, zoom, zoomBy, pan, cameraPosition, anglesOf } from './orbit.js';
 import { facePoint } from './geometry.js';
 
 /** Room → Three.js. */
@@ -121,15 +121,15 @@ export function createView(container, opts = {}) {
   sun.position.set(0.4, 1, 0.7);
   scene.add(sun);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
+  let orbit = null;        // camera state, see orbit.js; pivot = floor center
   let room = null;
   let roomGroup = null;
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
   let axes = null;         // { group, dirs: { X, Y, Z } }
   let showGrid = true, showNormals = false;
-  let firstFit = true;
+  let edgeMaterial = null;
+  let viewW = 1, viewH = 1;
+  let viewTouched = false;  // true once the user has rotated, panned or zoomed since the last fit
 
   function buildAxes(r) {
     const len = 0.25 * Math.max(r.L, r.W, r.H) + 0.3;
@@ -157,24 +157,53 @@ export function createView(container, opts = {}) {
     return { group, dirs };
   }
 
-  function fitCamera(r) {
-    const c = v3(toThree([r.L / 2, r.W / 2, r.H / 2]));
-    const radius = 0.5 * Math.hypot(r.L, r.W, r.H);
-    const dist = radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.05;
-    let dir;
-    if (firstFit) {
-      // view from above, past the corner (L, 0): floor and far walls y = W, x = 0 are visible;
-      // near walls and the ceiling face away from the camera and are culled ("dollhouse" view)
-      dir = v3(toThree([0.55, -1, 0.75])).normalize();
-      firstFit = false;
+  /** Initial view direction: from above, past the corner (L, 0) of the room. */
+  const DEFAULT_DIR = toThree([0.55, -1, 0.75]);
+
+  /**
+   * Frames the room. The pivot is always the floor center. With keepAngles the current
+   * azimuth and elevation stay (used when the room size changes); otherwise the default
+   * view is restored. In both cases the image is shifted so that the room's center is
+   * in the middle of the viewport: from above, the floor near walls and the ceiling are
+   * culled, so we see the floor and the far walls ("dollhouse" view).
+   */
+  function fitCamera(r, keepAngles) {
+    const R = 0.5 * Math.hypot(r.L, r.W, r.H);
+    // fit the room's bounding sphere into the narrower of the vertical and horizontal fields of view
+    const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
+    const hHalf = Math.atan(Math.tan(vHalf) * (viewW / viewH));
+    const fit = R / Math.sin(Math.min(vHalf, hHalf)) + 0.5 * r.H;
+    const angles = keepAngles && orbit ? { azimuth: orbit.azimuth, elevation: orbit.elevation } : anglesOf(DEFAULT_DIR);
+    orbit = createOrbit({
+      target: toThree([r.L / 2, r.W / 2, 0]),
+      ...angles,
+      distance: fit,
+      minDistance: 0.05 * R,
+      maxDistance: 20 * fit,
+    });
+    camera.near = 0.01 * R; camera.far = 100 * fit;
+    applyCamera(false);
+    // center the room in the viewport by a lens shift (the pivot does not move)
+    const c = v3(toThree([r.L / 2, r.W / 2, r.H / 2])).project(camera);
+    orbit.shiftX = -c.x * viewW / 2;
+    orbit.shiftY = c.y * viewH / 2;
+    applyCamera(true);
+    viewTouched = false;
+  }
+
+  /** Copies the orbit state to the Three.js camera; withShift applies the pan as a view offset. */
+  function applyCamera(withShift = true) {
+    const p = cameraPosition(orbit);
+    camera.position.set(p[0], p[1], p[2]);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(orbit.target[0], orbit.target[1], orbit.target[2]);
+    if (withShift && (orbit.shiftX || orbit.shiftY)) {
+      camera.setViewOffset(viewW, viewH, -orbit.shiftX, -orbit.shiftY, viewW, viewH);
     } else {
-      dir = camera.position.clone().sub(controls.target).normalize();
+      camera.clearViewOffset();
     }
-    controls.target.copy(c);
-    camera.position.copy(c.clone().add(dir.multiplyScalar(dist)));
-    camera.near = dist / 100; camera.far = dist * 10;
     camera.updateProjectionMatrix();
-    controls.update();
+    camera.updateMatrixWorld();
   }
 
   /** Rebuilds the scene for a new room. */
@@ -189,20 +218,29 @@ export function createView(container, opts = {}) {
       const grid = buildFaceGrid(face);
       const center = toThree(facePoint(face, face.sizeU / 2, face.sizeV / 2));
       const normal = toThree(face.normal);
-      const arrow = new THREE.ArrowHelper(v3(normal), v3(center), arrowLen, 0x111111, 0.3 * arrowLen, 0.15 * arrowLen);
+      const arrow = new THREE.ArrowHelper(v3(normal), v3(center), arrowLen, cssColor('--ink', '#111111'), 0.3 * arrowLen, 0.15 * arrowLen);
       roomGroup.add(mesh, grid, arrow);
       return { face, mesh, grid, arrow, center, normal };
     });
     // room outline
     const box = new THREE.BoxGeometry(r.L, r.H, r.W);
     box.translate(r.L / 2, r.H / 2, -r.W / 2);
-    roomGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0x444444 })));
+    edgeMaterial = new THREE.LineBasicMaterial({ color: cssColor('--view-edge', '#444444') });
+    roomGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(box), edgeMaterial));
     box.dispose();
     scene.add(roomGroup);
     axes = buildAxes(r);
     scene.add(axes.group);
-    fitCamera(r);
-    updateVisibility();
+    fitCamera(r, keepView); // first room: default view; later rooms keep the user's angles
+    keepView = true;
+    requestRender();
+  }
+  let keepView = false;
+
+  /** Reads a color from a CSS custom property of the container (follows the page theme). */
+  function cssColor(name, fallback) {
+    const v = getComputedStyle(container).getPropertyValue(name).trim();
+    return new THREE.Color(v || fallback);
   }
 
   /** Grid lines and normal arrows are shown only on faces whose front side faces the camera. */
@@ -215,12 +253,83 @@ export function createView(container, opts = {}) {
     }
   }
 
+  // ---- rendering on demand: one frame per input event, no animation loop ----
+  let framePending = false;
+  function requestRender() {
+    if (framePending) return;
+    framePending = true;
+    requestAnimationFrame(() => {
+      framePending = false;
+      if (!orbit) return;
+      applyCamera();
+      updateVisibility();
+      renderer.render(scene, camera);
+    });
+  }
+
+  // ---- mouse and touch: left = rotate, right / middle = pan, wheel = zoom ----
+  const el = renderer.domElement;
+  el.style.touchAction = 'none';
+  const pointers = new Map(); // pointerId → { x, y }
+  let dragMode = null;        // 'rotate' | 'pan' | null
+  let pinch = null;           // { d, mx, my } for two-finger touch
+
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.addEventListener('pointerdown', (e) => {
+    if (!orbit) return;
+    el.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      dragMode = null;
+    } else if (pointers.size === 1) {
+      dragMode = e.button === 0 ? 'rotate' : 'pan';
+    }
+    opts.onHover?.(null);
+    viewTouched = true;
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', (e) => {
+    const p = pointers.get(e.pointerId);
+    if (!p) { hover(e); return; }
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      if (pinch.d > 0) zoomBy(orbit, d / pinch.d);
+      pan(orbit, mx - pinch.mx, my - pinch.my);
+      pinch = { d, mx, my };
+    } else if (dragMode === 'rotate') {
+      rotate(orbit, dx, dy, viewH);
+    } else if (dragMode === 'pan') {
+      pan(orbit, dx, dy);
+    }
+    requestRender();
+  });
+  const release = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinch = null;
+    if (pointers.size === 0) dragMode = null;
+  };
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', release);
+  el.addEventListener('wheel', (e) => {
+    if (!orbit) return;
+    e.preventDefault();
+    const k = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 500 : 1; // lines / pages → px
+    zoom(orbit, e.deltaY * k);
+    viewTouched = true;
+    requestRender();
+  }, { passive: false });
+
   // hover: face, element (i, j), global index
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  renderer.domElement.addEventListener('pointermove', (e) => {
+  function hover(e) {
     if (!room || !opts.onHover) return;
-    const rect = renderer.domElement.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
     ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
     const hit = raycaster.intersectObjects(faceParts.map((p) => p.mesh), false)[0];
@@ -230,27 +339,22 @@ export function createView(container, opts = {}) {
     const elem = Math.floor(hit.faceIndex / 2); // two triangles per element, order i + j·nu
     const i = elem % face.nu, j = Math.floor(elem / face.nu);
     opts.onHover({ f, i, j, g: face.offset + elem, name: face.name });
-  });
-  renderer.domElement.addEventListener('pointerleave', () => opts.onHover?.(null));
+  }
+  el.addEventListener('pointerleave', () => opts.onHover?.(null));
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
     if (!w || !h) return;
+    if (orbit) { orbit.shiftX *= w / viewW; orbit.shiftY *= h / viewH; } // keep the framing proportional
+    viewW = w; viewH = h;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    if (room && orbit && !viewTouched) fitCamera(room, true); // untouched view: refit to the new size
+    requestRender();
   }
   const ro = new ResizeObserver(resize);
   ro.observe(container);
   resize();
-
-  let raf = 0;
-  (function loop() {
-    raf = requestAnimationFrame(loop);
-    controls.update();
-    updateVisibility();
-    renderer.render(scene, camera);
-  })();
 
   /**
    * Self-check against the built scene (stage 1 acceptance criteria).
@@ -313,14 +417,23 @@ export function createView(container, opts = {}) {
   return {
     setRoom,
     selfCheck,
-    setShowGrid(v) { showGrid = v; },
-    setShowNormals(v) { showNormals = v; },
-    resetView() { firstFit = true; if (room) fitCamera(room); },
+    setShowGrid(v) { showGrid = v; requestRender(); },
+    setShowNormals(v) { showNormals = v; requestRender(); },
+    resetView() { if (room) { fitCamera(room, false); requestRender(); } },
+    /** Re-reads theme colors from CSS (call after switching light/dark theme). */
+    refreshTheme() {
+      edgeMaterial?.color.copy(cssColor('--view-edge', '#444444'));
+      const ink = cssColor('--ink', '#111111');
+      for (const p of faceParts) p.arrow.setColor(ink);
+      requestRender();
+    },
+    /** Orbit state for diagnostics and tests (copy). */
+    orbitState() { return orbit && JSON.parse(JSON.stringify(orbit)); },
     dispose() {
-      cancelAnimationFrame(raf); ro.disconnect(); controls.dispose();
+      ro.disconnect();
       if (roomGroup) disposeTree(roomGroup);
       if (axes) disposeTree(axes.group);
-      renderer.dispose(); renderer.domElement.remove();
+      renderer.dispose(); el.remove();
     },
   };
 }

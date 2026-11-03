@@ -3,153 +3,274 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Калькулятор освещения</title>
+  <title>Расчёт освещения</title>
+  <script>
+    // Apply the saved theme before first paint to avoid a flash.
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
     }
   }
   </script>
   <style>
-    :root {
-      --bg: #f4f3f0; --panel: #fbfaf8; --ink: #1f1f1d; --muted: #6b6a66; --line: #dddbd5;
-      --accent: #2f6fd6; --ok: #2e8a47; --bad: #c2392f; --canvas: #eceae5;
-      color-scheme: light;
+    /* Design tokens and components follow the Maytoni design system
+       (pages "Оценочный расчет освещения" and "Maytoni Track Configurator"). */
+    *,*::before,*::after{box-sizing:border-box}
+    [hidden]{display:none!important}
+    :root{
+      color-scheme:light;
+      --ink:#000; --ink2:#2e2e2e; --ink3:#5F5F5F; --muted:#8A8A8A;
+      --paper:#F0F0F0; --card:#fff; --rule:#E4E4E4; --soft:#F0F0F0; --soft2:#f7f7f7; --line:#CFCFCF;
+      --accent:#7C54FE; --accent-hov:#5b34e6; --accent-soft:#DEDAEB; --on-accent:#fff;
+      --sel:#000; --on-sel:#fff; --sel-sub:#BDBDBD;
+      --err:#EB3D00; --ok:#1D874D; --ok-soft:#ECFFBF;
+      --room-bg:#F6F6F5; --view-edge:#7a7a78;
+      --sans:"Suisse Intl","SuisseIntl","Suisse","Helvetica Neue",Helvetica,Arial,sans-serif;
     }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg: #18181a; --panel: #202023; --ink: #ebeae6; --muted: #9b9a95; --line: #34343a;
-              --accent: #6c9dff; --ok: #5cc27a; --bad: #ff7a6e; --canvas: #2a2a2e; color-scheme: dark; }
+    @media (prefers-color-scheme:dark){
+      :root:not([data-theme="light"]){
+        color-scheme:dark; --ink:#fff; --ink2:#d6d6d6; --ink3:#a3a3a3; --muted:#8a8a8a;
+        --paper:#0e0e0f; --card:#161617; --rule:#2c2c2e; --soft:#202022; --soft2:#1a1a1c; --line:#3a3a3d;
+        --accent:#9B7DFF; --accent-hov:#b39dff; --accent-soft:#2A2340; --on-accent:#000;
+        --sel:#fff; --on-sel:#000; --sel-sub:#555;
+        --err:#FF6B3D; --ok:#7fce7f; --ok-soft:#16281a;
+        --room-bg:#1B1917; --view-edge:#bdb7ae;
+      }
     }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
-    body { background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-           display: grid; grid-template-columns: 320px 1fr; }
-    aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 18px 24px; }
-    h1 { font-size: 16px; margin: 0 0 2px; font-weight: 650; }
-    .stage { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
-    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
-         margin: 20px 0 8px; font-weight: 600; }
-    .field { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: 2px 10px; margin-bottom: 8px; }
-    .field-label i { color: var(--muted); }
-    .field-input { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 6px;
-                   background: var(--bg); padding: 0 8px; }
-    .field-input:focus-within { border-color: var(--accent); }
-    .field input { border: 0; background: transparent; color: inherit; font: inherit; width: 100%; padding: 6px 0;
-                   outline: none; font-variant-numeric: tabular-nums; text-align: right; }
-    .field input[aria-invalid] { color: var(--bad); }
-    .unit { color: var(--muted); margin-left: 6px; }
-    .field-err { grid-column: 2; color: var(--bad); font-size: 12px; min-height: 0; }
-    .field-err:empty { display: none; }
-    table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-    td, th { padding: 4px 4px; border-bottom: 1px solid var(--line); text-align: right; }
-    th { font-weight: 500; color: var(--muted); font-size: 12px; }
-    td:first-child, th:first-child { text-align: left; }
-    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px;
-          border: 1px solid rgba(0,0,0,.2); }
-    .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-variant-numeric: tabular-nums; }
-    .kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; }
-    .toggles label { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer; }
-    button { font: inherit; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
-             border-radius: 6px; padding: 5px 10px; cursor: pointer; }
-    button:hover { border-color: var(--accent); }
-    .checks { list-style: none; padding: 0; margin: 0; }
-    .checks li { padding: 6px 0 6px 24px; position: relative; border-bottom: 1px solid var(--line); }
-    .checks li::before { position: absolute; left: 0; top: 5px; font-weight: 700; }
-    .checks li.ok::before { content: "✓"; color: var(--ok); }
-    .checks li.bad::before { content: "✗"; color: var(--bad); }
-    .checks small { display: block; color: var(--muted); }
-    main { position: relative; background: var(--canvas); min-height: 0; }
-    #view { position: absolute; inset: 0; }
-    #view canvas { display: block; width: 100%; height: 100%; }
-    .overlay { position: absolute; left: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line);
-               border-radius: 6px; padding: 6px 10px; font-variant-numeric: tabular-nums; pointer-events: none; }
-    .overlay:empty { display: none; }
-    .hint { position: absolute; right: 12px; bottom: 12px; color: var(--muted); font-size: 12px; pointer-events: none; }
-    .fatal { padding: 24px; color: var(--bad); }
-    @media (max-width: 760px) {
-      body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
-      main { grid-row: 1; } aside { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+    :root[data-theme="dark"]{
+      color-scheme:dark; --ink:#fff; --ink2:#d6d6d6; --ink3:#a3a3a3; --muted:#8a8a8a;
+      --paper:#0e0e0f; --card:#161617; --rule:#2c2c2e; --soft:#202022; --soft2:#1a1a1c; --line:#3a3a3d;
+      --accent:#9B7DFF; --accent-hov:#b39dff; --accent-soft:#2A2340; --on-accent:#000;
+      --sel:#fff; --on-sel:#000; --sel-sub:#555;
+      --err:#FF6B3D; --ok:#7fce7f; --ok-soft:#16281a;
+      --room-bg:#1B1917; --view-edge:#bdb7ae;
+    }
+    html,body{height:100%}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+      font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+    :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    button,input{font:inherit;color:inherit}
+    .wrap{max-width:1920px;height:100%;margin:0 auto;padding:clamp(8px,1.4vw,20px) clamp(8px,1.6vw,28px);
+      display:flex;flex-direction:column;gap:16px}
+
+    /* top bar */
+    .sbar{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--rule);
+      border-radius:12px;padding:8px 14px 8px 20px;min-height:56px;flex:none}
+    .brand{display:inline-flex;align-items:center;color:var(--ink);flex:none}
+    .brand svg{height:18px;width:auto;display:block}
+    .apptitle{font-size:12px;color:var(--ink3);line-height:1.3;flex:none}
+    .stagebadge{margin-left:auto;font-size:12px;color:var(--ink3);background:var(--soft);border-radius:999px;padding:6px 12px;white-space:nowrap}
+    .themebtn{flex:none;height:36px;width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;
+      border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink2);cursor:pointer}
+    .themebtn:hover{border-color:var(--ink);color:var(--ink)}
+
+    /* layout: form on the left, 3D view fills the rest */
+    .work{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:16px}
+    .gscard{background:var(--card);border:1px solid var(--rule);border-radius:12px}
+    .form{overflow-y:auto;min-height:0;display:flex;flex-direction:column}
+    .fsec{padding:20px 26px 22px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:12px}
+    .fsec:first-child{border-top:0}
+    .shd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+    .gshint{font-size:12px;color:var(--ink3);line-height:1.4}
+    .gslink{border:0;background:none;padding:0;color:var(--accent);font-size:12.5px;cursor:pointer;
+      text-decoration:underline;text-underline-offset:2px;align-self:flex-start}
+    .gslink:hover{color:var(--accent-hov)}
+
+    /* fields */
+    .fgrid{display:grid;gap:12px 14px;align-items:start;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr))}
+    .fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .fld > .fl{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink3);height:17px;white-space:nowrap}
+    .fld > .fl i{color:var(--muted)}
+    .fld .ibox{position:relative;display:flex;align-items:center}
+    .fld input{height:40px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 30px 0 9px;
+      font-size:14px;color:var(--ink);background:var(--card);font-variant-numeric:tabular-nums}
+    .fld input:hover{border-color:var(--line)}
+    .fld input:focus{outline:none;border-color:var(--accent)}
+    .fld .unit{position:absolute;right:9px;font-size:11.5px;color:var(--muted);pointer-events:none}
+    .fld.bad input{border-color:var(--err)}
+    .fld .ferr{font-size:11px;color:var(--err);line-height:1.3}
+
+    /* chips */
+    .gschips{display:flex;gap:5px;flex-wrap:wrap}
+    .gschipb{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--rule);background:var(--card);
+      color:var(--ink);font-size:12.5px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+    .gschipb:hover{border-color:var(--ink)}
+    .gschipb[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel);font-weight:600}
+
+    /* key-value rows and tables */
+    .gstech{display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+    .gstrow{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+    .gstrow span{color:var(--ink3)}
+    .gstrow b{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+    .htable{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+    .htable th{text-align:right;font-weight:600;font-size:11.5px;color:var(--ink3);padding:5px 6px;border-bottom:1px solid var(--rule)}
+    .htable td{padding:6px;border-bottom:1px solid var(--rule);text-align:right}
+    .htable th:first-child,.htable td:first-child{text-align:left;padding-left:0}
+    .htable tr:last-child td{border-bottom:0}
+    .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px;
+      box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+
+    /* acceptance checks */
+    .checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+    .checks li{display:grid;grid-template-columns:20px 1fr;gap:2px 6px;font-size:13px;line-height:1.4}
+    .checks li::before{grid-row:span 2;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;
+      justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+    .checks li.ok::before{content:"✓";background:var(--ok-soft);color:var(--ok)}
+    .checks li.bad::before{content:"✕";background:color-mix(in srgb,var(--err) 12%,transparent);color:var(--err)}
+    .checks small{color:var(--ink3);font-size:12px}
+
+    /* 3D view */
+    .viewcard{position:relative;overflow:hidden;min-height:0;background:var(--room-bg)}
+    #view{position:absolute;inset:0}
+    #view canvas{display:block;width:100%;height:100%;cursor:grab}
+    #view canvas:active{cursor:grabbing}
+    .vbottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:flex-end;gap:12px;pointer-events:none}
+    .vstatus{background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:6px 12px;font-size:12px;
+      font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vstatus:empty{display:none}
+    .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
+    .vhint b{font-weight:600;color:var(--ink3)}
+    .fatal{padding:24px;color:var(--err)}
+
+    @media (max-width:900px){
+      .wrap{height:auto}
+      .work{grid-template-columns:minmax(0,1fr)}
+      .viewcard{order:-1;height:62vh}
+      .apptitle,.stagebadge{display:none}
+      .themebtn{margin-left:auto}
+      .vhint{display:none}
+    }
+    @media (max-width:600px){
+      .fsec{padding-left:14px;padding-right:14px}
     }
   </style>
 </head>
 <body>
-  <aside>
-    <h1>Калькулятор освещения</h1>
-    <div class="stage">Этап 1 · геометрия и 3D-вид</div>
+<div class="wrap">
+  <header class="sbar">
+    <span class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 106 22" fill="currentColor" role="img" aria-label="Maytoni"><g>
+      <polygon points="45.3,6.1 41.3,12.8 37.3,6.1 34.1,6.1 39.8,15.9 39.8,21.8 42.8,21.8 42.8,15.9 48.5,6.1"/>
+      <rect x="102.5" y="6.1" width="2.9" height="15.7"/>
+      <polygon points="94.7,6.1 94.7,17 86.7,6.1 84,6.1 84,21.8 86.7,21.8 86.7,10.8 94.7,21.8 97.4,21.8 97.4,6.1"/>
+      <polygon points="11.3,8 11.3,12.8 7.7,17.9 2.7,10.8 2.7,21.8 0,21.8 0,6.1 2.7,6.1 7.7,13.2"/>
+      <rect x="12.7" y="6.1" width="2.7" height="15.7"/>
+      <polygon points="62.7,6.1 50,6.1 50,8.6 54.9,8.6 54.9,21.8 57.9,21.8 57.9,8.6 62.7,8.6"/>
+      <path d="M72.4,5.8c-4.5,0-8.1,3.6-8.1,8.1s3.6,8.1,8.1,8.1s8.1-3.6,8.1-8.1S76.8,5.8,72.4,5.8z M72.4,19.3c-2.9,0-5.1-2.4-5.1-5.3c0-3,2.2-5.3,5.1-5.3s5.1,2.4,5.1,5.3S75.2,19.3,72.4,19.3z"/>
+      <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
+      <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
+    <span class="apptitle">Расчёт освещения<br>методом излучательности</span>
+    <span class="stagebadge">Этап 1 · геометрия и 3D-вид</span>
+    <button type="button" class="themebtn" id="themebtn" title="Светлая или тёмная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
+  </header>
 
-    <h2>Комната</h2>
-    <form id="form" autocomplete="off" onsubmit="return false"></form>
+  <main class="work">
+    <section class="gscard form" aria-label="Исходные данные">
+      <div class="fsec">
+        <div class="shd">Помещение</div>
+        <form class="fgrid" id="form" autocomplete="off" onsubmit="return false"></form>
+        <div class="gshint">Шаг разбиения — желаемый размер элемента; фактический Δ подбирается так, чтобы ребро делилось нацело.</div>
+      </div>
 
-    <h2>Разбиение</h2>
-    <dl class="kv" id="mesh"></dl>
-    <table id="faces" style="margin-top:10px">
-      <thead><tr><th>Грань</th><th>nu × nv</th><th>элем.</th></tr></thead>
-      <tbody></tbody>
-    </table>
+      <div class="fsec">
+        <div class="shd">Разбиение</div>
+        <div class="gstech" id="mesh"></div>
+        <table class="htable" id="faces">
+          <thead><tr><th>Грань</th><th>nu × nv</th><th>Элементов</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-    <h2>Вид</h2>
-    <div class="toggles">
-      <label><input type="checkbox" id="grid" checked> Границы элементов</label>
-      <label><input type="checkbox" id="normals"> Нормали граней</label>
-    </div>
-    <button type="button" id="reset">Исходный вид</button>
+      <div class="fsec">
+        <div class="shd">Вид</div>
+        <div class="gschips">
+          <button type="button" class="gschipb" id="grid" aria-pressed="true">Границы элементов</button>
+          <button type="button" class="gschipb" id="normals" aria-pressed="false">Нормали граней</button>
+        </div>
+        <button type="button" class="gslink" id="reset">Вернуть исходный вид</button>
+      </div>
 
-    <h2>Критерии этапа 1</h2>
-    <ul class="checks" id="checks"></ul>
-  </aside>
+      <div class="fsec">
+        <div class="shd">Критерии этапа 1</div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </section>
 
-  <main>
-    <div id="view"></div>
-    <div class="overlay" id="hover"></div>
-    <div class="hint">Вращение — левая кнопка, сдвиг — правая, масштаб — колесо</div>
+    <section class="gscard viewcard" aria-label="3D-вид комнаты">
+      <div id="view"></div>
+      <div class="vbottom">
+        <div class="vstatus" id="hover"></div>
+        <div class="vhint"><b>ЛКМ</b> — вращение вокруг центра пола · <b>ПКМ</b> — сдвиг · <b>колесо</b> — масштаб</div>
+      </div>
+    </section>
   </main>
+</div>
 
-  <script type="module">
-    import { createRoom } from './js/geometry.js';
-    import { initForm, formatNumber } from './js/ui.js';
+<script type="module">
+  import { createRoom } from './js/geometry.js';
+  import { initForm, formatNumber } from './js/ui.js';
 
-    const $ = (s) => document.querySelector(s);
-    let view = null;
-    try {
-      const { createView, FACE_COLORS } = await import('./js/view3d.js');
-      window.FACE_COLORS = FACE_COLORS;
-      view = createView($('#view'), {
-        onHover(info) {
-          $('#hover').textContent = info
-            ? `${info.name} · элемент (i ${info.i}, j ${info.j}) · глобальный индекс ${info.g}`
-            : '';
-        },
-      });
-    } catch (e) {
-      $('#view').innerHTML = `<div class="fatal">Не удалось загрузить 3D-вид (Three.js с CDN): ${e.message}</div>`;
-      console.error(e);
-    }
+  const $ = (s) => document.querySelector(s);
+  let view = null, FACE_COLORS = [];
+  try {
+    const mod = await import('./js/view3d.js');
+    FACE_COLORS = mod.FACE_COLORS;
+    view = mod.createView($('#view'), {
+      onHover(info) {
+        $('#hover').textContent = info
+          ? `${info.name} · элемент i ${info.i}, j ${info.j} · индекс ${info.g}`
+          : '';
+      },
+    });
+  } catch (e) {
+    $('#view').innerHTML = `<div class="fatal">Не удалось загрузить 3D-вид (Three.js с CDN): ${e.message}</div>`;
+    console.error(e);
+  }
 
-    function update(values) {
-      const room = createRoom(values);
-      const f = (x) => formatNumber(x, 4);
-      $('#mesh').innerHTML = `
-        <dt>n<sub>L</sub> × n<sub>W</sub> × n<sub>H</sub></dt><dd>${room.n.L} × ${room.n.W} × ${room.n.H}</dd>
-        <dt>Δ<sub>L</sub>, Δ<sub>W</sub>, Δ<sub>H</sub>, м</dt><dd>${f(room.d.L)} · ${f(room.d.W)} · ${f(room.d.H)}</dd>
-        <dt>Всего элементов N</dt><dd>${room.N.toLocaleString('ru-RU')}</dd>`;
-      $('#faces tbody').innerHTML = room.faces.map((fc) =>
-        `<tr><td><span class="sw" style="background:${window.FACE_COLORS?.[fc.id] ?? '#ccc'}"></span>${fc.id} · ${fc.name}</td>
-         <td>${fc.nu} × ${fc.nv}</td><td>${fc.count.toLocaleString('ru-RU')}</td></tr>`).join('');
-      if (!view) return;
-      view.setRoom(room);
-      $('#checks').innerHTML = view.selfCheck().map((c) =>
-        `<li class="${c.ok ? 'ok' : 'bad'}">${c.name}<small>${c.detail}</small></li>`).join('');
-      window.__stage1 = { room, checks: view.selfCheck() };
-    }
+  const row = (label, value) => `<div class="gstrow"><span>${label}</span><b>${value}</b></div>`;
 
-    const form = initForm($('#form'), update);
-    update(form.values());
+  function update(values) {
+    const room = createRoom(values);
+    const f = (x) => formatNumber(x, 4);
+    $('#mesh').innerHTML =
+      row('n<sub>L</sub> × n<sub>W</sub> × n<sub>H</sub>', `${room.n.L} × ${room.n.W} × ${room.n.H}`) +
+      row('Δ<sub>L</sub> · Δ<sub>W</sub> · Δ<sub>H</sub>, м', `${f(room.d.L)} · ${f(room.d.W)} · ${f(room.d.H)}`) +
+      row('Всего элементов N', room.N.toLocaleString('ru-RU'));
+    $('#faces tbody').innerHTML = room.faces.map((fc) =>
+      `<tr><td><span class="sw" style="background:${FACE_COLORS[fc.id] ?? '#ccc'}"></span>${fc.id} · ${fc.name}</td>
+       <td>${fc.nu} × ${fc.nv}</td><td>${fc.count.toLocaleString('ru-RU')}</td></tr>`).join('');
+    if (!view) return;
+    view.setRoom(room);
+    const checks = view.selfCheck();
+    $('#checks').innerHTML = checks.map((c) =>
+      `<li class="${c.ok ? 'ok' : 'bad'}"><span>${c.name}</span><small>${c.detail}</small></li>`).join('');
+    window.__stage1 = { room, checks, view };
+  }
 
-    $('#grid').addEventListener('change', (e) => view?.setShowGrid(e.target.checked));
-    $('#normals').addEventListener('change', (e) => view?.setShowNormals(e.target.checked));
-    $('#reset').addEventListener('click', () => view?.resetView());
-  </script>
+  const form = initForm($('#form'), update);
+  update(form.values());
+
+  function toggle(btn, apply) {
+    btn.addEventListener('click', () => {
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', String(on));
+      apply(on);
+    });
+  }
+  toggle($('#grid'), (on) => view?.setShowGrid(on));
+  toggle($('#normals'), (on) => view?.setShowNormals(on));
+  $('#reset').addEventListener('click', () => view?.resetView());
+
+  $('#themebtn').addEventListener('click', () => {
+    const r = document.documentElement;
+    const cur = r.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    r.dataset.theme = cur === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('theme', r.dataset.theme); } catch (e) {}
+    view?.refreshTheme();
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => view?.refreshTheme());
+</script>
 </body>
 </html>
