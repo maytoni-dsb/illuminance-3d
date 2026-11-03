@@ -1,8 +1,9 @@
-// Форма ввода и проверка значений.
-// validateParams — чистая функция (тестируется в Node); initForm работает с DOM
-// и вызывается только из браузера.
+// Input form and value validation.
+// validateParams is a pure function (tested in Node); initForm touches the DOM
+// and is only called from the browser.
+// Labels and error messages are user-facing and therefore in Russian.
 
-/** Параметры этапа 1. Диапазоны — по таблице «Входные параметры» спецификации. */
+/** Stage 1 parameters. Ranges follow the spec table "Входные параметры" (input parameters). */
 export const PARAMS = Object.freeze([
   { key: 'L', label: 'Длина', sym: 'L', unit: 'м', def: 6, min: 1, max: 50 },
   { key: 'W', label: 'Ширина', sym: 'W', unit: 'м', def: 4, min: 1, max: 50 },
@@ -10,7 +11,7 @@ export const PARAMS = Object.freeze([
   { key: 'h', label: 'Шаг разбиения', sym: 'h', unit: 'м', def: 0.25, min: 0.1, max: 1 },
 ]);
 
-/** Число из строки: допускается десятичная запятая и пробелы. */
+/** Parses a number from a string; accepts a decimal comma and spaces. */
 export function parseNumber(s) {
   if (typeof s === 'number') return s;
   const t = String(s).trim().replace(/\s+/g, '').replace(',', '.');
@@ -18,14 +19,14 @@ export function parseNumber(s) {
   return Number(t);
 }
 
-/** Число для показа: десятичная запятая, без лишних нулей. */
+/** Formats a number for display: decimal comma, no trailing zeros. */
 export function formatNumber(x, digits = 3) {
   if (!Number.isFinite(x)) return '—';
   return String(Number(x.toFixed(digits))).replace('.', ',');
 }
 
 /**
- * Проверка значений формы.
+ * Validates form values.
  * @param {Record<string, string|number>} raw
  * @returns {{ ok: boolean, values: Record<string, number>, errors: Record<string, string> }}
  */
@@ -41,7 +42,8 @@ export function validateParams(raw) {
 }
 
 /**
- * Строит поля формы и вызывает onChange(values) при каждом допустимом изменении.
+ * Builds the form fields and calls onChange(values) on every valid change.
+ * Invalid input is flagged and ignored; the last valid values stay in effect.
  * @param {HTMLElement} root
  * @param {(values: Record<string, number>) => void} onChange
  * @returns {{ values: () => Record<string, number> }}
@@ -75,6 +77,7 @@ export function initForm(root, onChange) {
     }
     if (r.ok) { last = r.values; onChange(r.values); }
   }
+  // Debounce typing; apply immediately on change (blur / Enter).
   root.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(check, 200); });
   root.addEventListener('change', () => { clearTimeout(timer); check(); });
 

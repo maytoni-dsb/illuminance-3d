@@ -1,21 +1,22 @@
-// Геометрия комнаты: грани, разбиение на элементы, индексы.
-// Чистый модуль: без DOM и Three.js, работает в браузере, Web Worker и Node.
-// Единицы СИ (м). Система координат и грани — по спецификации, раздел
-// «Система координат и грани».
+// Room geometry: faces, subdivision into elements, indexing.
+// Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
+// SI units (m). Coordinate system and faces follow the spec, section
+// "Система координат и грани" (coordinate system and faces).
 
-/** Допуск при делении размера на шаг: 1.1/0.1 = 11.000000000000002 не должно давать 12. */
+/** Tolerance for size/step division: 1.1/0.1 = 11.000000000000002 must give 11, not 12. */
 const DIVISION_EPS = 1e-9;
 
-/** Число делений размера a при желаемом шаге h: max(1, ⌈a/h − ε⌉). */
+/** Number of divisions of size a for the desired step h: max(1, ceil(a/h − eps)). */
 export function divisions(a, h) {
-  if (!(a > 0) || !(h > 0)) throw new RangeError(`divisions: a=${a}, h=${h} должны быть > 0`);
+  if (!(a > 0) || !(h > 0)) throw new RangeError(`divisions: a=${a}, h=${h} must be > 0`);
   return Math.max(1, Math.ceil(a / h - DIVISION_EPS));
 }
 
 /**
- * Описание граней 0…5. Размеры граней заданы именами рёбер ('L' | 'W' | 'H'),
- * чтобы число делений было общим для всех граней с этим ребром.
- * origin(L, W, H) — точка (u=0, v=0).
+ * Face definitions 0…5. Face sizes refer to room edges ('L' | 'W' | 'H'),
+ * so every face sharing an edge gets the same number of divisions along it.
+ * origin(L, W, H) is the point (u = 0, v = 0).
+ * `name` is a user-facing label and is therefore in Russian.
  */
 export const FACE_DEFS = Object.freeze([
   { id: 0, name: 'Пол',         normal: [0, 0, 1],  u: [1, 0, 0], v: [0, 1, 0], uEdge: 'L', vEdge: 'W', origin: () => [0, 0, 0] },
@@ -27,24 +28,24 @@ export const FACE_DEFS = Object.freeze([
 ]);
 
 /**
- * Строит комнату с разбиением граней.
- * @param {{L:number, W:number, H:number, h:number}} p — размеры, м; h — желаемый шаг
+ * Builds a room with subdivided faces.
+ * @param {{L:number, W:number, H:number, h:number}} p — room size, m; h — desired element step, m
  * @returns {Room}
  *
  * Room = {
  *   L, W, H, h,
- *   n:  { L, W, H },   // число делений рёбер
- *   d:  { L, W, H },   // фактический шаг Δ = размер / n
- *   faces: Face[6],    // в порядке 0…5
- *   offset: Int32Array(7), // начало грани f в общем массиве; offset[6] = N
- *   N,                 // общее число элементов
+ *   n:  { L, W, H },       // number of divisions per edge
+ *   d:  { L, W, H },       // actual step Δ = size / n
+ *   faces: Face[6],        // in order 0…5
+ *   offset: Int32Array(7), // start of face f in the global array; offset[6] = N
+ *   N,                     // total number of elements
  * }
  * Face = { id, name, normal, u, v, origin, nu, nv, du, dv, sizeU, sizeV,
  *          elementArea, area, offset, count }
  */
 export function createRoom({ L, W, H, h }) {
   for (const [k, x] of Object.entries({ L, W, H, h })) {
-    if (!Number.isFinite(x) || x <= 0) throw new RangeError(`createRoom: ${k}=${x} должно быть конечным и > 0`);
+    if (!Number.isFinite(x) || x <= 0) throw new RangeError(`createRoom: ${k}=${x} must be finite and > 0`);
   }
   const size = { L, W, H };
   const n = { L: divisions(L, h), W: divisions(W, h), H: divisions(H, h) };
@@ -76,7 +77,7 @@ export function createRoom({ L, W, H, h }) {
   return Object.freeze({ L, W, H, h, n: Object.freeze(n), d: Object.freeze(d), faces: Object.freeze(faces), offset, N: offset[6] });
 }
 
-/** Точка грани по локальным координатам (u, v), м. */
+/** Point on a face from local coordinates (u, v), m. */
 export function facePoint(face, u, v, out = [0, 0, 0]) {
   const o = face.origin, a = face.u, b = face.v;
   out[0] = o[0] + u * a[0] + v * b[0];
@@ -85,20 +86,20 @@ export function facePoint(face, u, v, out = [0, 0, 0]) {
   return out;
 }
 
-/** Центр элемента (i, j) грани: u = (i + 0,5)·Δu, v = (j + 0,5)·Δv. */
+/** Center of element (i, j) of a face: u = (i + 0.5)·Δu, v = (j + 0.5)·Δv. */
 export function elementCenter(face, i, j, out) {
   return facePoint(face, (i + 0.5) * face.du, (j + 0.5) * face.dv, out);
 }
 
-/** Индекс внутри грани: k = i + j·nu (i меняется быстрее). */
+/** Index within a face: k = i + j·nu (i varies fastest). */
 export const localIndex = (face, i, j) => i + j * face.nu;
 
-/** Глобальный индекс: offset[f] + k. */
+/** Global index: offset[f] + k. */
 export const globalIndex = (room, f, i, j) => room.offset[f] + i + j * room.faces[f].nu;
 
-/** Обратное преобразование: глобальный индекс → { f, i, j }. */
+/** Inverse mapping: global index → { f, i, j }. */
 export function fromGlobalIndex(room, g) {
-  if (!(g >= 0 && g < room.N)) throw new RangeError(`fromGlobalIndex: ${g} вне 0…${room.N - 1}`);
+  if (!(g >= 0 && g < room.N)) throw new RangeError(`fromGlobalIndex: ${g} is outside 0…${room.N - 1}`);
   let f = 0;
   while (g >= room.offset[f + 1]) f++;
   const k = g - room.offset[f];
@@ -106,7 +107,7 @@ export function fromGlobalIndex(room, g) {
   return { f, i: k % nu, j: Math.floor(k / nu) };
 }
 
-/** Центры всех элементов: Float64Array длины 3N (x, y, z подряд) в глобальном порядке. */
+/** Centers of all elements: Float64Array of length 3N (x, y, z interleaved) in global order. */
 export function elementCenters(room) {
   const out = new Float64Array(3 * room.N);
   const p = [0, 0, 0];
@@ -123,12 +124,12 @@ export function elementCenters(room) {
 }
 
 /**
- * Значения в вершинах для показа: сетка (nu+1)×(nv+1), индекс a + b·(nu+1).
- * Каждая вершина — среднее по прилегающим элементам ТОЛЬКО этой грани
- * (через рёбра между гранями значения не усредняются).
+ * Vertex values for display: a (nu+1)×(nv+1) grid, index a + b·(nu+1).
+ * Each vertex is the mean of the adjacent elements of THIS face only
+ * (values are never averaged across edges between faces).
  * @param {Face} face
- * @param {ArrayLike<number>} values — массив длины N (глобальный порядок)
- * @returns {Float64Array} длины (nu+1)(nv+1)
+ * @param {ArrayLike<number>} values — array of length N (global order)
+ * @returns {Float64Array} of length (nu+1)(nv+1)
  */
 export function faceVertexValues(face, values) {
   const { nu, nv, offset } = face;

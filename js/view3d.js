@@ -1,20 +1,21 @@
-// 3D-вид комнаты в Three.js.
-// Единственное место, где координаты комнаты пересчитываются в Three.js:
-// (x, y, z)three = (x, z, −y) — поворот на −90° вокруг X, без отражения.
+// 3D view of the room in Three.js.
+// The only place where room coordinates are converted to Three.js:
+// (x, y, z)three = (x, z, −y) — a −90° rotation about X, no reflection.
+// Strings shown in the UI (self-check results, labels) are in Russian.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { facePoint } from './geometry.js';
 
-/** Комната → Three.js. */
+/** Room → Three.js. */
 export const toThree = (p) => [p[0], p[2], -p[1]];
-/** Матрица того же пересчёта (столбцы — образы ортов X, Y, Z комнаты). */
+/** Matrix of the same mapping (columns are the images of the room's X, Y, Z unit vectors). */
 export const ROOM_TO_THREE = Object.freeze([
   [1, 0, 0],
   [0, 0, 1],
   [0, -1, 0],
 ]);
 
-/** Условные цвета граней по номеру (этап 1). */
+/** Placeholder face colors by face number (stage 1). */
 export const FACE_COLORS = Object.freeze(['#b9a27f', '#e8e4da', '#7fa6c9', '#9fbfd9', '#8fb98b', '#b5d3a8']);
 const AXIS_COLORS = { X: '#d0443a', Y: '#2e9b4a', Z: '#2f6fd6' };
 
@@ -49,7 +50,7 @@ function disposeTree(obj) {
   });
 }
 
-/** Сетка грани: (nu+1)(nv+1) вершин, по два треугольника на элемент. */
+/** Face mesh: (nu+1)(nv+1) vertices, two triangles per element. */
 function buildFaceMesh(face) {
   const { nu, nv, du, dv } = face;
   const nThree = toThree(face.normal);
@@ -62,8 +63,8 @@ function buildFaceMesh(face) {
     pos[k] = t[0]; pos[k + 1] = t[1]; pos[k + 2] = t[2];
     nor[k] = nThree[0]; nor[k + 1] = nThree[1]; nor[k + 2] = nThree[2];
   }
-  // Обход вершин выбирается так, чтобы лицевая сторона совпадала с нормалью грани:
-  // u × v не всегда равно n (потолок, стены y = 0 и x = L).
+  // Winding is chosen so that the front side matches the face normal:
+  // u × v is not always equal to n (ceiling, walls y = 0 and x = L).
   const ccw = dot(cross(face.u, face.v), face.normal) > 0;
   const idx = new Uint32Array(6 * nu * nv);
   let q = 0;
@@ -79,7 +80,7 @@ function buildFaceMesh(face) {
   g.setIndex(new THREE.BufferAttribute(idx, 1));
   const mat = new THREE.MeshLambertMaterial({
     color: FACE_COLORS[face.id],
-    side: THREE.FrontSide, // ближние к камере грани смотрят от неё и не рисуются
+    side: THREE.FrontSide, // faces near the camera point away from it and are culled
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
   const mesh = new THREE.Mesh(g, mat);
@@ -87,7 +88,7 @@ function buildFaceMesh(face) {
   return mesh;
 }
 
-/** Линии границ элементов грани. */
+/** Element boundary lines of a face. */
 function buildFaceGrid(face) {
   const { nu, nv, du, dv, sizeU, sizeV } = face;
   const pts = [];
@@ -101,20 +102,20 @@ function buildFaceGrid(face) {
 }
 
 /**
- * Создаёт 3D-вид в контейнере.
+ * Creates the 3D view inside a container.
  * @param {HTMLElement} container
  * @param {{ onHover?: (info: null | {f:number, i:number, j:number, g:number, name:string}) => void }} [opts]
  */
 export function createView(container, opts = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setClearColor(0x000000, 0); // фон берётся из CSS контейнера (светлая и тёмная темы)
+  renderer.setClearColor(0x000000, 0); // background comes from the container's CSS (light and dark themes)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
-  // Освещение сцены только для формы граней; цвета условные (по номеру грани).
+  // Scene lighting only conveys face shape; colors are placeholders (by face number).
   scene.add(new THREE.HemisphereLight(0xffffff, 0xdcdcdc, 2.6));
   const sun = new THREE.DirectionalLight(0xffffff, 0.5);
   sun.position.set(0.4, 1, 0.7);
@@ -162,8 +163,8 @@ export function createView(container, opts = {}) {
     const dist = radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.05;
     let dir;
     if (firstFit) {
-      // вид сверху из-за угла (L, 0): видны пол и дальние стены y = W, x = 0;
-      // ближние стены и потолок обращены от камеры и не рисуются («кукольный домик»)
+      // view from above, past the corner (L, 0): floor and far walls y = W, x = 0 are visible;
+      // near walls and the ceiling face away from the camera and are culled ("dollhouse" view)
       dir = v3(toThree([0.55, -1, 0.75])).normalize();
       firstFit = false;
     } else {
@@ -176,7 +177,7 @@ export function createView(container, opts = {}) {
     controls.update();
   }
 
-  /** Перестраивает сцену под новую комнату. */
+  /** Rebuilds the scene for a new room. */
   function setRoom(r) {
     if (roomGroup) { scene.remove(roomGroup); disposeTree(roomGroup); }
     if (axes) { scene.remove(axes.group); disposeTree(axes.group); }
@@ -192,7 +193,7 @@ export function createView(container, opts = {}) {
       roomGroup.add(mesh, grid, arrow);
       return { face, mesh, grid, arrow, center, normal };
     });
-    // контур комнаты
+    // room outline
     const box = new THREE.BoxGeometry(r.L, r.H, r.W);
     box.translate(r.L / 2, r.H / 2, -r.W / 2);
     roomGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0x444444 })));
@@ -204,7 +205,7 @@ export function createView(container, opts = {}) {
     updateVisibility();
   }
 
-  /** Сетка и стрелки нормалей видны только у граней, обращённых к камере лицевой стороной. */
+  /** Grid lines and normal arrows are shown only on faces whose front side faces the camera. */
   function updateVisibility() {
     const cam = camera.position.toArray();
     for (const p of faceParts) {
@@ -214,7 +215,7 @@ export function createView(container, opts = {}) {
     }
   }
 
-  // наведение: грань, элемент (i, j), глобальный индекс
+  // hover: face, element (i, j), global index
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   renderer.domElement.addEventListener('pointermove', (e) => {
@@ -226,7 +227,7 @@ export function createView(container, opts = {}) {
     if (!hit) { opts.onHover(null); return; }
     const f = hit.object.userData.faceId;
     const face = room.faces[f];
-    const elem = Math.floor(hit.faceIndex / 2); // два треугольника на элемент, порядок i + j·nu
+    const elem = Math.floor(hit.faceIndex / 2); // two triangles per element, order i + j·nu
     const i = elem % face.nu, j = Math.floor(elem / face.nu);
     opts.onHover({ f, i, j, g: face.offset + elem, name: face.name });
   });
@@ -252,8 +253,8 @@ export function createView(container, opts = {}) {
   })();
 
   /**
-   * Самопроверка по построенной сцене (критерии этапа 1).
-   * Нормали считаются из вершин реальных треугольников, а не из таблицы граней.
+   * Self-check against the built scene (stage 1 acceptance criteria).
+   * Normals are computed from actual triangle vertices, not from the face table.
    */
   function selfCheck() {
     if (!room) return [];
@@ -273,9 +274,9 @@ export function createView(container, opts = {}) {
         const c = [pos[3 * idx[t + 2]], pos[3 * idx[t + 2] + 1], pos[3 * idx[t + 2] + 2]];
         const gn = cross(sub(b, a), sub(c, a));
         const len = Math.hypot(...gn);
-        if (!(dot(gn, normal) / len > 1 - 1e-6)) bad++;           // лицевая сторона = нормаль грани
+        if (!(dot(gn, normal) / len > 1 - 1e-6)) bad++;           // front side = face normal
       }
-      const inward = dot(normal, sub(roomC, center)) > 0;          // нормаль смотрит в комнату
+      const inward = dot(normal, sub(roomC, center)) > 0;          // normal points into the room
       if (bad || !inward) { normalsOk = false; nDetail.push(`${face.name}: ${bad ? bad + ' треуг. не по нормали' : 'наружу'}`); }
 
       const tris = idx.length / 3;
@@ -293,7 +294,7 @@ export function createView(container, opts = {}) {
       detail: countOk ? `N = ${total} = 2·(n_L·n_W + n_L·n_H + n_W·n_H)` : cDetail.join('; '),
     });
 
-    // оси: X → +x, Y → −z, Z → +y в Three.js; пол на y = 0, потолок на y = H
+    // axes: X → +x, Y → −z, Z → +y in Three.js; floor at y = 0, ceiling at y = H
     const want = { X: [1, 0, 0], Y: [0, 0, -1], Z: [0, 1, 0] };
     let axesOk = true;
     for (const k of ['X', 'Y', 'Z']) {
