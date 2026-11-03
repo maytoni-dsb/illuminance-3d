@@ -36,15 +36,21 @@ The subdivision step is chosen automatically (`autoStep`, about 4000 elements); 
 Acceptance criteria are checked by `tests/geometry.test.mjs` and by the on-page
 "Критерии этапа 1" panel, which derives normals from the vertices of the built triangles.
 
-Stage 2 — form factor point → rectangle: `js/formfactor.js` (Lambert's contour integral with
-horizon clipping and an emitter-side check), `js/checks2.js` (the on-page "Критерии этапа 2" panel),
-`tests/formfactor.test.mjs`. Closed forms from Howell's catalogue (B-3, C-11, C-14) are used as
-references.
+Stage 2 — form factors in `js/formfactor.js`:
+- point → rectangle (`pointToRect`): Lambert's contour integral with horizon clipping and an
+  emitter-side check; used for work-plane points;
+- rectangle → rectangle (`rectToRect`, `elementToElement`): Sparrow's closed form for near pairs and,
+  where its rounding error grows (centre distance ≥ 5 sizes), a 5 × 5 Gauss rule over the receiver of
+  the exact point factor; relative error below about 3e-12; used for the element kernel.
+
+`js/checks2.js` is the on-page "Критерии этапа 2" panel, `tests/formfactor.test.mjs` the tests.
+Closed forms from Howell's catalogue (B-3, C-11, C-14) are used as references.
 
 ## MATLAB reference values
 
-`matlab/stage2_reference.m` (MATLAB R2025b) writes `matlab/stage2_reference.txt`: every row holds
-the full input and the result with 17 significant digits. Copy the file to
-`tests/fixtures/stage2_reference.txt`; `npm test` then requires agreement within 1e-9
-(the test is skipped while the file is absent).
+`matlab/stage2_reference.m` (MATLAB R2025b) writes `matlab/stage2_reference.txt` (point → rectangle)
+and, through `matlab/stage2_rect_reference.m`, `matlab/stage2_rect_reference.txt` (rectangle →
+rectangle). Every row holds the full input and the result with 17 significant digits. Copy the files
+to `tests/fixtures/`; `npm test` then requires agreement within 1e-9 (the tests are skipped while the
+files are absent).
 

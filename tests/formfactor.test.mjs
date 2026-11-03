@@ -7,6 +7,7 @@ import { createRoom, autoStep, elementCenter } from '../js/geometry.js';
 import {
   pointToPolygon, pointToRect, pointToElement, pointToFace, pointToElements,
   cornerParallel, coaxialRectangles, perpendicularCommonEdge,
+  parallelRects, perpendicularRects, axisRect, rectToRect, elementRect, elementToElement, RECT_SWITCH,
 } from '../js/formfactor.js';
 
 const UP = [0, 0, 1];
@@ -259,4 +260,121 @@ test('page panel "Критерии этапа 2" passes for default and extreme 
   for (const [L, W, H] of [[6, 4, 3], [1, 1, 2], [50, 50, 20], [1, 50, 20]]) {
     for (const c of stage2Checks(roomOf(L, W, H))) assert.ok(c.ok, `${L}×${W}×${H}: ${c.name} — ${c.detail}`);
   }
+});
+
+// --- rectangle → rectangle (element kernel) -------------------------------------------------
+
+/** Reference F₁₂ by an n × n Gauss rule of the exact point factor over rectangle 1. */
+function gaussRef(r1, r2, n) {
+  const edges = (r) => {
+    const [u, v] = [0, 1, 2].filter((c) => c !== r.axis);
+    const a = [0, 0, 0], b = [0, 0, 0];
+    a[u] = r.hi[u] - r.lo[u]; b[v] = r.hi[v] - r.lo[v];
+    return { p0: r.lo, a, b, n: r.n };
+  };
+  return areaToRect(edges(r1), edges(r2), n);
+}
+const rel = (a, b) => Math.abs(a / b - 1);
+
+test('Sparrow closed form reproduces Howell C-11 and C-14', () => {
+  for (const [a, b, c] of [[1, 1, 1], [2.4, 0.9, 1.5], [0.1, 5, 2], [10, 10, 0.3]]) {
+    assert.ok(near(parallelRects(0, a, 0, b, 0, a, 0, b, c), coaxialRectangles(a, b, c), 1e-14), `C-11 ${a}, ${b}, ${c}`);
+  }
+  for (const [w, h, l] of [[1, 1, 1], [2, 0.5, 1], [0.6, 3, 2], [0.01, 4, 1]]) {
+    assert.ok(near(perpendicularRects(0, l, 0, w, 0, l, 0, h), perpendicularCommonEdge(w, h, l), 1e-14), `C-14 ${w}, ${h}, ${l}`);
+  }
+});
+
+test('rectToRect: random parallel and perpendicular pairs agree with quadrature', () => {
+  const r = rng(11);
+  for (let t = 0; t < 150; t++) {
+    const x1 = 3 * r(), y1 = 3 * r(), p1 = 3 * r(), q1 = 3 * r();
+    const sx = 0.1 + 2 * r(), sy = 0.1 + 2 * r(), sp = 0.1 + 2 * r(), sq = 0.1 + 2 * r();
+    const A = axisRect([0, 0, 1], [x1, y1, 0], [x1 + sx, y1 + sy, 0]);          // floor-like, y ≥ 0
+    const B = t % 2
+      ? axisRect([0, 0, -1], [p1, q1, 1], [p1 + sp, q1 + sq, 1])            // height set below
+      : axisRect([0, 1, 0], [p1, 0, q1], [p1 + sp, 0, q1 + sq]);               // wall y = 0, z ≥ 0
+    if (t % 2) { const c = 0.3 + 3 * r(); B.lo[2] = c; B.hi[2] = c; }         // ceiling-like at height c
+    const Fs = rectToRect(A, B);
+    const Fq = gaussRef(A, B, 60);
+    assert.ok(Fs > 0 && Math.abs(Fs - Fq) <= 1e-11, `case ${t}: ${Fs} vs ${Fq}`);
+  }
+});
+
+test('rectToRect: accuracy across the switch to quadrature (relative error < 1e-11)', () => {
+  const d = 0.16;
+  for (const ratio of [1.5, 2, 3, 4, 5, RECT_SWITCH - 0.01, RECT_SWITCH, 8, 12, 20, 40, 100, 300]) {
+    const D = ratio * d;
+    const A = axisRect([0, 0, 1], [0, 0, 0], [d, d, 0]);
+    const pairs = [
+      axisRect([0, 1, 0], [0.3 * D, -D * 0.8, D * 0.6], [0.3 * D + d, -D * 0.8, D * 0.6 + d]),  // perpendicular
+      axisRect([0, 0, -1], [0.5 * D, 0, D * 0.85], [0.5 * D + d, d, D * 0.85]),                 // parallel
+    ];
+    for (const B of pairs) {
+      // high-order Gauss is the reference: its error falls as (size/distance)^(2n)
+      const ref = gaussRef(A, B, ratio < 3 ? 40 : 14);
+      const F = rectToRect(A, B);
+      assert.ok(rel(F, ref) < 1e-11, `ratio ${ratio}, axis ${B.axis}: rel. error ${rel(F, ref)}`);
+    }
+  }
+});
+
+test('elements: Σ_j F_ij = 1 and reciprocity A_i F_ij = A_j F_ji', () => {
+  for (const [L, W, H] of [[50, 50, 20], [2.3, 1.1, 2]]) {   // large room (h = 1 m), small odd room
+    const room = roomOf(L, W, H);
+    for (const face of room.faces) {
+      for (const [i, j] of [[0, 0], [face.nu - 1, face.nv - 1], [face.nu >> 1, face.nv >> 1]]) {
+        let s = 0;
+        for (const g of room.faces) for (let b = 0; b < g.nv; b++) for (let a = 0; a < g.nu; a++) s += elementToElement(room, face.id, i, j, g.id, a, b);
+        assert.ok(near(s, 1, 1e-11), `${L}×${W}×${H}, element ${face.id}/${i}/${j}: Σ F = ${s}`);
+      }
+    }
+  }
+  const room = roomOf(6, 4, 3);
+  const pick = [[0, 0, 0], [0, 18, 12], [1, 36, 24], [2, 0, 0], [3, 20, 18], [4, 12, 9], [5, 24, 0]];
+  for (const [f, i, j] of pick) {
+    let s = 0;
+    for (const face of room.faces) {
+      for (let b = 0; b < face.nv; b++) for (let a = 0; a < face.nu; a++) s += elementToElement(room, f, i, j, face.id, a, b);
+    }
+    assert.ok(near(s, 1, 1e-11), `element ${f}/${i}/${j}: Σ F = ${s}`);
+  }
+  const r = rng(5);
+  for (let t = 0; t < 400; t++) {
+    const f1 = Math.floor(6 * r()), f2 = Math.floor(6 * r());
+    const F1 = room.faces[f1], F2 = room.faces[f2];
+    const i1 = Math.floor(F1.nu * r()), j1 = Math.floor(F1.nv * r()), i2 = Math.floor(F2.nu * r()), j2 = Math.floor(F2.nv * r());
+    const a = F1.elementArea * elementToElement(room, f1, i1, j1, f2, i2, j2);
+    const b = F2.elementArea * elementToElement(room, f2, i2, j2, f1, i1, j1);
+    assert.ok(Math.abs(a - b) <= 1e-11 * Math.max(a, b, 1e-300) + 1e-20, `${f1}/${i1}/${j1} ↔ ${f2}/${i2}/${j2}: ${a} vs ${b}`);
+  }
+});
+
+test('elements of one face: F = 0; whole faces of a cube: 0.2 to each neighbour', () => {
+  const room = roomOf(6, 4, 3);
+  assert.equal(elementToElement(room, 2, 0, 0, 2, 5, 3), 0);
+  const cube = createRoom({ L: 1, W: 1, H: 1, h: 1 });
+  assert.ok(near(elementToElement(cube, 0, 0, 0, 1, 0, 0), coaxialRectangles(1, 1, 1), 1e-15));
+  for (const f of [2, 3, 4, 5]) assert.ok(near(elementToElement(cube, 0, 0, 0, f, 0, 0), perpendicularCommonEdge(1, 1, 1), 1e-15));
+  assert.ok(near(elementRect(cube, 0, 0, 0).hi[0], 1, 0));
+});
+
+// MATLAB reference for the element kernel (stage2_rect_reference.txt)
+const REF_RECT = fileURLToPath(new URL('./fixtures/stage2_rect_reference.txt', import.meta.url));
+
+test('criterion: rectToRect agrees with the MATLAB reference within 1e-9', { skip: !existsSync(REF_RECT) && 'tests/fixtures/stage2_rect_reference.txt is not there yet (run matlab/stage2_reference.m)' }, () => {
+  const rows = readFileSync(REF_RECT, 'utf8').split(/\r?\n/)
+    .filter((t) => t.trim() && !t.startsWith('%') && !t.startsWith('#'))
+    .map((t) => t.trim().split(/\s+/).map(Number));
+  assert.ok(rows.length >= 100, `${rows.length} rows`);
+  let worst = 0;
+  for (const v of rows) {
+    assert.equal(v.length, 20, 'id n1(3) lo1(3) hi1(3) n2(3) lo2(3) hi2(3) F');
+    const A = axisRect(v.slice(1, 4), v.slice(4, 7), v.slice(7, 10));
+    const B = axisRect(v.slice(10, 13), v.slice(13, 16), v.slice(16, 19));
+    const F = rectToRect(A, B);
+    worst = Math.max(worst, Math.abs(F - v[19]));
+    assert.ok(Math.abs(F - v[19]) <= 1e-9, `case ${v[0]}: JS ${F} vs MATLAB ${v[19]}`);
+  }
+  console.log(`MATLAB rect reference: ${rows.length} cases, max |ΔF| = ${worst.toExponential(2)}`);
 });

@@ -2,7 +2,7 @@
 // The same criteria are verified more thoroughly by tests/formfactor.test.mjs.
 // Check names and details are user-facing and therefore in Russian.
 
-import { pointToElements, pointToRect, coaxialRectangles } from './formfactor.js';
+import { pointToElements, pointToRect, coaxialRectangles, elementToElement } from './formfactor.js';
 
 const UP = [0, 0, 1];
 const TOL_SUM = 1e-6;
@@ -65,6 +65,25 @@ export function stage2Checks(room) {
     const err = Math.abs(s - 1);
     return { name: `ΣF = 1: ${label}`, ok: err <= TOL_SUM, detail: `|ΣF − 1| = ${exp(err)} по ${room.N} элементам` };
   });
+
+  // Element → element (exact kernel): row sums and reciprocity
+  const rowSum = (f, i, j) => {
+    let s = 0;
+    for (const g of room.faces) for (let b = 0; b < g.nv; b++) for (let a = 0; a < g.nu; a++) s += elementToElement(room, f, i, j, g.id, a, b);
+    return s;
+  };
+  const fl = room.faces[0];
+  for (const [label, f, i, j] of [['угловой элемент пола', 0, 0, 0], ['центральный элемент пола', 0, fl.nu >> 1, fl.nv >> 1]]) {
+    const err = Math.abs(rowSum(f, i, j) - 1);
+    out.push({ name: `ΣF<sub>ij</sub> = 1: ${label}`, ok: err <= 1e-9, detail: `|ΣF − 1| = ${exp(err)}, точные F элемент → элемент` });
+  }
+  let recip = 0;
+  for (const [f1, i1, j1, f2, i2, j2] of [[0, 0, 0, 2, 0, 0], [0, 0, 0, 4, 1, 0], [0, 2, 1, 1, 3, 2], [2, 1, 1, 5, 0, 2]]) {
+    const A1 = room.faces[f1].elementArea, A2 = room.faces[f2].elementArea;
+    const a = A1 * elementToElement(room, f1, i1, j1, f2, i2, j2), b = A2 * elementToElement(room, f2, i2, j2, f1, i1, j1);
+    recip = Math.max(recip, Math.abs(a - b) / Math.max(a, b));
+  }
+  out.push({ name: 'Взаимность A<sub>i</sub>F<sub>ij</sub> = A<sub>j</sub>F<sub>ji</sub>', ok: recip <= 1e-9, detail: `наибольшее относительное отличие ${exp(recip)}` });
 
   // Coaxial squares: classic table values (side / distance → F)
   const table = [[0.5, 0.0686], [1, 0.1998], [2, 0.4153]];

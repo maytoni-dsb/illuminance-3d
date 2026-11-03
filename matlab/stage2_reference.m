@@ -9,6 +9,9 @@
 %
 %   Also prints two independent checks: closed forms (Howell B-3, C-11) and
 %   numerical integration with integral2 of cos(t1)cos(t2)/(pi r^2).
+%
+%   At the end runs stage2_rect_reference.m (rectangle-to-rectangle factors),
+%   which writes stage2_rect_reference.txt. Send both .txt files.
 
 here = fileparts(mfilename('fullpath'));
 rows = zeros(0, 20);
@@ -127,6 +130,10 @@ for r = find(rows(:, 1) > size(rows, 1) - 300).'
     k = k + 1;
 end
 fprintf('Random cases vs integral2 (%d with F > 0): max relative |dF| = %.3g\n', k, e3);
+
+%% Rectangle-to-rectangle reference (element kernel)
+fprintf('\n');
+run(fullfile(here, 'stage2_rect_reference.m'));
 
 function y = kern(s, t, x, n, p0, a, b, nA)
 % cos(t1) cos(t2) / (pi r^2), zero where the point or the emitter is facing away
