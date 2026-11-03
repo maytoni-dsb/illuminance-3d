@@ -4,7 +4,8 @@
 // Strings shown in the UI (self-check results, labels) are in Russian.
 import * as THREE from 'three';
 import { createOrbit, rotate, zoom, zoomBy, pan, cameraPosition, anglesOf } from './orbit.js';
-import { facePoint } from './geometry.js';
+import { facePoint, faceVertexValues } from './geometry.js';
+import { LEVELS, COLORS } from './colorscale.js';
 
 /** Room → Three.js. */
 export const toThree = (p) => [p[0], p[2], -p[1]];
@@ -15,9 +16,42 @@ export const ROOM_TO_THREE = Object.freeze([
   [0, -1, 0],
 ]);
 
-/** Placeholder face colors by face number (stage 1). */
+/** Placeholder face colors by face number (stage 1); used in the "условные цвета" mode. */
 export const FACE_COLORS = Object.freeze(['#b9a27f', '#e8e4da', '#7fa6c9', '#9fbfd9', '#8fb98b', '#b5d3a8']);
 const AXIS_COLORS = { X: '#d0443a', Y: '#2e9b4a', Z: '#2f6fd6' };
+
+/**
+ * Unlit false-color material: per-vertex illuminance `value` is interpolated over the triangles and
+ * mapped to the stepped scale in the fragment shader, so color borders follow the isolines.
+ * Palette colors are sRGB and are written as is (no color-space conversion is applied).
+ */
+function falseColorMaterial() {
+  const n = LEVELS.length;
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      levels: { value: LEVELS.slice() },
+      colors: { value: COLORS.map((c) => new THREE.Vector3(c[0], c[1], c[2])) },
+    },
+    vertexShader: `
+      attribute float value;
+      varying float vValue;
+      void main() {
+        vValue = value;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform float levels[${n}];
+      uniform vec3 colors[${n}];
+      varying float vValue;
+      void main() {
+        int k = 0;
+        for (int i = 1; i < ${n}; i++) if (vValue >= levels[i]) k = i;
+        gl_FragColor = vec4(colors[k], 1.0);
+      }`,
+    side: THREE.FrontSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
+}
 
 const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -77,6 +111,7 @@ function buildFaceMesh(face) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  g.setAttribute('value', new THREE.BufferAttribute(new Float32Array((nu + 1) * (nv + 1)), 1));
   g.setIndex(new THREE.BufferAttribute(idx, 1));
   const mat = new THREE.MeshLambertMaterial({
     color: FACE_COLORS[face.id],
@@ -85,6 +120,7 @@ function buildFaceMesh(face) {
   });
   const mesh = new THREE.Mesh(g, mat);
   mesh.userData.faceId = face.id;
+  mesh.userData.plainMaterial = mat;
   return mesh;
 }
 
@@ -99,6 +135,42 @@ function buildFaceGrid(face) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
   const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x2b2b2b, transparent: true, opacity: 0.35 }));
   return lines;
+}
+
+/**
+ * Luminaire markers: light squares facing down at the photometric centre, turned by ψ,
+ * with a suspension line for pendants. The luminaire size is not known before stage 5,
+ * so the square side is a fixed fraction of the grid pitch (at most 0.3 m).
+ */
+function buildLuminaires(r, lums, edgeColor) {
+  const group = new THREE.Group();
+  if (!lums.length) return group;
+  const zs = lums[0].pos[2];
+  const xs = new Set(lums.map((s) => s.pos[0])).size, ys = new Set(lums.map((s) => s.pos[1])).size;
+  const side = Math.min(0.3, 0.35 * Math.min(r.L / xs, r.W / ys));
+  const plane = new THREE.PlaneGeometry(side, side);
+  plane.rotateX(Math.PI / 2); // PlaneGeometry faces +Z; after rotation it faces −Y (down in Three.js)
+  const fill = new THREE.MeshBasicMaterial({ color: 0xfffbea, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const edges = new THREE.EdgesGeometry(plane);
+  const edgeMat = new THREE.LineBasicMaterial({ color: edgeColor });
+  const hangs = [];
+  const zMark = Math.min(zs, r.H - 0.004); // keep the square just below the ceiling plane
+  for (const s of lums) {
+    const t = toThree([s.pos[0], s.pos[1], zMark]);
+    const m = new THREE.Mesh(plane, fill);
+    m.position.set(t[0], t[1], t[2]);
+    m.rotation.y = s.psi; // Three.js +Y is room +Z: rotation about it is counterclockwise viewed from above
+    const e = new THREE.LineSegments(edges, edgeMat);
+    e.position.copy(m.position); e.rotation.copy(m.rotation);
+    group.add(m, e);
+    if (r.H - zs > 1e-6) hangs.push(...toThree([s.pos[0], s.pos[1], r.H]), ...t);
+  }
+  if (hangs.length) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(hangs, 3));
+    group.add(new THREE.LineSegments(g, edgeMat));
+  }
+  return group;
 }
 
 /**
@@ -124,6 +196,10 @@ export function createView(container, opts = {}) {
   let orbit = null;        // camera state, see orbit.js; pivot = floor center
   let room = null;
   let roomGroup = null;
+  let lumGroup = null;     // luminaire markers
+  let values = null;       // element values (lx) shown in false colors, or null
+  let colorMode = 'false'; // 'false' — false colors by `values`; 'faces' — placeholder colors by face number
+  const fcMaterial = falseColorMaterial();
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
   let axes = null;         // { group, dirs: { X, Y, Z } }
   let showGrid = false, showNormals = false; // element grid and normals are developer aids, off by default
@@ -208,6 +284,7 @@ export function createView(container, opts = {}) {
 
   /** Rebuilds the scene for a new room. */
   function setRoom(r) {
+    for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial; // the shared false-color material outlives rooms
     if (roomGroup) { scene.remove(roomGroup); disposeTree(roomGroup); }
     if (axes) { scene.remove(axes.group); disposeTree(axes.group); }
     room = r;
@@ -231,11 +308,45 @@ export function createView(container, opts = {}) {
     scene.add(roomGroup);
     axes = buildAxes(r);
     scene.add(axes.group);
+    if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); lumGroup = null; }
+    values = null;
+    applyMaterials();
     fitCamera(r, keepView); // first room: default view; later rooms keep the user's angles
     keepView = true;
     requestRender();
   }
   let keepView = false;
+
+  /** Uses false colors when values are set and that mode is on; placeholder colors otherwise. */
+  function applyMaterials() {
+    const fc = colorMode === 'false' && values;
+    for (const p of faceParts) p.mesh.material = fc ? fcMaterial : p.mesh.userData.plainMaterial;
+  }
+
+  /**
+   * Element values to show in false colors (lx, global element order), or null.
+   * Vertex values are means of the adjacent elements of the same face (geometry.faceVertexValues).
+   */
+  function setValues(v) {
+    values = v;
+    if (v) {
+      for (const p of faceParts) {
+        const attr = p.mesh.geometry.attributes.value;
+        attr.array.set(faceVertexValues(p.face, v));
+        attr.needsUpdate = true;
+      }
+    }
+    applyMaterials();
+    requestRender();
+  }
+
+  /** Luminaire markers (photometry.luminaireGrid). */
+  function setLuminaires(lums) {
+    if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); }
+    lumGroup = room ? buildLuminaires(room, lums, cssColor('--view-edge', '#444444')) : null;
+    if (lumGroup) scene.add(lumGroup);
+    requestRender();
+  }
 
   /** Reads a color from a CSS custom property of the container (follows the page theme). */
   function cssColor(name, fallback) {
@@ -338,7 +449,8 @@ export function createView(container, opts = {}) {
     const face = room.faces[f];
     const elem = Math.floor(hit.faceIndex / 2); // two triangles per element, order i + j·nu
     const i = elem % face.nu, j = Math.floor(elem / face.nu);
-    opts.onHover({ f, i, j, g: face.offset + elem, name: face.name });
+    const g = face.offset + elem;
+    opts.onHover({ f, i, j, g, name: face.name, value: values ? values[g] : null });
   }
   el.addEventListener('pointerleave', () => opts.onHover?.(null));
 
@@ -417,6 +529,10 @@ export function createView(container, opts = {}) {
   return {
     setRoom,
     selfCheck,
+    setValues,
+    setLuminaires,
+    /** 'false' — false colors (default); 'faces' — placeholder colors by face number. */
+    setColorMode(m) { colorMode = m; applyMaterials(); requestRender(); },
     setShowGrid(v) { showGrid = v; requestRender(); },
     setShowNormals(v) { showNormals = v; requestRender(); },
     resetView() { if (room) { fitCamera(room, false); requestRender(); } },
@@ -425,13 +541,17 @@ export function createView(container, opts = {}) {
       edgeMaterial?.color.copy(cssColor('--view-edge', '#444444'));
       const ink = cssColor('--ink', '#111111');
       for (const p of faceParts) p.arrow.setColor(ink);
+      lumGroup?.traverse((o) => { if (o.isLineSegments) o.material.color.copy(cssColor('--view-edge', '#444444')); });
       requestRender();
     },
     /** Orbit state for diagnostics and tests (copy). */
     orbitState() { return orbit && JSON.parse(JSON.stringify(orbit)); },
     dispose() {
       ro.disconnect();
+      for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial;
       if (roomGroup) disposeTree(roomGroup);
+      if (lumGroup) disposeTree(lumGroup);
+      fcMaterial.dispose();
       if (axes) disposeTree(axes.group);
       renderer.dispose(); el.remove();
     },

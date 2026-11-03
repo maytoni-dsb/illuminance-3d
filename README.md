@@ -57,3 +57,19 @@ rectangle). Every row holds the full input and the result with 17 significant di
 to `tests/fixtures/`; `npm test` then requires agreement within 1e-9 (the tests are skipped while the
 files are absent).
 
+
+Stage 3 — direct component and false colors:
+- `js/photometry.js`: cosine and direct-indirect models in the C-γ system, luminaire grid
+  (half-pitch margins, suspension h_c, rotation ψ);
+- `js/direct.js`: direct illuminance at points (`directAtPoint`) and element averages
+  (`elementDirect`). For photometry made of cosine lobes the element average is exact,
+  Σ Φ_l · F(source, lobe axis → element) / A, so the flux on all faces equals the luminaires'
+  flux to rounding on any mesh; general photometry (stage 5) uses a 4 × 4 Gauss rule;
+- `js/colorscale.js`: the fixed 26-level scale with stepped colors (temporary Turbo palette);
+  `js/view3d.js` colors faces in a shader so color borders follow the isolines, and shows luminaires.
+
+The form has luminaire inputs, photometry, f_up and MF (results are E = MF · E₀).
+`js/checks3.js` is the on-page "Критерии этапа 3" panel, `tests/direct.test.mjs` the tests.
+`matlab/stage3_reference.m` writes `stage3_point_reference.txt` and `stage3_element_reference.txt`
+(element averages by `integral2` of the point formula, independent of the form-factor route);
+put them into `tests/fixtures/` — until then the two comparison tests are skipped.
