@@ -126,7 +126,7 @@ export function createView(container, opts = {}) {
   let roomGroup = null;
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
   let axes = null;         // { group, dirs: { X, Y, Z } }
-  let showGrid = true, showNormals = false;
+  let showGrid = false, showNormals = false; // element grid and normals are developer aids, off by default
   let edgeMaterial = null;
   let viewW = 1, viewH = 1;
   let viewTouched = false;  // true once the user has rotated, panned or zoomed since the last fit

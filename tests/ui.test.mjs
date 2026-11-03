@@ -21,9 +21,10 @@ test('formatNumber: decimal comma, no trailing zeros', () => {
 test('validateParams: defaults are valid, bounds are inclusive', () => {
   const def = Object.fromEntries(PARAMS.map((p) => [p.key, p.def]));
   assert.deepEqual(validateParams(def), { ok: true, values: def, errors: {} });
-  assert.ok(validateParams({ L: '50', W: '1', H: '2', h: '0,1' }).ok);
-  const r = validateParams({ L: '51', W: 'abc', H: '1,9', h: '0,25' });
+  assert.ok(validateParams({ L: '50', W: '1', H: '2' }).ok);
+  const r = validateParams({ L: '51', W: 'abc', H: '1,9' });
   assert.equal(r.ok, false);
   assert.deepEqual(Object.keys(r.errors).sort(), ['H', 'L', 'W']);
-  assert.equal(r.values.h, 0.25);
+  assert.deepEqual(Object.keys(r.values), []);
+  assert.ok(!PARAMS.some((p) => p.key === 'h')); // the step is automatic, not a form field
 });

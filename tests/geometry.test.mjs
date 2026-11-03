@@ -151,3 +151,17 @@ test('FACE_DEFS is frozen, invalid sizes are rejected', () => {
   assert.throws(() => createRoom({ L: 0, W: 4, H: 3, h: 0.25 }), RangeError);
   assert.throws(() => createRoom({ L: 6, W: NaN, H: 3, h: 0.25 }), RangeError);
 });
+
+test('autoStep: about targetElements elements, step within limits', async () => {
+  const { autoStep, AUTO_STEP } = await import('../js/geometry.js');
+  for (const [L, W, H] of [[6, 4, 3], [10, 10, 3], [12.5, 7.3, 2.8], [30, 20, 6]]) {
+    const r = createRoom({ L, W, H, h: autoStep(L, W, H) });
+    assert.ok(r.N >= AUTO_STEP.targetElements * 0.9 && r.N <= AUTO_STEP.targetElements * 1.3, `${L}×${W}×${H}: N=${r.N}`);
+  }
+  assert.equal(autoStep(1, 1, 2), AUTO_STEP.min);    // small room: clamped at the finest step
+  assert.equal(autoStep(50, 50, 20), AUTO_STEP.max); // large room: clamped at the coarsest step
+  for (const L of [1, 2.5, 7, 19, 50]) for (const H of [2, 3, 9, 20]) {
+    const h = autoStep(L, 4, H);
+    assert.ok(h >= AUTO_STEP.min && h <= AUTO_STEP.max);
+  }
+});

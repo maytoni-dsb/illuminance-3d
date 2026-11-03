@@ -3,12 +3,14 @@
 // and is only called from the browser.
 // Labels and error messages are user-facing and therefore in Russian.
 
-/** Stage 1 parameters. Ranges follow the spec table "Входные параметры" (input parameters). */
+/**
+ * Room parameters entered by the user. Ranges follow the spec table "Входные параметры" (input parameters).
+ * The subdivision step is not a user parameter: it is chosen by autoStep() in geometry.js.
+ */
 export const PARAMS = Object.freeze([
   { key: 'L', label: 'Длина', sym: 'L', unit: 'м', def: 6, min: 1, max: 50 },
   { key: 'W', label: 'Ширина', sym: 'W', unit: 'м', def: 4, min: 1, max: 50 },
   { key: 'H', label: 'Высота', sym: 'H', unit: 'м', def: 3, min: 2, max: 20 },
-  { key: 'h', label: 'Шаг разбиения', sym: 'h', unit: 'м', def: 0.25, min: 0.1, max: 1 },
 ]);
 
 /** Parses a number from a string; accepts a decimal comma and spaces. */

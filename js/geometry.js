@@ -12,6 +12,19 @@ export function divisions(a, h) {
   return Math.max(1, Math.ceil(a / h - DIVISION_EPS));
 }
 
+/** Automatic subdivision: target total number of elements and step limits, m. */
+export const AUTO_STEP = Object.freeze({ targetElements: 4000, min: 0.1, max: 1 });
+
+/**
+ * Desired element step chosen from the room size, so the user never sets it:
+ * h = sqrt(S / targetElements), clamped to [min, max], where S is the total face area.
+ * The resulting N is close to targetElements unless the clamp is active.
+ */
+export function autoStep(L, W, H, opts = AUTO_STEP) {
+  const S = 2 * (L * W + L * H + W * H);
+  return Math.min(opts.max, Math.max(opts.min, Math.sqrt(S / opts.targetElements)));
+}
+
 /**
  * Face definitions 0…5. Face sizes refer to room edges ('L' | 'W' | 'H'),
  * so every face sharing an edge gets the same number of divisions along it.

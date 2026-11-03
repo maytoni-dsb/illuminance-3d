@@ -31,6 +31,7 @@ Node 18+, no dependencies (`node:test`). Calculation modules use neither the DOM
 
 ## Status
 
-Stage 1 — geometry and 3D view: `js/geometry.js`, `js/view3d.js`, `js/ui.js`, `index.html`.
+Stage 1 — geometry and 3D view: `js/geometry.js`, `js/orbit.js`, `js/view3d.js`, `js/ui.js`, `index.html`.
+The subdivision step is chosen automatically (`autoStep`, about 4000 elements); it is not a user input.
 Acceptance criteria are checked by `tests/geometry.test.mjs` and by the on-page
 "Критерии этапа 1" panel, which derives normals from the vertices of the built triangles.
