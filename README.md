@@ -45,6 +45,8 @@ Stage 2 — form factors in `js/formfactor.js`:
 
 `js/checks2.js` is the on-page "Критерии этапа 2" panel, `tests/formfactor.test.mjs` the tests.
 Closed forms from Howell's catalogue (B-3, C-11, C-14) are used as references.
+MATLAB reference values (`tests/fixtures/`, 528 point and 500 rectangle cases) agree within
+1.1e-16 and 3.5e-18 absolute (relative 1.7e-13 for rectangle → rectangle).
 
 ## MATLAB reference values
 
