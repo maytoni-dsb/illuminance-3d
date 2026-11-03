@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Калькулятор освещения</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #f4f3f0; --panel: #fbfaf8; --ink: #1f1f1d; --muted: #6b6a66; --line: #dddbd5;
+      --accent: #2f6fd6; --ok: #2e8a47; --bad: #c2392f; --canvas: #eceae5;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #18181a; --panel: #202023; --ink: #ebeae6; --muted: #9b9a95; --line: #34343a;
+              --accent: #6c9dff; --ok: #5cc27a; --bad: #ff7a6e; --canvas: #2a2a2e; color-scheme: dark; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+           display: grid; grid-template-columns: 320px 1fr; }
+    aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 18px 24px; }
+    h1 { font-size: 16px; margin: 0 0 2px; font-weight: 650; }
+    .stage { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+         margin: 20px 0 8px; font-weight: 600; }
+    .field { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: 2px 10px; margin-bottom: 8px; }
+    .field-label i { color: var(--muted); }
+    .field-input { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 6px;
+                   background: var(--bg); padding: 0 8px; }
+    .field-input:focus-within { border-color: var(--accent); }
+    .field input { border: 0; background: transparent; color: inherit; font: inherit; width: 100%; padding: 6px 0;
+                   outline: none; font-variant-numeric: tabular-nums; text-align: right; }
+    .field input[aria-invalid] { color: var(--bad); }
+    .unit { color: var(--muted); margin-left: 6px; }
+    .field-err { grid-column: 2; color: var(--bad); font-size: 12px; min-height: 0; }
+    .field-err:empty { display: none; }
+    table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    td, th { padding: 4px 4px; border-bottom: 1px solid var(--line); text-align: right; }
+    th { font-weight: 500; color: var(--muted); font-size: 12px; }
+    td:first-child, th:first-child { text-align: left; }
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px;
+          border: 1px solid rgba(0,0,0,.2); }
+    .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-variant-numeric: tabular-nums; }
+    .kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; }
+    .toggles label { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; cursor: pointer; }
+    button { font: inherit; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+             border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    .checks { list-style: none; padding: 0; margin: 0; }
+    .checks li { padding: 6px 0 6px 24px; position: relative; border-bottom: 1px solid var(--line); }
+    .checks li::before { position: absolute; left: 0; top: 5px; font-weight: 700; }
+    .checks li.ok::before { content: "✓"; color: var(--ok); }
+    .checks li.bad::before { content: "✗"; color: var(--bad); }
+    .checks small { display: block; color: var(--muted); }
+    main { position: relative; background: var(--canvas); min-height: 0; }
+    #view { position: absolute; inset: 0; }
+    #view canvas { display: block; width: 100%; height: 100%; }
+    .overlay { position: absolute; left: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--line);
+               border-radius: 6px; padding: 6px 10px; font-variant-numeric: tabular-nums; pointer-events: none; }
+    .overlay:empty { display: none; }
+    .hint { position: absolute; right: 12px; bottom: 12px; color: var(--muted); font-size: 12px; pointer-events: none; }
+    .fatal { padding: 24px; color: var(--bad); }
+    @media (max-width: 760px) {
+      body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
+      main { grid-row: 1; } aside { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <h1>Калькулятор освещения</h1>
+    <div class="stage">Этап 1 · геометрия и 3D-вид</div>
+
+    <h2>Комната</h2>
+    <form id="form" autocomplete="off" onsubmit="return false"></form>
+
+    <h2>Разбиение</h2>
+    <dl class="kv" id="mesh"></dl>
+    <table id="faces" style="margin-top:10px">
+      <thead><tr><th>Грань</th><th>nu × nv</th><th>элем.</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>Вид</h2>
+    <div class="toggles">
+      <label><input type="checkbox" id="grid" checked> Границы элементов</label>
+      <label><input type="checkbox" id="normals"> Нормали граней</label>
+    </div>
+    <button type="button" id="reset">Исходный вид</button>
+
+    <h2>Критерии этапа 1</h2>
+    <ul class="checks" id="checks"></ul>
+  </aside>
+
+  <main>
+    <div id="view"></div>
+    <div class="overlay" id="hover"></div>
+    <div class="hint">Вращение — левая кнопка, сдвиг — правая, масштаб — колесо</div>
+  </main>
+
+  <script type="module">
+    import { createRoom } from './js/geometry.js';
+    import { initForm, formatNumber } from './js/ui.js';
+
+    const $ = (s) => document.querySelector(s);
+    let view = null;
+    try {
+      const { createView, FACE_COLORS } = await import('./js/view3d.js');
+      window.FACE_COLORS = FACE_COLORS;
+      view = createView($('#view'), {
+        onHover(info) {
+          $('#hover').textContent = info
+            ? `${info.name} · элемент (i ${info.i}, j ${info.j}) · глобальный индекс ${info.g}`
+            : '';
+        },
+      });
+    } catch (e) {
+      $('#view').innerHTML = `<div class="fatal">Не удалось загрузить 3D-вид (Three.js с CDN): ${e.message}</div>`;
+      console.error(e);
+    }
+
+    function update(values) {
+      const room = createRoom(values);
+      const f = (x) => formatNumber(x, 4);
+      $('#mesh').innerHTML = `
+        <dt>n<sub>L</sub> × n<sub>W</sub> × n<sub>H</sub></dt><dd>${room.n.L} × ${room.n.W} × ${room.n.H}</dd>
+        <dt>Δ<sub>L</sub>, Δ<sub>W</sub>, Δ<sub>H</sub>, м</dt><dd>${f(room.d.L)} · ${f(room.d.W)} · ${f(room.d.H)}</dd>
+        <dt>Всего элементов N</dt><dd>${room.N.toLocaleString('ru-RU')}</dd>`;
+      $('#faces tbody').innerHTML = room.faces.map((fc) =>
+        `<tr><td><span class="sw" style="background:${window.FACE_COLORS?.[fc.id] ?? '#ccc'}"></span>${fc.id} · ${fc.name}</td>
+         <td>${fc.nu} × ${fc.nv}</td><td>${fc.count.toLocaleString('ru-RU')}</td></tr>`).join('');
+      if (!view) return;
+      view.setRoom(room);
+      $('#checks').innerHTML = view.selfCheck().map((c) =>
+        `<li class="${c.ok ? 'ok' : 'bad'}">${c.name}<small>${c.detail}</small></li>`).join('');
+      window.__stage1 = { room, checks: view.selfCheck() };
+    }
+
+    const form = initForm($('#form'), update);
+    update(form.values());
+
+    $('#grid').addEventListener('change', (e) => view?.setShowGrid(e.target.checked));
+    $('#normals').addEventListener('change', (e) => view?.setShowNormals(e.target.checked));
+    $('#reset').addEventListener('click', () => view?.resetView());
+  </script>
+</body>
+</html>
