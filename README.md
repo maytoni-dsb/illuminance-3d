@@ -35,3 +35,16 @@ Stage 1 — geometry and 3D view: `js/geometry.js`, `js/orbit.js`, `js/view3d.js
 The subdivision step is chosen automatically (`autoStep`, about 4000 elements); it is not a user input.
 Acceptance criteria are checked by `tests/geometry.test.mjs` and by the on-page
 "Критерии этапа 1" panel, which derives normals from the vertices of the built triangles.
+
+Stage 2 — form factor point → rectangle: `js/formfactor.js` (Lambert's contour integral with
+horizon clipping and an emitter-side check), `js/checks2.js` (the on-page "Критерии этапа 2" panel),
+`tests/formfactor.test.mjs`. Closed forms from Howell's catalogue (B-3, C-11, C-14) are used as
+references.
+
+## MATLAB reference values
+
+`matlab/stage2_reference.m` (MATLAB R2025b) writes `matlab/stage2_reference.txt`: every row holds
+the full input and the result with 17 significant digits. Copy the file to
+`tests/fixtures/stage2_reference.txt`; `npm test` then requires agreement within 1e-9
+(the test is skipped while the file is absent).
+

@@ -171,7 +171,7 @@
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle">Расчёт освещения<br>помещения</span>
-    <span class="stagebadge">Этап 1 · геометрия и 3D-вид</span>
+    <span class="stagebadge">Этап 2 · коэффициент облучённости</span>
     <button type="button" class="themebtn" id="themebtn" title="Светлая или тёмная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
   </header>
 
@@ -200,6 +200,8 @@
             </div>
             <div class="shd">Критерии этапа 1</div>
             <ul class="checks" id="checks"></ul>
+            <div class="shd">Критерии этапа 2</div>
+            <ul class="checks" id="checks2"></ul>
           </div>
         </details>
       </div>
@@ -221,6 +223,7 @@
 <script type="module">
   import { createRoom, autoStep } from './js/geometry.js';
   import { initForm, formatNumber } from './js/ui.js';
+  import { stage2Checks } from './js/checks2.js';
 
   const $ = (s) => document.querySelector(s);
   let view = null, FACE_COLORS = [];
@@ -253,6 +256,10 @@
     $('#faces tbody').innerHTML = room.faces.map((fc) =>
       `<tr><td><span class="sw" style="background:${FACE_COLORS[fc.id] ?? '#ccc'}"></span>${fc.id} · ${fc.name}</td>
        <td>${fc.nu} × ${fc.nv}</td><td>${fc.count.toLocaleString('ru-RU')}</td></tr>`).join('');
+    const checks2 = stage2Checks(room);
+    $('#checks2').innerHTML = checks2.map((c) =>
+      `<li class="${c.ok ? 'ok' : 'bad'}"><span>${c.name}</span><small>${c.detail}</small></li>`).join('');
+    window.__stage2 = { room, checks: checks2 };
     if (!view) return;
     view.setRoom(room);
     const checks = view.selfCheck();
