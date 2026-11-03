@@ -185,12 +185,16 @@ export function pointToElements(room, x, n, out = new Float64Array(room.N)) {
 // terms vanish (limits r²·ln r → 0, s·atan → 0).
 //
 // Rounding: the result is a fourth difference of H, so for distant small rectangles most digits
-// cancel. Measured on element pairs of a 6 × 4 × 3 m room (relative error vs a high-order rule):
-// 6e-13 at a centre distance of 4–5 sizes, 1e-11 at 5–6, 1e-10 at 10, 1e-9 at 14, 1e-2 at 400.
-// For distant pairs the exact point → rectangle factor integrated over rectangle 1 with a 5 × 5
-// Gauss–Legendre rule is more accurate: its error falls as (size/distance)^10 — 3e-12 at 5 sizes,
-// 1e-14 beyond 10. The switch is at a centre distance of RECT_SWITCH sizes, so over the whole range
-// the relative error stays below about 3e-12 (see tests/formfactor.test.mjs).
+// cancel. For distant pairs the exact point → rectangle factor integrated over rectangle 1 with a
+// 5 × 5 Gauss–Legendre rule is more accurate: its error falls as (size/distance)^10. The switch is
+// at a centre distance of RECT_SWITCH times the largest side. Relative errors measured in MATLAB
+// against a 50-digit evaluation of the closed form (500 cases, 3 Nov 2026):
+//   distance/size    0–2      2–3      3–4      4–5      5–6      6–10     10–30    > 30
+//   closed form    1.6e-11  7.2e-11  6.5e-11  7.3e-11  3.0e-10  4.4e-09  5.0e-08  1.3e-07
+//   Gauss 5 × 5    1.3e-02  5.1e-09  1.7e-10  7.8e-11  9.5e-13  2.2e-14  4.3e-14  1.7e-13
+// The two branches cross at 4–5 sizes. For elements of nearly equal size (the kernel) the closed
+// form is better still (~1e-12); the 1e-11…1e-10 above come from pairs of very different size
+// (a 5 cm strip against a 6 m face), where the smaller rectangle governs the cancellation.
 
 /** Switch from Sparrow's closed form to Gauss quadrature: centre distance / largest side. */
 export const RECT_SWITCH = 5;

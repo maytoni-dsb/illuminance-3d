@@ -41,7 +41,8 @@ Stage 2 — form factors in `js/formfactor.js`:
   emitter-side check; used for work-plane points;
 - rectangle → rectangle (`rectToRect`, `elementToElement`): Sparrow's closed form for near pairs and,
   where its rounding error grows (centre distance ≥ 5 sizes), a 5 × 5 Gauss rule over the receiver of
-  the exact point factor; relative error below about 3e-12; used for the element kernel.
+  the exact point factor; relative error about 1e-12 for kernel elements, at most ~1e-10 for
+  rectangles of very different size; used for the element kernel.
 
 `js/checks2.js` is the on-page "Критерии этапа 2" panel, `tests/formfactor.test.mjs` the tests.
 Closed forms from Howell's catalogue (B-3, C-11, C-14) are used as references.
