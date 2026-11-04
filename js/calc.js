@@ -11,9 +11,10 @@ import { createRoom, autoStep } from './geometry.js';
 import { buildKernel } from './kernel.js';
 import { solve, coarseData, energyBalance, sumpner, SOLVER_EPS } from './solver.js';
 import { createPhotometry, luminaireGrid } from './photometry.js';
-import { elementDirect } from './direct.js';
+import { elementDirect, emittedFlux } from './direct.js';
 import { stage3Checks } from './checks3.js';
 import { stage4Checks } from './checks4.js';
+import { stage5Checks } from './checks5.js';
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -22,8 +23,10 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
  * calls, so that only what changed is recomputed.
  * @returns {{ run: (p: CalcParams) => CalcResult }}
  *
- * CalcParams = { L, W, H, nx, ny, flux, hc, psi (rad), phot: 'cosine' | 'directIndirect', fUp,
+ * CalcParams = { L, W, H, nx, ny, flux, hc, psi (rad), phot: 'cosine' | 'directIndirect' | 'file', fUp,
+ *                table?: PhotTable (photfile.js; phot = 'file'), fileKey?: string (identifies the table),
  *                rho: number[6] (faces 0…5), checks?: boolean }
+ * With a file the flux comes from the table (the flux of its interpolant), `flux` is ignored.
  * CalcResult = { key, N, h, Edir, Eind (Float64Array, E₀, lx), iterations, converged, change,
  *                balance, sumpner, ms: { kernel, coarse, direct, solve, checks }, reused: {…},
  *                checks3?, checks4? }
@@ -52,9 +55,10 @@ export function createCalc() {
     }
     const { room, kernel } = geo;
 
-    const dirKey = [p.nx, p.ny, p.flux, p.hc, p.psi, p.phot, p.phot === 'directIndirect' ? p.fUp : 0].join('|');
+    const isFile = p.phot === 'file';
+    const dirKey = [p.nx, p.ny, isFile ? 0 : p.flux, p.hc, p.psi, p.phot, p.phot === 'directIndirect' ? p.fUp : 0, isFile ? p.fileKey : ''].join('|');
     if (!dir || dir.key !== dirKey) {
-      const phot = createPhotometry({ type: p.phot, flux: p.flux, fUp: p.fUp });
+      const phot = createPhotometry({ type: p.phot, flux: p.flux, fUp: p.fUp, table: p.table });
       const lums = luminaireGrid({ L: p.L, W: p.W, H: p.H, nx: p.nx, ny: p.ny, hc: p.hc, psi: p.psi });
       const t = now();
       const Edir = elementDirect(room, lums, phot);
@@ -69,7 +73,9 @@ export function createCalc() {
     ms.solve = s.ms;
     sol = { key: `${dirKey}|${p.rho.join('|')}`, Eind: s.Eind };
 
-    const emitted = lums.length * phot.flux;
+    // a luminaire in the ceiling plane (h_c = 0) cannot light upwards: its upward flux is lost
+    const emitted = lums.length * emittedFlux(phot, lums[0].pos[2], p.H);
+    const lost = lums.length * phot.flux - emitted;
     const balance = energyBalance(room, Edir, s.Eind, p.rho, emitted);
     const sp = sumpner(room, Edir, s.Eind, p.rho);
 
@@ -78,10 +84,12 @@ export function createCalc() {
       Edir: Float64Array.from(Edir), Eind: Float64Array.from(s.Eind),
       iterations: s.iterations, converged: s.converged, change: s.change,
       balance, sumpner: sp, ms, reused, lums: lums.map((l) => ({ pos: [...l.pos], psi: l.psi })),
+      flux: phot.flux, lost, directStats: Edir.stats ?? null,
     };
     if (p.checks !== false) {
       const t = now();
       out.checks3 = stage3Checks(room, lums, phot, Edir, { hc: p.hc, psi: p.psi });
+      if (isFile) out.checks5 = stage5Checks(room, lums, phot, Edir, p.table);
       out.checks4 = stage4Checks(kernel, { iterations: s.iterations, converged: s.converged, change: s.change, balance, sumpner: sp });
       ms.checks = now() - t;
     }

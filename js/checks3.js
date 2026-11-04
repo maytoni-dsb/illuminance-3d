@@ -4,7 +4,7 @@
 
 import { createRoom } from './geometry.js';
 import { luminaireGrid } from './photometry.js';
-import { directAtPoint, elementDirectExact, elementDirectCenters, elementDirectQuadrature, faceFlux } from './direct.js';
+import { directAtPoint, elementDirectExact, elementDirectCenters, elementDirectQuadrature, elementDirectAdaptive, faceFlux, emittedFlux } from './direct.js';
 
 /** 3.1e-15 → "3,1·10<sup>−15</sup>" (decimal comma for the Russian UI; the panel uses innerHTML). */
 function exp(x) {
@@ -42,34 +42,45 @@ export function stage3Checks(room, lums, phot, E, { hc, psi }) {
   }
   out.push({ name: 'Под светильником E = I(0)/d²', ok: rel <= 1e-12, detail: `один светильник; ${detail}` });
 
-  // 2. Flux reaching all faces equals the luminaires' flux: element averages (exact)
-  const total = lums.length * phot.flux;
+  // 2. Flux reaching all faces equals the luminaires' flux (a luminaire in the ceiling plane emits
+  //    only its downward flux): exact for cosine lobes, adaptive cubature for a file (tolerance 1e-4)
+  const total = lums.length * emittedFlux(phot, lums[0].pos[2], H);
+  const file = !phot.lobes;
   const errExact = Math.abs(faceFlux(room, E).total / total - 1);
   out.push({
     name: 'Поток на все грани равен потоку светильников',
-    ok: errExact <= 1e-9,
-    detail: `средние по элементам: |ΣE·A / ΣΦ − 1| = ${exp(errExact)} при N = ${room.N}`,
+    ok: errExact <= (file ? 1e-4 : 1e-9),
+    detail: `средние по элементам${file ? ' (адаптивная кубатура)' : ''}: |ΣE·A / ΣΦ − 1| = ${exp(errExact)} при N = ${room.N}` +
+      (H - lums[0].pos[2] < 1e-12 && phot.flux - total / lums.length > 1e-9 * phot.flux ? '; поток вверх у потолка не учитывается' : ''),
   });
 
-  // 3. The same with values at element centres on a fine mesh (h/2): within 1e-3
-  const fine = createRoom({ L, W, H, h: room.h / 2 });
-  const Ec = elementDirectCenters(fine, lums, phot);
-  const errCentres = Math.abs(faceFlux(fine, Ec).total / total - 1);
-  out.push({
-    name: 'Баланс потока по центрам элементов при мелкой сетке',
-    ok: errCentres <= 1e-3,
-    detail: `|ΣE·A / ΣΦ − 1| = ${exp(errCentres)} при N = ${fine.N} (шаг h/2); на основной сетке: ${exp(Math.abs(faceFlux(room, elementDirectCenters(room, lums, phot)).total / total - 1))}`,
-  });
+  if (!file) {
+    // 3. The same with values at element centres on a fine mesh (h/2): within 1e-3
+    const fine = createRoom({ L, W, H, h: room.h / 2 });
+    const Ec = elementDirectCenters(fine, lums, phot);
+    const errCentres = Math.abs(faceFlux(fine, Ec).total / total - 1);
+    out.push({
+      name: 'Баланс потока по центрам элементов при мелкой сетке',
+      ok: errCentres <= 1e-3,
+      detail: `|ΣE·A / ΣΦ − 1| = ${exp(errCentres)} при N = ${fine.N} (шаг h/2); на основной сетке: ${exp(Math.abs(faceFlux(room, elementDirectCenters(room, lums, phot)).total / total - 1))}`,
+    });
+  }
 
-  // 4. Exact element averages against an independent Gauss 8 × 8 rule on the floor
+  // 4. Element averages against an independent rule on the floor: Gauss 8 × 8 for cosine lobes
+  //    (exact formula, 1e-9); for a file a 100 times tighter adaptive cubature (1e-2)
   const floor = { ...room, faces: [room.faces[0]] };
-  const Eq = elementDirectQuadrature(floor, lums, phot, 8, new Float64Array(room.N));
-  let worst = 0;
-  for (let k = 0; k < room.faces[0].count; k++) worst = Math.max(worst, Math.abs(Eq[k] - E[k]) / E[k]);
+  const Eq = file
+    ? elementDirectAdaptive(floor, lums, phot, { eps: 1e-5, abs: 1e-9, maxRetries: 0, balance: Infinity, out: new Float64Array(room.N) })
+    : elementDirectQuadrature(floor, lums, phot, 8, new Float64Array(room.N));
+  let worst = 0, Emax = 0;
+  for (let k = 0; k < room.faces[0].count; k++) Emax = Math.max(Emax, Eq[k]);
+  for (let k = 0; k < room.faces[0].count; k++) if (Eq[k] > (file ? 1e-2 * Emax : 0)) worst = Math.max(worst, Math.abs(Eq[k] - E[k]) / Eq[k]);
   out.push({
-    name: 'Средние по элементам: точная формула и квадратура',
-    ok: worst <= 1e-9,
-    detail: `пол, Гаусс 8 × 8 по формуле в точке: наибольшее относительное отличие ${exp(worst)}`,
+    name: file ? 'Средние по элементам: кубатура и точная кубатура' : 'Средние по элементам: точная формула и квадратура',
+    ok: worst <= (file ? 1e-2 : 1e-9),
+    detail: file
+      ? `пол, кубатура с допуском в 100 раз меньше: наибольшее относительное отличие ${exp(worst)} (элементы выше 1 % максимума)`
+      : `пол, Гаусс 8 × 8 по формуле в точке: наибольшее относительное отличие ${exp(worst)}`,
   });
   return out;
 }

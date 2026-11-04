@@ -70,14 +70,14 @@ test('worker loader: every module the worker needs imports siblings only as \'./
     seen.add(spec);
     const text = readFileSync(jsDir + spec.slice(2), 'utf8');
     for (const line of text.split('\n')) {
-      if (/^\s*import\s/.test(line) || /^\s*export\s.*\sfrom\s/.test(line)) {
+      if (/^\s*import\s/.test(line) || /^\s*export\s.*\sfrom\s+['"]/.test(line)) {
         assert.match(line, /['"]\.\/[\w.-]+\.js['"]/, `${spec}: ${line}`);
       }
     }
     for (const d of moduleDeps(text)) visit(d);
   };
   visit('./calc.js');
-  for (const m of ['./kernel.js', './solver.js', './direct.js', './checks3.js', './checks4.js', './formfactor.js', './geometry.js']) {
+  for (const m of ['./kernel.js', './solver.js', './direct.js', './checks3.js', './checks4.js', './checks5.js', './formfactor.js', './geometry.js']) {
     assert.ok(seen.has(m), m);
   }
   assert.ok(![...seen].some((m) => /view3d|ui|orbit/.test(m)), 'no DOM modules in the worker');
