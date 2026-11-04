@@ -65,7 +65,9 @@ Stage 3 — direct component and false colors:
   (`elementDirect`). For photometry made of cosine lobes the element average is exact,
   Σ Φ_l · F(source, lobe axis → element) / A, so the flux on all faces equals the luminaires'
   flux to rounding on any mesh; general photometry (stage 5) uses a 4 × 4 Gauss rule;
-- `js/colorscale.js`: the fixed 26-level scale with stepped colors (temporary Turbo palette);
+- `js/colorscale.js`: the fixed 27-level scale (0…2000 lx) with stepped colors and the project palette
+  (below 1 lx black, 2000 lx and above white); the legend runs along the bottom of the 3D view and
+  the "Фиктивные цвета" button switches coloring off (neutral grey faces);
   `js/view3d.js` colors faces in a shader so color borders follow the isolines, and shows luminaires.
 
 The form has luminaire inputs, photometry, f_up and MF (results are E = MF · E₀).

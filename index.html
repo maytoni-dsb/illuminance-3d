@@ -130,7 +130,8 @@
     #view{position:absolute;inset:0}
     #view canvas{display:block;width:100%;height:100%;cursor:grab}
     #view canvas:active{cursor:grabbing}
-    .vbottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:flex-end;gap:12px;pointer-events:none}
+    .vbottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    .vrow{display:flex;align-items:flex-end;gap:12px;min-height:0}
     .vstatus{background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:6px 12px;font-size:12px;
       font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .vstatus:empty{display:none}
@@ -138,23 +139,22 @@
     .vhint b{font-weight:600;color:var(--ink3)}
     .fatal{padding:24px;color:var(--err)}
 
-    /* false-color legend: fixed 26-level scale, highest level on top */
-    .legend{position:absolute;top:12px;left:12px;background:var(--card);border:1px solid var(--rule);border-radius:12px;
-      padding:8px 10px 8px 8px;display:flex;flex-direction:column;gap:4px;max-height:calc(100% - 76px);overflow:hidden;pointer-events:none}
-    .legend .lt{font-size:11px;color:var(--ink3);padding-left:2px}
-    .legend ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse}
-    .legend li{height:13px;display:flex;align-items:center;gap:6px;font-size:10.5px;line-height:1;
-      font-variant-numeric:tabular-nums;color:var(--ink2)}
-    .legend li i{width:14px;align-self:stretch;flex:none}
-    .legend li:first-child i{border-radius:0 0 3px 3px}
-    .legend li:last-child i{border-radius:3px 3px 0 0}
-    @media (max-height:640px), (max-width:900px){
-      .legend{padding:6px 7px 6px 6px;top:10px;left:10px}
-      .legend li{height:7px;font-size:9px;gap:4px}
-      .legend li i{width:10px}
-      .legend li:nth-child(even) span{visibility:hidden}
-    }
-    .vbtn{position:absolute;top:12px;right:12px;height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px solid var(--rule);
+    /* false-color legend: fixed 27-level scale along the bottom of the view; each label is the
+       lower bound of the color above it (stepped colors) */
+    .legend{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:8px 12px 6px;
+      display:flex;align-items:flex-start;gap:10px}
+    .legend .lt{font-size:11px;color:var(--ink3);white-space:nowrap;line-height:12px}
+    .legend ol{list-style:none;margin:0;padding:0;flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(27,minmax(0,1fr))}
+    .legend li{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .legend li i{height:12px;box-shadow:inset 0 1px 0 rgba(0,0,0,.12),inset 0 -1px 0 rgba(0,0,0,.12)}
+    .legend li:first-child i{border-radius:3px 0 0 3px}
+    .legend li:last-child i{border-radius:0 3px 3px 0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+    .legend li span{font-size:10px;line-height:1;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+    @media (max-width:1200px){ .legend li:not(.maj) span{visibility:hidden} }
+    .vtools{position:absolute;top:12px;right:12px;display:flex;gap:8px}
+    .vbtn[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
+    .vbtn[aria-pressed="true"]:hover{color:var(--on-sel)}
+    .vbtn{height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px solid var(--rule);
       background:var(--card);color:var(--ink2);font-size:12.5px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
     .vbtn:hover{border-color:var(--ink);color:var(--ink)}
 
@@ -255,13 +255,20 @@
 
     <section class="gscard viewcard" aria-label="3D-вид комнаты">
       <div id="view"></div>
-      <div class="legend" id="legend" aria-label="Шкала освещённости"><span class="lt">E, лк</span><ol></ol></div>
+      <div class="vtools">
+      <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" title="Показать или скрыть фиктивные цвета">
+        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><rect x="2.5" y="5" width="3.75" height="10" rx="1" fill="#0042ff"/><rect x="6.25" y="5" width="3.75" height="10" fill="#00ff00"/><rect x="10" y="5" width="3.75" height="10" fill="#ffff00"/><rect x="13.75" y="5" width="3.75" height="10" rx="1" fill="#ff0000"/></svg>
+        Фиктивные цвета</button>
       <button type="button" class="vbtn" id="reset" title="Вернуть исходный вид" aria-label="Вернуть исходный вид">
         <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg>
         Исходный вид</button>
+      </div>
       <div class="vbottom">
-        <div class="vstatus" id="hover"></div>
-        <div class="vhint"><b>ЛКМ</b> — вращение вокруг центра пола · <b>ПКМ</b> — сдвиг · <b>колесо</b> — масштаб</div>
+        <div class="vrow">
+          <div class="vstatus" id="hover"></div>
+          <div class="vhint"><b>ЛКМ</b> — вращение вокруг центра пола · <b>ПКМ</b> — сдвиг · <b>колесо</b> — масштаб</div>
+        </div>
+        <div class="legend" id="legend" aria-label="Шкала освещённости"><span class="lt">E, лк</span><ol></ol></div>
       </div>
     </section>
   </main>
@@ -294,7 +301,10 @@
     console.error(e);
   }
 
-  $('#legend ol').innerHTML = LEVELS.map((v, k) => `<li><i style="background:${COLORS_HEX[k]}"></i><span>${v.toLocaleString('ru-RU')}</span></li>`).join('');
+  // labels kept on narrow views (the others are hidden by CSS)
+  const MAJOR = new Set([0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
+  $('#legend ol').innerHTML = LEVELS.map((v, k) =>
+    `<li${MAJOR.has(v) ? ' class="maj"' : ''} title="${v.toLocaleString('ru-RU')}${k + 1 < LEVELS.length ? `…${LEVELS[k + 1].toLocaleString('ru-RU')}` : ' и выше'} лк"><i style="background:${COLORS_HEX[k]}"></i><span>${v.toLocaleString('ru-RU')}</span></li>`).join('');
 
   const row = (label, value) => `<div class="gstrow"><span>${label}</span><b>${value}</b></div>`;
   const checkList = (list) => list.map((c) =>
@@ -363,7 +373,15 @@
   }
   toggle($('#grid'), (on) => view?.setShowGrid(on));
   toggle($('#normals'), (on) => view?.setShowNormals(on));
-  toggle($('#plain'), (on) => { view?.setColorMode(on ? 'faces' : 'false'); $('#legend').hidden = on; });
+  // Color mode: false colors (button in the view) or neutral grey; the developer toggle shows face numbers.
+  let falseOn = true, faceColors = false;
+  function applyColorMode() {
+    const mode = faceColors ? 'faces' : falseOn ? 'false' : 'neutral';
+    view?.setColorMode(mode);
+    $('#legend').hidden = mode !== 'false';
+  }
+  toggle($('#falsecolors'), (on) => { falseOn = on; applyColorMode(); });
+  toggle($('#plain'), (on) => { faceColors = on; applyColorMode(); });
   $('#reset').addEventListener('click', () => view?.resetView());
 
   $('#themebtn').addEventListener('click', () => {

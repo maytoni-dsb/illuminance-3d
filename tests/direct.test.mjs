@@ -264,27 +264,44 @@ test('MATLAB: element-average direct illuminance (integral2 of the point formula
 // ---------------------------------------------------------------------------------------------
 // False-color scale
 
-test('colorscale: 26 fixed levels, stepped index, end colors outside 1…2000 lx', () => {
-  assert.equal(LEVELS.length, 26);
-  assert.deepEqual(LEVELS.slice(0, 8), [1, 2, 3, 4, 5, 6, 7, 10]);
-  assert.equal(LEVELS[25], 2000);
-  assert.equal(COLORS.length, 26);
-  assert.equal(COLORS_HEX.length, 26);
+test('colorscale: 27 fixed levels 0…2000 lx with the project palette', () => {
+  assert.equal(LEVELS.length, 27);
+  assert.deepEqual(LEVELS.slice(0, 9), [0, 1, 2, 3, 4, 5, 6, 7, 10]);
+  assert.equal(LEVELS[26], 2000);
+  for (let k = 1; k < 27; k++) assert.ok(LEVELS[k] > LEVELS[k - 1]);
+  assert.equal(COLORS.length, 27);
+  assert.equal(COLORS_HEX.length, 27);
   assert.ok(COLORS_HEX.every((c) => /^#[0-9a-f]{6}$/.test(c)));
-  assert.equal(new Set(COLORS_HEX).size, 26);
+  assert.equal(new Set(COLORS_HEX).size, 27);
+  // spot checks against the palette file
+  assert.equal(COLORS_HEX[0], '#000000');
+  assert.equal(COLORS_HEX[LEVELS.indexOf(20)], '#00ffff');
+  assert.equal(COLORS_HEX[LEVELS.indexOf(500)], '#ff8900');
+  assert.equal(COLORS_HEX[LEVELS.indexOf(1000)], '#ff9499');
+  assert.equal(COLORS_HEX[26], '#ffffff');
+  assert.deepEqual(COLORS[26], [1, 1, 1]);
+  // the added levels 1250, 1500 get lighter towards white, keeping red at full
+  const lum = (h) => [1, 3, 5].reduce((s, i) => s + parseInt(h.slice(i, i + 2), 16), 0);
+  for (const k of [24, 25, 26]) {
+    assert.ok(lum(COLORS_HEX[k]) > lum(COLORS_HEX[k - 1]));
+    assert.equal(COLORS_HEX[k].slice(1, 3), 'ff');
+  }
+});
+
+test('colorscale: stepped index; below 1 lx black, 2000 lx and above white', () => {
   assert.equal(levelIndex(0), 0);
   assert.equal(levelIndex(-5), 0);
   assert.equal(levelIndex(NaN), 0);
   assert.equal(levelIndex(0.99), 0);
-  assert.equal(levelIndex(1), 0);
-  assert.equal(levelIndex(1.999), 0);
-  assert.equal(levelIndex(2), 1);
-  assert.equal(levelIndex(9.99), 6);   // between 7 and 10 → color of 7
-  assert.equal(levelIndex(10), 7);
-  assert.equal(levelIndex(499.9), 18);
-  assert.equal(levelIndex(500), 19);
-  assert.equal(levelIndex(1999), 24);
-  assert.equal(levelIndex(2000), 25);
-  assert.equal(levelIndex(1e6), 25);
-  for (let k = 0; k < 26; k++) assert.equal(levelIndex(LEVELS[k]), k);
+  assert.equal(levelIndex(1), 1);
+  assert.equal(levelIndex(1.999), 1);
+  assert.equal(levelIndex(2), 2);
+  assert.equal(levelIndex(9.99), 7);   // between 7 and 10 → color of 7
+  assert.equal(levelIndex(10), 8);
+  assert.equal(levelIndex(499.9), 19);
+  assert.equal(levelIndex(500), 20);
+  assert.equal(levelIndex(1999), 25);
+  assert.equal(levelIndex(2000), 26);
+  assert.equal(levelIndex(1e6), 26);
+  for (let k = 0; k < 27; k++) assert.equal(levelIndex(LEVELS[k]), k);
 });

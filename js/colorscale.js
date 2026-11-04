@@ -1,19 +1,51 @@
 // False-color scale. Pure module: no DOM and no Three.js.
 // Spec, section "Фиктивные цвета" (false colors):
-//   - a fixed scale of 26 levels, the same for all faces, planes and projects;
+//   - a fixed scale of 27 levels (0…2000 lx), the same for all faces, planes and projects;
 //   - stepped colors: a value between levels k and k+1 gets color k, so the border between two
-//     colors coincides with an isoline; values below 1 lx and above 2000 lx get the end colors.
-// The final color of each level will be set later; until then a temporary palette is used
-// (the "Turbo" ramp, sampled evenly over the level index).
+//     colors coincides with an isoline; values below 0 get the first color, 2000 lx and above
+//     get the last one (white).
+// Colors 0…1000 lx are the project palette (file from the user, 4 Nov 2026); 1250, 1500 and
+// 2000 lx continue the pink ramp after 1000 lx towards white.
 
 /** Scale levels, lx. */
 export const LEVELS = Object.freeze([
-  1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500, 600, 750, 1000, 1250, 1500, 2000,
+  0, 1, 2, 3, 4, 5, 6, 7, 10, 15, 20, 30, 40, 50, 75, 100, 150, 200, 300, 400, 500, 600, 750, 1000, 1250, 1500, 2000,
 ]);
 
-/** Index of the color for value E: the largest k with LEVELS[k] ≤ E, clamped to 0…25. */
+/** Palette, one sRGB hex color per level. */
+export const COLORS_HEX = Object.freeze([
+  '#000000', // 0
+  '#3d0040', // 1
+  '#67003a', // 2
+  '#7e0085', // 3
+  '#873dff', // 4
+  '#992e9e', // 5
+  '#6f60ff', // 6
+  '#0042ff', // 7
+  '#3590ff', // 10
+  '#72a9ff', // 15
+  '#00ffff', // 20
+  '#00c4a8', // 30
+  '#15ffab', // 40
+  '#00ff00', // 50
+  '#73dc00', // 75
+  '#53df77', // 100
+  '#dfff53', // 150
+  '#ffff00', // 200
+  '#ffdd8a', // 300
+  '#ffb41c', // 400
+  '#ff8900', // 500
+  '#ff0000', // 600
+  '#ff5644', // 750
+  '#ff9499', // 1000
+  '#ffbabd', // 1250 — continues 750 → 1000 towards white
+  '#ffdcdd', // 1500 — pinkish white
+  '#ffffff', // 2000 and above — white
+]);
+
+/** Index of the color for value E: the largest k with LEVELS[k] ≤ E, clamped to 0…26. */
 export function levelIndex(E) {
-  if (!(E >= LEVELS[1])) return 0; // also NaN → 0
+  if (!(E >= LEVELS[1])) return 0; // also negative and NaN → 0
   let lo = 1, hi = LEVELS.length - 1;
   if (E >= LEVELS[hi]) return hi;
   while (hi - lo > 1) { // invariant: LEVELS[lo] ≤ E < LEVELS[hi]
@@ -23,21 +55,9 @@ export function levelIndex(E) {
   return lo;
 }
 
-/** Turbo colormap, polynomial approximation (Mikhailov, Google, 2019); t in 0…1 → sRGB 0…1. */
-function turbo(t) {
-  const r = 0.13572138 + t * (4.61539260 + t * (-42.66032258 + t * (132.13108234 + t * (-152.94239396 + t * 59.28637943))));
-  const g = 0.09140261 + t * (2.19418839 + t * (4.84296658 + t * (-14.18503333 + t * (4.27729857 + t * 2.82956604))));
-  const b = 0.10667330 + t * (12.64194608 + t * (-60.58204836 + t * (110.36276771 + t * (-89.90310912 + t * 27.34824973))));
-  const c = (x) => Math.min(1, Math.max(0, x));
-  return [c(r), c(g), c(b)];
-}
-
-/** Temporary palette: sRGB triplets 0…1, one per level. Trimmed ends avoid near-black and dark red. */
-export const COLORS = Object.freeze(LEVELS.map((_, k) => Object.freeze(turbo(0.06 + 0.88 * k / (LEVELS.length - 1)))));
-
-const hex2 = (x) => Math.round(255 * x).toString(16).padStart(2, '0');
-/** Palette as CSS hex strings. */
-export const COLORS_HEX = Object.freeze(COLORS.map((c) => `#${hex2(c[0])}${hex2(c[1])}${hex2(c[2])}`));
+/** Palette as sRGB triplets 0…1. */
+export const COLORS = Object.freeze(COLORS_HEX.map((h) =>
+  Object.freeze([1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255))));
 
 /** sRGB color (0…1) for value E. */
 export const colorOf = (E) => COLORS[levelIndex(E)];

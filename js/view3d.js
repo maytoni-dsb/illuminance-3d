@@ -198,8 +198,13 @@ export function createView(container, opts = {}) {
   let roomGroup = null;
   let lumGroup = null;     // luminaire markers
   let values = null;       // element values (lx) shown in false colors, or null
-  let colorMode = 'false'; // 'false' — false colors by `values`; 'faces' — placeholder colors by face number
+  // 'false' — false colors by `values`; 'neutral' — plain light grey faces;
+  // 'faces' — placeholder colors by face number (developer aid)
+  let colorMode = 'false';
   const fcMaterial = falseColorMaterial();
+  const neutralMaterial = new THREE.MeshLambertMaterial({
+    color: 0xe6e3dd, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
   let axes = null;         // { group, dirs: { X, Y, Z } }
   let showGrid = false, showNormals = false; // element grid and normals are developer aids, off by default
@@ -317,10 +322,12 @@ export function createView(container, opts = {}) {
   }
   let keepView = false;
 
-  /** Uses false colors when values are set and that mode is on; placeholder colors otherwise. */
+  /** False colors when values are set and that mode is on; neutral grey or placeholder colors otherwise. */
   function applyMaterials() {
-    const fc = colorMode === 'false' && values;
-    for (const p of faceParts) p.mesh.material = fc ? fcMaterial : p.mesh.userData.plainMaterial;
+    for (const p of faceParts) {
+      p.mesh.material = colorMode === 'faces' ? p.mesh.userData.plainMaterial
+        : colorMode === 'false' && values ? fcMaterial : neutralMaterial;
+    }
   }
 
   /**
@@ -531,7 +538,7 @@ export function createView(container, opts = {}) {
     selfCheck,
     setValues,
     setLuminaires,
-    /** 'false' — false colors (default); 'faces' — placeholder colors by face number. */
+    /** 'false' — false colors (default); 'neutral' — grey faces; 'faces' — placeholder colors by face number. */
     setColorMode(m) { colorMode = m; applyMaterials(); requestRender(); },
     setShowGrid(v) { showGrid = v; requestRender(); },
     setShowNormals(v) { showNormals = v; requestRender(); },
@@ -551,7 +558,7 @@ export function createView(container, opts = {}) {
       for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial;
       if (roomGroup) disposeTree(roomGroup);
       if (lumGroup) disposeTree(lumGroup);
-      fcMaterial.dispose();
+      fcMaterial.dispose(); neutralMaterial.dispose();
       if (axes) disposeTree(axes.group);
       renderer.dispose(); el.remove();
     },
