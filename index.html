@@ -77,12 +77,13 @@
       border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink2);cursor:pointer}
     .themebtn:hover{border-color:var(--ink);color:var(--ink)}
 
-    /* layout: inputs | 3D view | results (≥ 1280 px); inputs | view over results (900–1280 px);
-       one column below 900 px: view, inputs, results */
+    /* layout: inputs | 3D view | results (≥ 1280 px); inputs | view, results below both (900–1280 px);
+       one column below 900 px: view, inputs, results. Side panels are as tall as the 3D view and
+       scroll inside. */
     .work{flex:1 1 auto;min-height:0;display:grid;gap:16px;
       grid-template-columns:minmax(0,340px) minmax(0,1fr) minmax(0,320px);grid-template-areas:"form view results"}
     .gscard{background:var(--card);border:1px solid var(--rule);border-radius:12px}
-    .side{overflow-y:auto;min-height:0;max-height:100%;align-self:start;display:flex;flex-direction:column}
+    .side{overflow-y:auto;min-height:0;align-self:stretch;display:flex;flex-direction:column}
     .form{grid-area:form}
     .viewcard{grid-area:view}
     .results{grid-area:results}
@@ -191,15 +192,13 @@
 
     @media (max-width:1279.98px){
       .wrap{height:auto;min-height:100%}
-      .work{grid-template-columns:minmax(0,340px) minmax(0,1fr);grid-template-areas:"form view" "form results";
-        grid-template-rows:auto auto}
-      .viewcard{height:max(440px,calc(100vh - 120px))}
-      .side{max-height:none;overflow:visible}
-      .results{align-self:stretch}
+      .work{grid-template-columns:minmax(0,340px) minmax(0,1fr);grid-template-areas:"form view" "results results";
+        grid-template-rows:max(440px,calc(100vh - 120px)) auto}
+      .results{overflow:visible}
     }
     @media (max-width:900px){
-      .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "form" "results"}
-      .viewcard{height:62vh}
+      .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "form" "results";grid-template-rows:62vh auto auto}
+      .side{overflow:visible}
       .apptitle,.stagebadge{display:none}
       .themebtn{margin-left:auto}
       .vhint{display:none}
