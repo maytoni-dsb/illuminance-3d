@@ -102,7 +102,7 @@ false colors, plan view, initial view. The plan view is an orthographic camera f
 the orbit from straight above. The X/Y/Z axis indicator is drawn in its own small viewport in the
 lower left corner, above the legend.
 
-Stage 4 — reflected light (radiosity) and the realistic view:
+Stage 4 — reflected light (radiosity) and the realistic view (accepted 4 Nov 2026; `npm test` on Windows: 90 of 90):
 - `js/kernel.js`: the element → element form factors as six small tables instead of an N × N
   matrix — parallel faces by (|Δi|, |Δj|), perpendicular faces by the shift along the common edge and
   the two distances from it (stored as A·F, symmetric). Values are exact `rectToRect` factors, so
