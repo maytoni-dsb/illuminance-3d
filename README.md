@@ -26,8 +26,11 @@ changing anything in `js/`, run
 npm run stamp
 ```
 
-`npm test` fails while the stamps are out of date. Import maps do not apply inside Web Workers,
-so the stage 4 worker will need its own stamps.
+`npm test` fails while the stamps are out of date. Import maps do not apply inside Web Workers, so
+`js/worker.js` has no static imports: the page creates it from its stamped URL and sends it the import
+map, and the worker fetches every module by its stamped URL, rewrites the `'./name.js'` specifiers to
+object URLs of the loaded dependencies and imports the result. Relative imports between modules
+must therefore have the form `from './name.js'` (checked by `tests/stage4.test.mjs`).
 
 ## Tests
 
@@ -98,3 +101,30 @@ false colors, plan view, initial view. The plan view is an orthographic camera f
 (`fitPlan`, `panPlan`, `zoomPlan`, `planToOrbit` in `js/orbit.js`); the first rotation returns to
 the orbit from straight above. The X/Y/Z axis indicator is drawn in its own small viewport in the
 lower left corner, above the legend.
+
+Stage 4 — reflected light (radiosity) and the realistic view:
+- `js/kernel.js`: the element → element form factors as six small tables instead of an N × N
+  matrix — parallel faces by (|Δi|, |Δj|), perpendicular faces by the shift along the common edge and
+  the two distances from it (stored as A·F, symmetric). Values are exact `rectToRect` factors, so
+  Σ_j F_ij = 1 (to 6e-14) and reciprocity hold; the kernel equals the direct factor within 1e-11;
+- `js/solver.js`: Gauss–Seidel gathering E_ind,i = Σ_j F_ij ρ_j (E_dir,j + E_ind,j) until the largest
+  relative change is below ε = 1e-4, with a face-level coarse correction after every sweep (a constant
+  per face from a 6 × 6 system with exact face-to-face factors, which zeroes the area-weighted
+  residual of every face). The correction does not change the solution; it cuts ρ = 0.9 from 39 to 7
+  sweeps and makes the energy balance exact to rounding. Also `energyBalance` and `sumpner`;
+- `js/calc.js`: the whole calculation with the kernel cached per geometry, the direct component cached
+  per luminaire set and a warm start of the solver; MF is applied by the page, so MF needs no
+  recalculation. `js/worker.js` runs it in a Web Worker (main-thread fallback);
+- `js/tonemap.js` and the realistic view in `js/view3d.js`: luminance L = ρE/π, Ward's contrast-based
+  exposure from the log-average luminance of the whole room (never the visible part, so rotation does
+  not change it), a soft shoulder and the sRGB curve in the fragment shader; ±2 stops correction in
+  "Дополнительные настройки". The false-color button switches between false colors and this view;
+- the form has reflectances (ceiling, walls, floor); the results table shows total, direct and
+  reflected mean illuminance per face, and the face map can show any of the three.
+
+`js/checks4.js` is the on-page "Критерии этапа 4" panel (the exposure check renders the room from eight
+directions in `view3d.exposureCheck`); `tests/radiosity.test.mjs` and `tests/stage4.test.mjs` are the
+tests. `matlab/stage4_reference.m` assembles the full matrix pair by pair with `rect_to_rect.m` and
+solves (I − F R) E_ind = F R E_dir directly; its `stage4_reference.txt` goes to `tests/fixtures/`
+(tolerance 1e-9). Timing for 10 × 10 × 3 m (4176 elements, headless Chromium): kernel 0.3 s once per
+geometry, direct component 10 ms, solver 0.3 s (6 sweeps).

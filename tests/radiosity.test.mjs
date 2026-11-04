@@ -246,12 +246,15 @@ test('MATLAB reference: element E_dir and E_ind', { skip: !existsSync(fixture) &
     const s = solve(buildKernel(room), Edir, [r0, r1, r2, r3, r4, r5], { eps: 1e-14 });
     for (const r of rs) {
       const g = r[16];
-      wd = Math.max(wd, Math.abs(Edir[g] - r[17]) / r[17]);
+      if (r[17] > 0) wd = Math.max(wd, Math.abs(Edir[g] - r[17]) / r[17]);
+      else assert.ok(Math.abs(Edir[g]) < 1e-12, `E_dir of element ${g} is ${Edir[g]}, not 0`);
       if (r[18] > 0) wi = Math.max(wi, Math.abs(s.Eind[g] - r[18]) / r[18]);
+      else assert.ok(Math.abs(s.Eind[g]) < 1e-12, `E_ind of element ${g} is ${s.Eind[g]}, not 0`);
       count++;
     }
   }
   assert.ok(count > 100);
   assert.ok(wd < 1e-9, `E_dir: ${wd}`);
   assert.ok(wi < 1e-9, `E_ind: ${wi}`);
+  console.log(`MATLAB stage 4: ${count} elements, E_dir within ${wd.toExponential(1)}, E_ind within ${wi.toExponential(1)}`);
 });
