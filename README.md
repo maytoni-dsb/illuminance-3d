@@ -15,6 +15,20 @@ Then open http://localhost:8000. Opening `index.html` via `file://` does not wor
 refuse to load ES modules from the file system. Three.js 0.170.0 is loaded from jsDelivr
 through an import map, so an internet connection is required.
 
+## Module version stamps
+
+Modules are loaded without a bundler, so a browser could combine a fresh module with a cached old
+copy of another one. The import map in `index.html` therefore points every `./js/*.js` module to
+`./js/<name>.js?v=<content hash>`; relative imports between modules are redirected too. After
+changing anything in `js/`, run
+
+```
+npm run stamp
+```
+
+`npm test` fails while the stamps are out of date. Import maps do not apply inside Web Workers,
+so the stage 4 worker will need its own stamps.
+
 ## Tests
 
 ```
