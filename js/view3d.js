@@ -3,7 +3,10 @@
 // (x, y, z)three = (x, z, −y) — a −90° rotation about X, no reflection.
 // Strings shown in the UI (self-check results, labels) are in Russian.
 import * as THREE from 'three';
-import { createOrbit, rotate, zoom, zoomBy, pan, cameraPosition, anglesOf } from './orbit.js';
+import {
+  createOrbit, rotate, zoom, zoomBy, pan, cameraPosition, anglesOf,
+  fitPlan, panPlan, zoomPlan, zoomPlanBy, planToOrbit,
+} from './orbit.js';
 import { facePoint, faceVertexValues } from './geometry.js';
 import { LEVELS, COLORS } from './colorscale.js';
 
@@ -206,37 +209,42 @@ export function createView(container, opts = {}) {
     color: 0xe6e3dd, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
-  let axes = null;         // { group, dirs: { X, Y, Z } }
   let showGrid = false, showNormals = false; // element grid and normals are developer aids, off by default
   let edgeMaterial = null;
   let viewW = 1, viewH = 1;
   let viewTouched = false;  // true once the user has rotated, panned or zoomed since the last fit
 
-  function buildAxes(r) {
-    const len = 0.25 * Math.max(r.L, r.W, r.H) + 0.3;
+  /**
+   * Axis indicator (3ds Max-like): X, Y, Z arrows of unit length in their own scene, drawn in a
+   * small square in the lower left corner of the view. It turns with the camera only (no pan, no zoom).
+   */
+  function buildAxes() {
     const group = new THREE.Group();
     const dirs = {};
     const unit = { X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] };
     for (const k of ['X', 'Y', 'Z']) {
       const d = v3(toThree(unit[k]));
       dirs[k] = d.clone();
-      const arrow = new THREE.ArrowHelper(d, new THREE.Vector3(0, 0, 0), len, AXIS_COLORS[k], 0.12 * len, 0.06 * len);
-      arrow.line.material.depthTest = false; arrow.cone.material.depthTest = false;
-      arrow.renderOrder = 9;
+      const arrow = new THREE.ArrowHelper(d, new THREE.Vector3(0, 0, 0), 1, AXIS_COLORS[k], 0.3, 0.16);
       group.add(arrow);
       const s = textSprite(k, AXIS_COLORS[k]);
-      const sz = 0.14 * len;
+      const sz = 0.5;
       s.scale.set(sz * s.userData.aspect, sz, 1);
-      s.position.copy(d.clone().multiplyScalar(len * 1.12));
+      s.position.copy(d.clone().multiplyScalar(1.3));
       group.add(s);
     }
-    const o = textSprite('0', '#555');
-    const sz = 0.07 * len;
-    o.scale.set(sz * o.userData.aspect, sz, 1);
-    o.position.set(-0.05 * len, -0.05 * len, 0.05 * len);
-    group.add(o);
     return { group, dirs };
   }
+  const axes = buildAxes(); // { group, dirs: { X, Y, Z } }
+  const gizmoScene = new THREE.Scene();
+  gizmoScene.add(axes.group);
+  const gizmoCam = new THREE.OrthographicCamera(-1.55, 1.55, 1.55, -1.55, 0.1, 10);
+  const GIZMO_PX = 76;
+
+  // Plan view (orthographic, from above); null when the perspective orbit is active.
+  let plan = null;
+  const planCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 1000);
+  const activeCamera = () => (plan ? planCam : camera);
 
   /** Initial view direction: from above, past the corner (L, 0) of the room. */
   const DEFAULT_DIR = toThree([0.55, -1, 0.75]);
@@ -272,6 +280,44 @@ export function createView(container, opts = {}) {
     viewTouched = false;
   }
 
+  /** Overlay sizes from the page (buttons on top, status and legend below), CSS px. */
+  const insets = () => ({ top: 56, bottom: 24, side: 24, ...(opts.insets?.() ?? {}) });
+  /** Plan fit keeps clear of the status row and the axis indicator as well. */
+  const planInsets = () => { const i = insets(); return { ...i, bottom: i.planBottom ?? i.bottom + 40 }; };
+
+  /** Copies the plan state to the orthographic camera: looking down, room +Y up on screen. */
+  function applyPlan() {
+    const a = viewW / viewH;
+    planCam.left = -plan.half * a; planCam.right = plan.half * a;
+    planCam.top = plan.half; planCam.bottom = -plan.half;
+    const top = (room ? room.H : 3) + 1;
+    planCam.position.set(plan.cx, top + 1, plan.cz);
+    planCam.up.set(0, 0, -1);
+    planCam.lookAt(plan.cx, 0, plan.cz);
+    planCam.near = 0.01; planCam.far = top + 2;
+    planCam.updateProjectionMatrix();
+    planCam.updateMatrixWorld();
+  }
+
+  /** Switches to the plan view, fitted to the floor. */
+  function showPlan() {
+    if (!room) return;
+    plan = fitPlan(room, viewW, viewH, planInsets());
+    viewTouched = true;
+    opts.onPlanChange?.(true);
+    requestRender();
+  }
+
+  /** Leaves the plan for the orbit from straight above, keeping the image in place. */
+  function leavePlan() {
+    if (!plan) return;
+    const R = 0.5 * Math.hypot(room.L, room.W, room.H);
+    orbit = planToOrbit(plan, orbit.target, THREE.MathUtils.degToRad(camera.fov / 2), viewH,
+      { minDistance: orbit.minDistance, maxDistance: Math.max(orbit.maxDistance, 40 * R) });
+    plan = null;
+    opts.onPlanChange?.(false);
+  }
+
   /** Copies the orbit state to the Three.js camera; withShift applies the pan as a view offset. */
   function applyCamera(withShift = true) {
     const p = cameraPosition(orbit);
@@ -291,7 +337,6 @@ export function createView(container, opts = {}) {
   function setRoom(r) {
     for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial; // the shared false-color material outlives rooms
     if (roomGroup) { scene.remove(roomGroup); disposeTree(roomGroup); }
-    if (axes) { scene.remove(axes.group); disposeTree(axes.group); }
     room = r;
     roomGroup = new THREE.Group();
     const arrowLen = 0.12 * Math.min(r.L, r.W, r.H) + 0.1;
@@ -311,12 +356,11 @@ export function createView(container, opts = {}) {
     roomGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(box), edgeMaterial));
     box.dispose();
     scene.add(roomGroup);
-    axes = buildAxes(r);
-    scene.add(axes.group);
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); lumGroup = null; }
     values = null;
     applyMaterials();
     fitCamera(r, keepView); // first room: default view; later rooms keep the user's angles
+    if (plan) plan = fitPlan(r, viewW, viewH, planInsets());
     keepView = true;
     requestRender();
   }
@@ -363,7 +407,7 @@ export function createView(container, opts = {}) {
 
   /** Grid lines and normal arrows are shown only on faces whose front side faces the camera. */
   function updateVisibility() {
-    const cam = camera.position.toArray();
+    const cam = activeCamera().position.toArray();
     for (const p of faceParts) {
       const front = dot(p.normal, sub(cam, p.center)) > 0;
       p.grid.visible = showGrid && front;
@@ -379,9 +423,25 @@ export function createView(container, opts = {}) {
     requestAnimationFrame(() => {
       framePending = false;
       if (!orbit) return;
-      applyCamera();
+      if (plan) applyPlan(); else applyCamera();
       updateVisibility();
-      renderer.render(scene, camera);
+      const cam = activeCamera();
+      renderer.setViewport(0, 0, viewW, viewH);
+      renderer.render(scene, cam);
+      // axis indicator: same orientation as the view camera, its own square in the lower left corner
+      gizmoCam.quaternion.copy(cam.quaternion);
+      gizmoCam.position.set(0, 0, 5).applyQuaternion(cam.quaternion);
+      gizmoCam.updateMatrixWorld();
+      const gb = insets().bottom;
+      renderer.autoClear = false;
+      renderer.clearDepth();
+      renderer.setScissorTest(true);
+      renderer.setScissor(6, gb, GIZMO_PX, GIZMO_PX);
+      renderer.setViewport(6, gb, GIZMO_PX, GIZMO_PX);
+      renderer.render(gizmoScene, gizmoCam);
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, viewW, viewH);
+      renderer.autoClear = true;
     });
   }
 
@@ -416,13 +476,19 @@ export function createView(container, opts = {}) {
     if (pinch && pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      if (pinch.d > 0) zoomBy(orbit, d / pinch.d);
-      pan(orbit, mx - pinch.mx, my - pinch.my);
+      if (plan) {
+        if (pinch.d > 0) zoomPlanBy(plan, d / pinch.d);
+        panPlan(plan, mx - pinch.mx, my - pinch.my, viewH);
+      } else {
+        if (pinch.d > 0) zoomBy(orbit, d / pinch.d);
+        pan(orbit, mx - pinch.mx, my - pinch.my);
+      }
       pinch = { d, mx, my };
     } else if (dragMode === 'rotate') {
+      if (plan) leavePlan(); // the first rotation leaves the plan, starting from straight above
       rotate(orbit, dx, dy, viewH);
     } else if (dragMode === 'pan') {
-      pan(orbit, dx, dy);
+      if (plan) panPlan(plan, dx, dy, viewH); else pan(orbit, dx, dy);
     }
     requestRender();
   });
@@ -437,7 +503,7 @@ export function createView(container, opts = {}) {
     if (!orbit) return;
     e.preventDefault();
     const k = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 500 : 1; // lines / pages → px
-    zoom(orbit, e.deltaY * k);
+    if (plan) zoomPlan(plan, e.deltaY * k); else zoom(orbit, e.deltaY * k);
     viewTouched = true;
     requestRender();
   }, { passive: false });
@@ -449,7 +515,7 @@ export function createView(container, opts = {}) {
     if (!room || !opts.onHover) return;
     const rect = el.getBoundingClientRect();
     ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
-    raycaster.setFromCamera(ndc, camera);
+    raycaster.setFromCamera(ndc, activeCamera());
     const hit = raycaster.intersectObjects(faceParts.map((p) => p.mesh), false)[0];
     if (!hit) { opts.onHover(null); return; }
     const f = hit.object.userData.faceId;
@@ -469,6 +535,10 @@ export function createView(container, opts = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     if (room && orbit && !viewTouched) fitCamera(room, true); // untouched view: refit to the new size
+    if (plan && room) { // keep the plan's scale; refit only the free area
+      const f = fitPlan(room, w, h, planInsets());
+      plan.fitHalf = f.fitHalf;
+    }
     requestRender();
   }
   const ro = new ResizeObserver(resize);
@@ -542,7 +612,16 @@ export function createView(container, opts = {}) {
     setColorMode(m) { colorMode = m; applyMaterials(); requestRender(); },
     setShowGrid(v) { showGrid = v; requestRender(); },
     setShowNormals(v) { showNormals = v; requestRender(); },
-    resetView() { if (room) { fitCamera(room, false); requestRender(); } },
+    resetView() {
+      if (!room) return;
+      if (plan) { plan = null; opts.onPlanChange?.(false); }
+      fitCamera(room, false); requestRender();
+    },
+    /** Orthographic view from above, fitted to the floor; a rotation returns to the orbit. */
+    showPlan,
+    isPlan: () => !!plan,
+    /** Redraws after overlays changed size (legend shown or hidden). */
+    refresh() { requestRender(); },
     /** Re-reads theme colors from CSS (call after switching light/dark theme). */
     refreshTheme() {
       edgeMaterial?.color.copy(cssColor('--view-edge', '#444444'));
@@ -559,7 +638,7 @@ export function createView(container, opts = {}) {
       if (roomGroup) disposeTree(roomGroup);
       if (lumGroup) disposeTree(lumGroup);
       fcMaterial.dispose(); neutralMaterial.dispose();
-      if (axes) disposeTree(axes.group);
+      disposeTree(axes.group);
       renderer.dispose(); el.remove();
     },
   };

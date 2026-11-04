@@ -67,10 +67,16 @@
       border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink2);cursor:pointer}
     .themebtn:hover{border-color:var(--ink);color:var(--ink)}
 
-    /* layout: form on the left, 3D view fills the rest */
-    .work{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:16px}
+    /* layout: inputs | 3D view | results (≥ 1280 px); inputs | view over results (900–1280 px);
+       one column below 900 px: view, inputs, results */
+    .work{flex:1 1 auto;min-height:0;display:grid;gap:16px;
+      grid-template-columns:minmax(0,340px) minmax(0,1fr) minmax(0,320px);grid-template-areas:"form view results"}
     .gscard{background:var(--card);border:1px solid var(--rule);border-radius:12px}
-    .form{overflow-y:auto;min-height:0;max-height:100%;align-self:start;display:flex;flex-direction:column}
+    .side{overflow-y:auto;min-height:0;max-height:100%;align-self:start;display:flex;flex-direction:column}
+    .form{grid-area:form}
+    .viewcard{grid-area:view}
+    .results{grid-area:results}
+    .fsec.compact{padding:16px 20px 18px}
     .fsec{padding:20px 26px 22px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:12px}
     .fsec:first-child{border-top:0}
     .shd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
@@ -126,15 +132,16 @@
     .checks small{color:var(--ink3);font-size:12px}
 
     /* 3D view */
-    .viewcard{position:relative;overflow:hidden;min-height:0;background:var(--room-bg)}
+    .viewcard{position:relative;overflow:hidden;min-height:0;background:var(--room-bg);container:view / inline-size}
     #view{position:absolute;inset:0}
     #view canvas{display:block;width:100%;height:100%;cursor:grab}
     #view canvas:active{cursor:grabbing}
     .vbottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-    .vrow{display:flex;align-items:flex-end;gap:12px;min-height:0}
+    .vrow{display:flex;align-items:flex-end;gap:12px;min-height:32px;padding-left:84px}
     .vstatus{background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:6px 12px;font-size:12px;
       font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .vstatus:empty{display:none}
+    .vstatus:not(:empty) + .vhint{visibility:hidden}
     .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
     .vhint b{font-weight:600;color:var(--ink3)}
     .fatal{padding:24px;color:var(--err)}
@@ -150,13 +157,21 @@
     .legend li:first-child i{border-radius:3px 0 0 3px}
     .legend li:last-child i{border-radius:0 3px 3px 0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
     .legend li span{font-size:10px;line-height:1;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
-    @media (max-width:1200px){ .legend li:not(.maj) span{visibility:hidden} }
-    .vtools{position:absolute;top:12px;right:12px;display:flex;gap:8px}
+    /* fewer labels when the view is narrow (container query on the view card) */
+    @container view (max-width:900px){ .legend li:not(.maj) span{visibility:hidden} }
+    @container view (max-width:480px){ .legend li:not(.key) span{visibility:hidden} }
+    .vtools{position:absolute;top:12px;right:12px;display:flex;gap:6px}
     .vbtn[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
     .vbtn[aria-pressed="true"]:hover{color:var(--on-sel)}
-    .vbtn{height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px solid var(--rule);
-      background:var(--card);color:var(--ink2);font-size:12.5px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+    .vbtn{position:relative;height:34px;width:34px;padding:0;border-radius:999px;border:1px solid var(--rule);
+      background:var(--card);color:var(--ink2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
     .vbtn:hover{border-color:var(--ink);color:var(--ink)}
+    /* tooltip: shown at once on hover and keyboard focus (the native title waits about a second) */
+    .vbtn[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);right:0;white-space:nowrap;
+      background:var(--sel);color:var(--on-sel);font-size:12px;line-height:1;padding:6px 9px;border-radius:6px;
+      pointer-events:none;opacity:0;transform:translateY(-2px);transition:opacity .08s,transform .08s;z-index:5}
+    .vbtn[data-tip]:hover::after,.vbtn[data-tip]:focus-visible::after{opacity:1;transform:none}
+    @media (hover:none){ .vbtn[data-tip]::after{display:none} }
 
     /* developer details */
     .dev summary{cursor:pointer;font-size:12px;color:var(--ink3)}
@@ -164,10 +179,17 @@
     .devbody{display:flex;flex-direction:column;gap:12px;margin-top:14px}
     .devbody .shd{font-size:13px;margin-top:6px}
 
+    @media (max-width:1279.98px){
+      .wrap{height:auto;min-height:100%}
+      .work{grid-template-columns:minmax(0,340px) minmax(0,1fr);grid-template-areas:"form view" "form results";
+        grid-template-rows:auto auto}
+      .viewcard{height:max(440px,calc(100vh - 120px))}
+      .side{max-height:none;overflow:visible}
+      .results{align-self:stretch}
+    }
     @media (max-width:900px){
-      .wrap{height:auto}
-      .work{grid-template-columns:minmax(0,1fr)}
-      .viewcard{order:-1;height:62vh}
+      .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "form" "results"}
+      .viewcard{height:62vh}
       .apptitle,.stagebadge{display:none}
       .themebtn{margin-left:auto}
       .vhint{display:none}
@@ -196,7 +218,7 @@
   </header>
 
   <main class="work">
-    <section class="gscard form" aria-label="Исходные данные">
+    <section class="gscard side form" aria-label="Исходные данные">
       <form id="form" autocomplete="off" onsubmit="return false">
         <div class="fsec">
           <div class="shd">Помещение</div>
@@ -214,6 +236,28 @@
         </div>
       </form>
 
+    </section>
+
+    <section class="gscard viewcard" aria-label="3D-вид комнаты">
+      <div id="view"></div>
+      <div class="vtools">
+        <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="3.5" height="12" rx="1" fill="#0042ff"/><rect x="6.5" y="4" width="3.5" height="12" fill="#00ff00"/><rect x="10" y="4" width="3.5" height="12" fill="#ffff00"/><rect x="13.5" y="4" width="3.5" height="12" rx="1" fill="#ff0000"/></svg></button>
+        <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="Вид сверху" data-tip="Вид сверху (план)">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4.5" width="14" height="11" rx="1"/><g fill="currentColor" stroke="none"><rect x="5.6" y="7.2" width="2" height="2"/><rect x="9" y="7.2" width="2" height="2"/><rect x="12.4" y="7.2" width="2" height="2"/><rect x="5.6" y="10.8" width="2" height="2"/><rect x="9" y="10.8" width="2" height="2"/><rect x="12.4" y="10.8" width="2" height="2"/></g></svg></button>
+        <button type="button" class="vbtn" id="reset" aria-label="Исходный вид" data-tip="Исходный вид">
+          <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
+      </div>
+      <div class="vbottom">
+        <div class="vrow">
+          <div class="vstatus" id="hover"></div>
+          <div class="vhint"><b>ЛКМ</b> — вращение вокруг центра пола · <b>ПКМ</b> — сдвиг · <b>колесо</b> — масштаб</div>
+        </div>
+        <div class="legend" id="legend" aria-label="Шкала освещённости"><span class="lt">E, лк</span><ol></ol></div>
+      </div>
+    </section>
+
+    <section class="gscard side results" aria-label="Результаты">
       <div class="fsec">
         <div class="shd">Прямая освещённость</div>
         <table class="htable" id="results">
@@ -252,25 +296,6 @@
         </details>
       </div>
     </section>
-
-    <section class="gscard viewcard" aria-label="3D-вид комнаты">
-      <div id="view"></div>
-      <div class="vtools">
-      <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" title="Показать или скрыть фиктивные цвета">
-        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><rect x="2.5" y="5" width="3.75" height="10" rx="1" fill="#0042ff"/><rect x="6.25" y="5" width="3.75" height="10" fill="#00ff00"/><rect x="10" y="5" width="3.75" height="10" fill="#ffff00"/><rect x="13.75" y="5" width="3.75" height="10" rx="1" fill="#ff0000"/></svg>
-        Фиктивные цвета</button>
-      <button type="button" class="vbtn" id="reset" title="Вернуть исходный вид" aria-label="Вернуть исходный вид">
-        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg>
-        Исходный вид</button>
-      </div>
-      <div class="vbottom">
-        <div class="vrow">
-          <div class="vstatus" id="hover"></div>
-          <div class="vhint"><b>ЛКМ</b> — вращение вокруг центра пола · <b>ПКМ</b> — сдвиг · <b>колесо</b> — масштаб</div>
-        </div>
-        <div class="legend" id="legend" aria-label="Шкала освещённости"><span class="lt">E, лк</span><ol></ol></div>
-      </div>
-    </section>
   </main>
 </div>
 
@@ -290,6 +315,14 @@
     const mod = await import('./js/view3d.js');
     FACE_COLORS = mod.FACE_COLORS;
     view = mod.createView($('#view'), {
+      // overlays: the axis indicator and the plan fit keep clear of the legend and the status row
+      insets() {
+        const card = $('.viewcard').getBoundingClientRect();
+        const lg = $('#legend');
+        const bottom = lg.hidden ? 12 : card.bottom - lg.getBoundingClientRect().top + 8;
+        return { top: 56, bottom, planBottom: bottom + 40, side: 24 };
+      },
+      onPlanChange(on) { $('#plan').setAttribute('aria-pressed', String(on)); },
       onHover(info) {
         $('#hover').textContent = info
           ? `${info.name}${info.value != null ? ` · E = ${formatNumber(info.value, 0)} лк` : ''} · элемент i ${info.i}, j ${info.j}`
@@ -303,8 +336,9 @@
 
   // labels kept on narrow views (the others are hidden by CSS)
   const MAJOR = new Set([0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
+  const KEY = new Set([0, 10, 100, 1000]);
   $('#legend ol').innerHTML = LEVELS.map((v, k) =>
-    `<li${MAJOR.has(v) ? ' class="maj"' : ''} title="${v.toLocaleString('ru-RU')}${k + 1 < LEVELS.length ? `…${LEVELS[k + 1].toLocaleString('ru-RU')}` : ' и выше'} лк"><i style="background:${COLORS_HEX[k]}"></i><span>${v.toLocaleString('ru-RU')}</span></li>`).join('');
+    `<li class="${MAJOR.has(v) ? 'maj' : ''}${KEY.has(v) ? ' key' : ''}" title="${v.toLocaleString('ru-RU')}${k + 1 < LEVELS.length ? `…${LEVELS[k + 1].toLocaleString('ru-RU')}` : ' и выше'} лк"><i style="background:${COLORS_HEX[k]}"></i><span>${v.toLocaleString('ru-RU')}</span></li>`).join('');
 
   const row = (label, value) => `<div class="gstrow"><span>${label}</span><b>${value}</b></div>`;
   const checkList = (list) => list.map((c) =>
@@ -379,10 +413,12 @@
     const mode = faceColors ? 'faces' : falseOn ? 'false' : 'neutral';
     view?.setColorMode(mode);
     $('#legend').hidden = mode !== 'false';
+    view?.refresh();
   }
   toggle($('#falsecolors'), (on) => { falseOn = on; applyColorMode(); });
   toggle($('#plain'), (on) => { faceColors = on; applyColorMode(); });
   $('#reset').addEventListener('click', () => view?.resetView());
+  $('#plan').addEventListener('click', () => { if (view?.isPlan()) view.resetView(); else view?.showPlan(); });
 
   $('#themebtn').addEventListener('click', () => {
     const r = document.documentElement;

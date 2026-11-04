@@ -77,3 +77,10 @@ The form has luminaire inputs, photometry, f_up and MF (results are E = MF · E�
 they are in `tests/fixtures/`. MATLAB R2025b comparison (4 Nov 2026): 1256 point cases agree within
 1.2e-13 relative, 400 element averages within 7.5e-12 (the accuracy of integral2 itself: MATLAB's
 integral2 and the form-factor route differ by 7.8e-12).
+
+Layout: inputs | 3D view | results (three columns from 1280 px; results under the view at
+900–1280 px; one column below 900 px). The view buttons are icons with instant tooltips:
+false colors, plan view, initial view. The plan view is an orthographic camera from above
+(`fitPlan`, `panPlan`, `zoomPlan`, `planToOrbit` in `js/orbit.js`); the first rotation returns to
+the orbit from straight above. The X/Y/Z axis indicator is drawn in its own small viewport in the
+lower left corner, above the legend.

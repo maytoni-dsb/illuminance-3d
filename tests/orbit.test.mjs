@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createOrbit, rotate, zoom, zoomBy, pan, cameraPosition, direction, anglesOf } from '../js/orbit.js';
+import { fitPlan, panPlan, zoomPlan, zoomPlanBy, planToOrbit } from '../js/orbit.js';
 
 const near = (a, b, tol = 1e-12) => Math.abs(a - b) <= tol;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
@@ -69,4 +70,55 @@ test('anglesOf inverts direction', () => {
   const s = make();
   const { azimuth, elevation } = anglesOf(direction(s).map((x) => 7 * x));
   assert.ok(near(azimuth, 0.5) && near(elevation, 0.6));
+});
+
+// ---------------------------------------------------------------------------------------------
+// Plan view (orthographic, from above)
+
+test('fitPlan: the floor fits the free area and its centre is the centre of that area', () => {
+  const vw = 800, vh = 600, ins = { top: 56, bottom: 100, side: 24 };
+  for (const r of [{ L: 6, W: 4 }, { L: 4, W: 10 }, { L: 50, W: 1 }]) {
+    const s = fitPlan(r, vw, vh, ins);
+    const px = vh / (2 * s.half);                         // px per metre
+    const availW = vw - 48, availH = vh - 156;
+    assert.ok(r.L * px <= availW + 1e-9 && r.W * px <= availH + 1e-9);
+    assert.ok(Math.abs(r.L * px - availW) < 1e-9 || Math.abs(r.W * px - availH) < 1e-9); // touches one side
+    // floor centre (L/2, −W/2 in Three.js) on screen, px from the top-left corner
+    const sx = vw / 2 + (r.L / 2 - s.cx) * px, sy = vh / 2 + (-r.W / 2 - s.cz) * px;
+    assert.ok(Math.abs(sx - vw / 2) < 1e-9);
+    assert.ok(Math.abs(sy - (56 + availH / 2)) < 1e-9);
+    assert.equal(s.fitHalf, s.half);
+  }
+});
+
+test('panPlan: the image follows the pointer; zoomPlan keeps the centre and is limited', () => {
+  const s = fitPlan({ L: 6, W: 4 }, 800, 600);
+  const px = 600 / (2 * s.half);
+  const cx = s.cx, cz = s.cz;
+  panPlan(s, 30, -20, 600);                              // drag right and up
+  assert.ok(Math.abs(s.cx - (cx - 30 / px)) < 1e-12);    // the view centre moves left: content right
+  assert.ok(Math.abs(s.cz - (cz + 20 / px)) < 1e-12);    // screen up is −Z: content moves up
+  const h = s.half;
+  zoomPlan(s, -100);
+  assert.ok(s.half < h && s.cx === cx - 30 / px);
+  zoomPlanBy(s, 2);
+  for (let i = 0; i < 200; i++) zoomPlan(s, -100);
+  assert.ok(Math.abs(s.half - 0.02 * s.fitHalf) < 1e-12);
+  for (let i = 0; i < 400; i++) zoomPlan(s, 100);
+  assert.ok(Math.abs(s.half - 20 * s.fitHalf) < 1e-9);
+});
+
+test('planToOrbit: from straight above, room +Y up on screen, same floor scale and position', () => {
+  const s = fitPlan({ L: 6, W: 4 }, 800, 600, { top: 56, bottom: 100 });
+  panPlan(s, 40, 25, 600);
+  const target = [3, 0, -2], vHalf = 20 * Math.PI / 180;
+  const o = planToOrbit(s, target, vHalf, 600, { minDistance: 0.1, maxDistance: 1000 });
+  const d = direction(o);
+  assert.ok(d[1] > 0.999);                                // looking down
+  assert.ok(Math.abs(d[0]) < 1e-12 && d[2] > 0);          // camera slightly toward +Z: screen up is −Z (room +Y)
+  // the pivot (floor centre) sits where the plan shows it, at the same px per metre
+  const px = 600 / (2 * s.half);
+  assert.ok(Math.abs(600 / (2 * o.distance * Math.tan(vHalf)) - px) < 1e-9);
+  assert.ok(Math.abs(o.shiftX - (target[0] - s.cx) * px) < 1e-9);
+  assert.ok(Math.abs(o.shiftY - (target[2] - s.cz) * px) < 1e-9);
 });
