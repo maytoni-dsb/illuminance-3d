@@ -125,6 +125,7 @@ Stage 4 — reflected light (radiosity) and the realistic view:
 `js/checks4.js` is the on-page "Критерии этапа 4" panel (the exposure check renders the room from eight
 directions in `view3d.exposureCheck`); `tests/radiosity.test.mjs` and `tests/stage4.test.mjs` are the
 tests. `matlab/stage4_reference.m` assembles the full matrix pair by pair with `rect_to_rect.m` and
-solves (I − F R) E_ind = F R E_dir directly; its `stage4_reference.txt` goes to `tests/fixtures/`
-(tolerance 1e-9). Timing for 10 × 10 × 3 m (4176 elements, headless Chromium): kernel 0.3 s once per
+solves (I − F R) E_ind = F R E_dir directly; its `stage4_reference.txt` is in `tests/fixtures/`
+(tolerance 1e-9). MATLAB R2025b comparison (4 Nov 2026): 1352 elements in four rooms, E_dir within
+2.4e-15 and E_ind within 1.0e-13 relative. Timing for 10 × 10 × 3 m (4176 elements, headless Chromium): kernel 0.3 s once per
 geometry, direct component 10 ms, solver 0.3 s (6 sweeps).
