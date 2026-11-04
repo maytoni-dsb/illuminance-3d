@@ -18,6 +18,9 @@ export const PARAMS = Object.freeze([
   { key: 'L', group: 'room', label: 'Длина', sym: 'L', unit: 'м', def: 6, min: 1, max: 50 },
   { key: 'W', group: 'room', label: 'Ширина', sym: 'W', unit: 'м', def: 4, min: 1, max: 50 },
   { key: 'H', group: 'room', label: 'Высота', sym: 'H', unit: 'м', def: 3, min: 2, max: 20 },
+  { key: 'rhoC', group: 'refl', label: 'Потолок', sym: 'ρ<sub>1</sub>', unit: '', def: 0.7, min: 0, max: 0.9 },
+  { key: 'rhoW', group: 'refl', label: 'Стены', sym: 'ρ<sub>2…5</sub>', unit: '', def: 0.5, min: 0, max: 0.9 },
+  { key: 'rhoF', group: 'refl', label: 'Пол', sym: 'ρ<sub>0</sub>', unit: '', def: 0.2, min: 0, max: 0.9 },
   { key: 'nx', group: 'lum', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true },
   { key: 'ny', group: 'lum', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true },
   { key: 'flux', group: 'lum', label: 'Поток', sym: 'Φ', unit: 'лм', def: 4000, gt: 0, max: 1e6 },
@@ -51,6 +54,9 @@ export function formatNumber(x, digits = 3) {
   if (!Number.isFinite(x)) return '—';
   return String(Number(x.toFixed(digits))).replace('.', ',');
 }
+
+/** Reflectances of faces 0…5 (floor, ceiling, four walls) from form values. */
+export const faceRho = (v) => [v.rhoF, v.rhoC, v.rhoW, v.rhoW, v.rhoW, v.rhoW];
 
 /** Defaults of all parameters (numbers and choices). */
 export const DEFAULTS = Object.freeze(Object.fromEntries(PARAMS.map((p) => [p.key, p.def])));
@@ -92,7 +98,7 @@ export function validateParams(raw) {
 
 /**
  * Builds the form fields and calls onChange(values) on every valid change.
- * Fields go to the elements marked data-group="room" | "lum" | "phot" | "maint" inside root.
+ * Fields go to the elements marked data-group="room" | "refl" | "lum" | "phot" | "maint" inside root.
  * Invalid input is flagged and ignored; the last valid values stay in effect.
  * @param {HTMLElement} root
  * @param {(values: Record<string, number|string>) => void} onChange

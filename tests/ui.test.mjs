@@ -1,7 +1,7 @@
 // Form value validation tests (no DOM).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PARAMS, DEFAULTS, parseNumber, formatNumber, validateParams } from '../js/ui.js';
+import { PARAMS, DEFAULTS, parseNumber, formatNumber, validateParams, faceRho } from '../js/ui.js';
 
 test('parseNumber: comma, dot, spaces, garbage', () => {
   assert.equal(parseNumber('0,25'), 0.25);
@@ -69,4 +69,12 @@ test('validateParams: f_up is checked only for the direct-indirect model; file i
   assert.equal(r.values.fUp, 1);
   assert.ok(validateParams(raw({ phot: 'file' })).errors.phot);
   assert.ok(validateParams(raw({ phot: 'laser' })).errors.phot);
+});
+
+test('validateParams: reflectances 0…0.9 with the spec defaults; faceRho orders them by face', () => {
+  assert.deepEqual([DEFAULTS.rhoC, DEFAULTS.rhoW, DEFAULTS.rhoF], [0.7, 0.5, 0.2]);
+  assert.deepEqual(faceRho(DEFAULTS), [0.2, 0.7, 0.5, 0.5, 0.5, 0.5]);
+  assert.ok(validateParams(raw({ rhoC: '0,9', rhoW: '0', rhoF: '0' })).ok);
+  const r = validateParams(raw({ rhoC: '0,95', rhoW: '-0,1', rhoF: '1' }));
+  assert.deepEqual(Object.keys(r.errors).sort(), ['rhoC', 'rhoF', 'rhoW']);
 });

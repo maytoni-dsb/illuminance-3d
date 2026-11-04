@@ -12,8 +12,10 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "./js/calc.js": "./js/calc.js?v=8d70eeae",
       "./js/checks2.js": "./js/checks2.js?v=bec00f91",
       "./js/checks3.js": "./js/checks3.js?v=a22258ae",
+      "./js/checks4.js": "./js/checks4.js?v=1b36670e",
       "./js/colorscale.js": "./js/colorscale.js?v=85c6fa84",
       "./js/direct.js": "./js/direct.js?v=e912443d",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
@@ -22,8 +24,10 @@
       "./js/orbit.js": "./js/orbit.js?v=264941e1",
       "./js/photometry.js": "./js/photometry.js?v=ee2b712a",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
-      "./js/ui.js": "./js/ui.js?v=7a9b86e9",
-      "./js/view3d.js": "./js/view3d.js?v=5de77bbf"
+      "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
+      "./js/ui.js": "./js/ui.js?v=c20ba6fd",
+      "./js/view3d.js": "./js/view3d.js?v=7fc7a468",
+      "./js/worker.js": "./js/worker.js?v=ab03bae2"
     }
   }
   </script>
@@ -94,6 +98,7 @@
     .fsec:first-child{border-top:0}
     .shd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
     .gshint{font-size:12px;color:var(--ink3);line-height:1.4}
+    .fsub{font-size:12px;font-weight:600;color:var(--ink2);margin-top:4px}
     .gslink{border:0;background:none;padding:0;color:var(--accent);font-size:12.5px;cursor:pointer;
       text-decoration:underline;text-underline-offset:2px;align-self:flex-start}
     .gslink:hover{color:var(--accent-hov)}
@@ -158,6 +163,19 @@
     .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
     .vhint b{font-weight:600;color:var(--ink3)}
     .fatal{padding:24px;color:var(--err)}
+    /* calculation in progress: a pill in the upper left corner of the view */
+    .vbusy{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:8px;background:var(--card);
+      border:1px solid var(--rule);border-radius:999px;padding:7px 12px;font-size:12px;color:var(--ink2);pointer-events:none;
+      max-width:calc(100% - 160px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vbusy::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;border:2px solid var(--accent-soft);
+      border-top-color:var(--accent);animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion:reduce){ .vbusy::before{animation:none} }
+    .vbusy.err{color:var(--err)} .vbusy.err::before{display:none}
+    /* exposure slider (extra settings) */
+    .range{display:flex;align-items:center;gap:10px;font-size:12.5px}
+    .range input{flex:1 1 auto;min-width:0;accent-color:var(--accent)}
+    .range output{min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
 
     /* false-color legend: fixed 27-level scale along the bottom of the view; each label is the
        lower bound of the color above it (stepped colors) */
@@ -224,7 +242,7 @@
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle">Расчёт освещения<br>помещения</span>
-    <span class="stagebadge">Этап 3 · прямая составляющая</span>
+    <span class="stagebadge">Этап 4 · отражённый свет</span>
     <button type="button" class="themebtn" id="themebtn" title="Светлая или тёмная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
   </header>
 
@@ -234,6 +252,8 @@
         <div class="fsec">
           <div class="shd">Помещение</div>
           <div class="fgrid" data-group="room" style="--cols:3"></div>
+          <div class="fsub">Коэффициенты отражения</div>
+          <div class="fgrid" data-group="refl" style="--cols:3"></div>
         </div>
         <div class="fsec">
           <div class="shd">Светильники</div>
@@ -251,6 +271,7 @@
 
     <section class="gscard viewcard" aria-label="3D-вид комнаты">
       <div id="view"></div>
+      <div class="vbusy" id="busy" hidden>Расчёт…</div>
       <div class="vtools">
         <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="3.5" height="12" rx="1" fill="#0042ff"/><rect x="6.5" y="4" width="3.5" height="12" fill="#00ff00"/><rect x="10" y="4" width="3.5" height="12" fill="#ffff00"/><rect x="13.5" y="4" width="3.5" height="12" rx="1" fill="#ff0000"/></svg></button>
@@ -270,12 +291,30 @@
 
     <section class="gscard side results" aria-label="Результаты">
       <div class="fsec">
-        <div class="shd">Прямая освещённость</div>
+        <div class="shd">Освещённость граней</div>
         <table class="htable" id="results">
-          <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Поток, лм</th></tr></thead>
+          <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Прямая</th><th>Отраж.</th></tr></thead>
           <tbody></tbody>
         </table>
-        <div class="gshint">Только свет, пришедший прямо от светильников; отражённый появится на следующем этапе.</div>
+        <div class="gshint" id="mfnote"></div>
+        <div class="shd" style="font-size:13px;margin-top:4px">Карта на гранях</div>
+        <div class="gschips" role="radiogroup" aria-label="Карта на гранях" id="mapmode">
+          <button type="button" class="gschipb" role="radio" data-v="total" aria-pressed="true" aria-checked="true">Полная</button>
+          <button type="button" class="gschipb" role="radio" data-v="direct" aria-pressed="false" aria-checked="false">Прямая</button>
+          <button type="button" class="gschipb" role="radio" data-v="indirect" aria-pressed="false" aria-checked="false">Отражённая</button>
+        </div>
+        <div class="gshint">Без фиктивных цветов (кнопка на 3D-виде) комната показывается в реалистичном виде: яркость L = ρE/π, экспозиция подбирается автоматически.</div>
+      </div>
+
+      <div class="fsec">
+        <details class="dev" id="extra">
+          <summary>Дополнительные настройки</summary>
+          <div class="devbody">
+            <label class="range" for="stops"><span>Поправка экспозиции</span>
+              <input type="range" id="stops" min="-2" max="2" step="0.5" value="0"><output id="stopsout">0 ст.</output></label>
+            <div class="gshint">Для реалистичного вида: ±2 ступени от автоматической экспозиции.</div>
+          </div>
+        </details>
       </div>
 
       <!-- Developer details: mesh, view toggles and stage acceptance checks; collapsed by default. -->
@@ -303,6 +342,8 @@
             <ul class="checks" id="checks2"></ul>
             <div class="shd">Критерии этапа 3</div>
             <ul class="checks" id="checks3"></ul>
+            <div class="shd">Критерии этапа 4</div>
+            <ul class="checks" id="checks4"></ul>
           </div>
         </details>
       </div>
@@ -312,11 +353,10 @@
 
 <script type="module">
   import { createRoom, autoStep } from './js/geometry.js';
-  import { initForm, formatNumber } from './js/ui.js';
+  import { initForm, formatNumber, faceRho } from './js/ui.js';
   import { stage2Checks } from './js/checks2.js';
-  import { stage3Checks } from './js/checks3.js';
-  import { createPhotometry, luminaireGrid } from './js/photometry.js';
-  import { elementDirect, faceFlux, faceAverages } from './js/direct.js';
+  import { faceAverages } from './js/direct.js';
+  import { luminance, exposure } from './js/tonemap.js';
   import { LEVELS, COLORS_HEX } from './js/colorscale.js';
 
   const $ = (s) => document.querySelector(s);
@@ -335,9 +375,13 @@
       },
       onPlanChange(on) { $('#plan').setAttribute('aria-pressed', String(on)); },
       onHover(info) {
-        $('#hover').textContent = info
-          ? `${info.name}${info.value != null ? ` · E = ${formatNumber(info.value, 0)} лк` : ''} · элемент i ${info.i}, j ${info.j}`
-          : '';
+        if (!info) { $('#hover').textContent = ''; return; }
+        const E = info.value != null && shown ? shown.E[info.g] : null;
+        const parts = [info.name];
+        if (E != null) parts.push(`E = ${formatNumber(E, 0)} лк`);
+        if (info.mode === 'real' && shown) parts.push(`L = ${formatNumber(shown.L[info.g], 1)} кд/м²`);
+        parts.push(`элемент i ${info.i}, j ${info.j}`);
+        $('#hover').textContent = parts.join(' · ');
       },
     });
   } catch (e) {
@@ -354,11 +398,78 @@
   const row = (label, value) => `<div class="gstrow"><span>${label}</span><b>${value}</b></div>`;
   const checkList = (list) => list.map((c) =>
     `<li class="${c.ok ? 'ok' : 'bad'}"><span>${c.name}</span><small>${c.detail}</small></li>`).join('');
+  const ms = (x) => `${formatNumber(x, 0)} мс`;
 
-  let lastRoomKey = '';
-  let room = null;
+  // ---- calculation in a Web Worker (js/worker.js); main-thread fallback if workers fail ----
+  // The worker gets the page's import map with absolute stamped URLs and loads every module by it.
+  const imports = Object.fromEntries(Object.entries(
+    JSON.parse(document.querySelector('script[type="importmap"]').textContent).imports,
+  ).map(([k, v]) => [k, new URL(v, document.baseURI).href]));
+  let worker = null, mainCalc = null;
+  let jobId = 0, busy = false, pending = null;
+
+  async function useMainThread(reason) {
+    console.warn('Calculation runs on the main thread:', reason);
+    worker?.terminate(); worker = null;
+    const { createCalc } = await import('./js/calc.js');
+    mainCalc = createCalc();
+  }
+  try {
+    worker = new Worker(import.meta.resolve('./js/worker.js'), { type: 'module' });
+    worker.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'result') onResult(m.id, m.result);
+      else if (m.type === 'error') {
+        console.error(m.message);
+        if (m.id == null) { useMainThread(m.message).then(() => { busy = false; flush(); }); return; }
+        busy = false; setBusy(`Ошибка расчёта: ${m.message.split('\n')[0]}`, true); flush();
+      }
+    };
+    worker.onerror = (e) => { e.preventDefault(); useMainThread(e.message).then(() => { busy = false; flush(); }); };
+    worker.postMessage({ type: 'init', imports });
+  } catch (e) {
+    await useMainThread(e.message);
+  }
+
+  function setBusy(text, err = false) {
+    const el = $('#busy');
+    el.hidden = !text; el.textContent = text || ''; el.classList.toggle('err', err);
+  }
+
+  /** Sends a job; while one is running only the latest request is kept. */
+  function request(params) {
+    pending = params;
+    flush();
+  }
+  function flush() {
+    if (busy || !pending || (!worker && !mainCalc)) return;
+    const params = pending; pending = null;
+    busy = true;
+    const id = ++jobId;
+    setBusy('Расчёт…');
+    if (worker) worker.postMessage({ type: 'run', id, params });
+    else setTimeout(() => {   // let the busy pill paint first
+      try { onResult(id, mainCalc.run(params)); } catch (e) { busy = false; setBusy(`Ошибка расчёта: ${e.message}`, true); console.error(e); }
+    }, 0);
+  }
+
+  // ---- state ----
+  let lastRoomKey = '', room = null;
+  let current = null;   // latest form values
+  let result = null;    // last result that matches the current room: { ...CalcResult, rho }
+  let shown = null;     // what is displayed: { E, L } per element (maintained values)
+  let mapMode = 'total', falseOn = true, faceColors = false, stops = 0;
+  const sentKey = { v: '' };
+
+  function calcParams(v) {
+    return {
+      L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: v.hc, psi: v.psi * DEG,
+      phot: v.phot, fUp: v.fUp, rho: faceRho(v),
+    };
+  }
 
   function update(values) {
+    current = values;
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
       const h = autoStep(values.L, values.W, values.H); // the subdivision step is automatic
@@ -381,29 +492,71 @@
         $('#checks').innerHTML = checkList(checks);
         window.__stage1 = { room, checks, view };
       }
+      result = null; shown = null;
       lastRoomKey = roomKey;
     }
+    // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
+    const p = calcParams(values);
+    const key = JSON.stringify(p);
+    if (key !== sentKey.v) { sentKey.v = key; request(p); }
+    else render();
+  }
 
-    // Direct component: luminaires changed or the room was rebuilt
-    const phot = createPhotometry({ type: values.phot, flux: values.flux, fUp: values.fUp });
-    const lumParams = { hc: values.hc, psi: values.psi * DEG };
-    const lums = luminaireGrid({ L: room.L, W: room.W, H: room.H, nx: values.nx, ny: values.ny, ...lumParams });
-    const t0 = performance.now();
-    const E0 = elementDirect(room, lums, phot);
-    const ms = performance.now() - t0;
-    const E = E0.map((x) => values.mf * x); // maintained values: E = MF · E₀
+  function onResult(id, r) {
+    busy = false;
+    if (!pending) setBusy('');
+    const rk = `${r.key}`;
+    if (rk === lastRoomKey && room && r.N === room.N) {
+      result = r;
+      render();
+      $('#timing').innerHTML =
+        row('Ядро', r.reused.kernel ? 'из кэша' : `${ms(r.ms.kernel)} + поправка ${ms(r.ms.coarse)}`) +
+        row('Прямая составляющая', r.reused.direct ? 'из кэша' : `${ms(r.ms.direct)} · ${r.lums.length} св. × ${r.N.toLocaleString('ru-RU')} эл.`) +
+        row('Решатель', `${ms(r.ms.solve)} · ${r.iterations} итер.`) +
+        row('Проверки этапов 3–4', ms(r.ms.checks));
+      $('#checks3').innerHTML = checkList(r.checks3);
+      const c4 = [...r.checks4];
+      const ex = view?.exposureCheck();
+      if (ex) {
+        c4.splice(3, 0, {
+          name: 'Экспозиция не меняется при вращении',
+          ok: ex.same,
+          detail: `${ex.views} ракурсов, сверху и снизу: m = ${ex.values[0].toExponential(3).replace('.', ',').replace(/e([-+])(\d+)/, (_, sg, d) => `·10<sup>${sg === '-' ? '−' : ''}${d}</sup>`)} во всех; L<sub>wa</sub> = ${formatNumber(shown.Lwa, 2)} кд/м² по всей комнате`,
+        });
+      }
+      $('#checks4').innerHTML = checkList(c4);
+      window.__stage3 = { room, result: r, checks: r.checks3 };
+      window.__stage4 = { room, result: r, checks: c4, shown, exposure: ex };
+    }
+    flush();
+  }
 
-    const avg = faceAverages(room, E), flux = faceFlux(room, E0);
+  /** Applies MF, the map mode and the exposure to the last result (no recalculation). */
+  function render() {
+    if (!result || !current) return;
+    const mf = current.mf;
+    const N = result.N;
+    const E = new Float64Array(N), Ed = new Float64Array(N), Ei = new Float64Array(N);
+    for (let g = 0; g < N; g++) {
+      Ed[g] = mf * result.Edir[g]; Ei[g] = mf * result.Eind[g]; E[g] = Ed[g] + Ei[g];
+    }
+    // ρ in the form may already differ from the result while a new one is computed: the luminance
+    // uses the ρ of the result, so the picture always matches the illuminance it shows.
+    const L = luminance(room, E, result.rho);
+    const ex = exposure(room, L);
+    shown = { E, Ed, Ei, L, Lwa: ex.Lwa, m: ex.m };
+
+    const avg = faceAverages(room, E), avgD = faceAverages(room, Ed), avgI = faceAverages(room, Ei);
     const n0 = (x) => formatNumber(x, 0);
     $('#results tbody').innerHTML = room.faces.map((fc) =>
-      `<tr><td>${fc.name}</td><td>${n0(avg[fc.id])}</td><td>${n0(values.mf * flux.perFace[fc.id])}</td></tr>`).join('') +
-      `<tr><td><b>Все грани</b></td><td></td><td><b>${n0(values.mf * flux.total)}</b></td></tr>`;
+      `<tr><td>${fc.name}</td><td><b>${n0(avg[fc.id])}</b></td><td>${n0(avgD[fc.id])}</td><td>${n0(avgI[fc.id])}</td></tr>`).join('');
+    $('#mfnote').innerHTML = `Средние по граням с учётом MF = ${formatNumber(mf, 2)}. Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.`;
 
-    const checks3 = stage3Checks(room, lums, phot, E0, lumParams);
-    $('#checks3').innerHTML = checkList(checks3);
-    $('#timing').innerHTML = row('Прямая составляющая', `${formatNumber(ms, 0)} мс · ${lums.length} св. × ${room.N.toLocaleString('ru-RU')} эл.`);
-    window.__stage3 = { room, lums, phot, E0, E, checks: checks3, ms };
-    if (view) { view.setLuminaires(lums); view.setValues(E); }
+    if (view) {
+      view.setLuminaires(result.lums);
+      view.setValues(mapMode === 'direct' ? Ed : mapMode === 'indirect' ? Ei : E);
+      view.setLuminance(L, ex.m);
+    }
   }
 
   const form = initForm($('#form'), update);
@@ -418,16 +571,32 @@
   }
   toggle($('#grid'), (on) => view?.setShowGrid(on));
   toggle($('#normals'), (on) => view?.setShowNormals(on));
-  // Color mode: false colors (button in the view) or neutral grey; the developer toggle shows face numbers.
-  let falseOn = true, faceColors = false;
+  // Display mode: false colors (button in the view) or the realistic grey view; the developer toggle
+  // shows placeholder colors by face number.
   function applyColorMode() {
-    const mode = faceColors ? 'faces' : falseOn ? 'false' : 'neutral';
+    const mode = faceColors ? 'faces' : falseOn ? 'false' : 'real';
     view?.setColorMode(mode);
     $('#legend').hidden = mode !== 'false';
     view?.refresh();
   }
   toggle($('#falsecolors'), (on) => { falseOn = on; applyColorMode(); });
   toggle($('#plain'), (on) => { faceColors = on; applyColorMode(); });
+  $('#mapmode').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]');
+    if (!b) return;
+    mapMode = b.dataset.v;
+    for (const x of $('#mapmode').querySelectorAll('button')) {
+      const on = x === b;
+      x.setAttribute('aria-pressed', String(on)); x.setAttribute('aria-checked', String(on));
+    }
+    if (!falseOn) { falseOn = true; $('#falsecolors').setAttribute('aria-pressed', 'true'); applyColorMode(); }
+    render();
+  });
+  $('#stops').addEventListener('input', (e) => {
+    stops = Number(e.target.value);
+    $('#stopsout').textContent = `${stops > 0 ? '+' : stops < 0 ? '−' : ''}${formatNumber(Math.abs(stops), 1)} ст.`;
+    view?.setExposureStops(stops);
+  });
   $('#reset').addEventListener('click', () => view?.resetView());
   $('#plan').addEventListener('click', () => { if (view?.isPlan()) view.resetView(); else view?.showPlan(); });
 

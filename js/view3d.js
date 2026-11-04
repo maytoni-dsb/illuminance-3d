@@ -9,6 +9,7 @@ import {
 } from './orbit.js';
 import { facePoint, faceVertexValues } from './geometry.js';
 import { LEVELS, COLORS } from './colorscale.js';
+import { SHOULDER } from './tonemap.js';
 
 /** Room → Three.js. */
 export const toThree = (p) => [p[0], p[2], -p[1]];
@@ -50,6 +51,38 @@ function falseColorMaterial() {
         int k = 0;
         for (int i = 1; i < ${n}; i++) if (vValue >= levels[i]) k = i;
         gl_FragColor = vec4(colors[k], 1.0);
+      }`,
+    side: THREE.FrontSide,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
+}
+
+/**
+ * Unlit realistic material: per-vertex luminance `lum` (cd/m²) is interpolated over the triangles and
+ * mapped to a grey level exactly as tonemap.displayValue does: scale (Ward's m · 2^stops), soft
+ * shoulder above SHOULDER, sRGB transfer function. The output is already sRGB-encoded.
+ */
+function realisticMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { scale: { value: 0 }, knee: { value: SHOULDER } },
+    vertexShader: `
+      attribute float lum;
+      varying float vLum;
+      void main() {
+        vLum = lum;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform float scale;
+      uniform float knee;
+      varying float vLum;
+      float tanh1(float x) { float e = exp(-2.0 * x); return (1.0 - e) / (1.0 + e); }
+      void main() {
+        float x = max(scale * vLum, 0.0);
+        if (x > knee) x = knee + (1.0 - knee) * tanh1((x - knee) / (1.0 - knee));
+        x = clamp(x, 0.0, 1.0);
+        float c = x <= 0.0031308 ? 12.92 * x : 1.055 * pow(x, 1.0 / 2.4) - 0.055;
+        gl_FragColor = vec4(vec3(c), 1.0);
       }`,
     side: THREE.FrontSide,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
@@ -115,6 +148,7 @@ function buildFaceMesh(face) {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   g.setAttribute('value', new THREE.BufferAttribute(new Float32Array((nu + 1) * (nv + 1)), 1));
+  g.setAttribute('lum', new THREE.BufferAttribute(new Float32Array((nu + 1) * (nv + 1)), 1));
   g.setIndex(new THREE.BufferAttribute(idx, 1));
   const mat = new THREE.MeshLambertMaterial({
     color: FACE_COLORS[face.id],
@@ -201,10 +235,14 @@ export function createView(container, opts = {}) {
   let roomGroup = null;
   let lumGroup = null;     // luminaire markers
   let values = null;       // element values (lx) shown in false colors, or null
-  // 'false' — false colors by `values`; 'neutral' — plain light grey faces;
-  // 'faces' — placeholder colors by face number (developer aid)
+  let lum = null;          // element luminance (cd/m²) for the realistic view, or null
+  let exposureM = 0;       // Ward's scale factor m of the current result (whole room, camera-independent)
+  let exposureStops = 0;   // manual correction, stops (±2)
+  // 'false' — false colors by `values`; 'real' — realistic grey levels by `lum`;
+  // 'neutral' — plain light grey faces (no result yet); 'faces' — placeholder colors by face number
   let colorMode = 'false';
   const fcMaterial = falseColorMaterial();
+  const realMaterial = realisticMaterial();
   const neutralMaterial = new THREE.MeshLambertMaterial({
     color: 0xe6e3dd, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
@@ -357,7 +395,7 @@ export function createView(container, opts = {}) {
     box.dispose();
     scene.add(roomGroup);
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); lumGroup = null; }
-    values = null;
+    values = null; lum = null;
     applyMaterials();
     fitCamera(r, keepView); // first room: default view; later rooms keep the user's angles
     if (plan) plan = fitPlan(r, viewW, viewH, planInsets());
@@ -370,7 +408,8 @@ export function createView(container, opts = {}) {
   function applyMaterials() {
     for (const p of faceParts) {
       p.mesh.material = colorMode === 'faces' ? p.mesh.userData.plainMaterial
-        : colorMode === 'false' && values ? fcMaterial : neutralMaterial;
+        : colorMode === 'false' && values ? fcMaterial
+          : colorMode === 'real' && lum ? realMaterial : neutralMaterial;
     }
   }
 
@@ -389,6 +428,49 @@ export function createView(container, opts = {}) {
     }
     applyMaterials();
     requestRender();
+  }
+
+  /**
+   * Element luminance (cd/m², global order) and its exposure for the realistic view.
+   * @param {ArrayLike<number>|null} L — luminance per element
+   * @param {number} m — Ward's scale factor for the whole room (tonemap.exposure); it is set once per
+   *   result and never depends on the camera
+   */
+  function setLuminance(L, m) {
+    lum = L;
+    exposureM = m;
+    if (L) {
+      for (const p of faceParts) {
+        const attr = p.mesh.geometry.attributes.lum;
+        attr.array.set(faceVertexValues(p.face, L));
+        attr.needsUpdate = true;
+      }
+    }
+    realMaterial.uniforms.scale.value = exposureM * 2 ** exposureStops;
+    applyMaterials();
+    requestRender();
+  }
+
+  /**
+   * Stage 4 criterion: the exposure does not change when the view is rotated. Renders the room
+   * from several directions (synchronously) and reads the exposure used for each frame.
+   */
+  function exposureCheck() {
+    if (!room || !lum || !orbit) return null;
+    const saved = JSON.parse(JSON.stringify(orbit)), savedPlan = plan, savedMode = colorMode;
+    colorMode = 'real'; applyMaterials(); plan = null;
+    const seen = [];
+    for (let k = 0; k < 8; k++) {
+      orbit.azimuth = saved.azimuth + k * Math.PI / 4;
+      orbit.elevation = k % 2 ? -0.6 : 0.9; // from above and from below (ceiling in view)
+      applyCamera();
+      renderer.render(scene, camera);
+      seen.push(realMaterial.uniforms.scale.value);
+    }
+    Object.assign(orbit, saved); plan = savedPlan; colorMode = savedMode; applyMaterials();
+    requestRender();
+    const want = exposureM * 2 ** exposureStops;
+    return { views: seen.length, values: seen, expected: want, same: seen.every((v) => v === want) };
   }
 
   /** Luminaire markers (photometry.luminaireGrid). */
@@ -523,7 +605,7 @@ export function createView(container, opts = {}) {
     const elem = Math.floor(hit.faceIndex / 2); // two triangles per element, order i + j·nu
     const i = elem % face.nu, j = Math.floor(elem / face.nu);
     const g = face.offset + elem;
-    opts.onHover({ f, i, j, g, name: face.name, value: values ? values[g] : null });
+    opts.onHover({ f, i, j, g, name: face.name, value: values ? values[g] : null, lum: lum ? lum[g] : null, mode: colorMode });
   }
   el.addEventListener('pointerleave', () => opts.onHover?.(null));
 
@@ -608,7 +690,12 @@ export function createView(container, opts = {}) {
     selfCheck,
     setValues,
     setLuminaires,
-    /** 'false' — false colors (default); 'neutral' — grey faces; 'faces' — placeholder colors by face number. */
+    setLuminance,
+    exposureCheck,
+    /** Manual exposure correction of the realistic view, stops (−2…+2). */
+    setExposureStops(s) { exposureStops = s; realMaterial.uniforms.scale.value = exposureM * 2 ** s; requestRender(); },
+    /** 'false' — false colors (default); 'real' — realistic grey levels; 'neutral' — grey faces;
+     *  'faces' — placeholder colors by face number. */
     setColorMode(m) { colorMode = m; applyMaterials(); requestRender(); },
     setShowGrid(v) { showGrid = v; requestRender(); },
     setShowNormals(v) { showNormals = v; requestRender(); },
@@ -637,7 +724,7 @@ export function createView(container, opts = {}) {
       for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial;
       if (roomGroup) disposeTree(roomGroup);
       if (lumGroup) disposeTree(lumGroup);
-      fcMaterial.dispose(); neutralMaterial.dispose();
+      fcMaterial.dispose(); realMaterial.dispose(); neutralMaterial.dispose();
       disposeTree(axes.group);
       renderer.dispose(); el.remove();
     },
