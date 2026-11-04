@@ -15,6 +15,7 @@ import { elementDirect, emittedFlux } from './direct.js';
 import { stage3Checks } from './checks3.js';
 import { stage4Checks } from './checks4.js';
 import { stage5Checks } from './checks5.js';
+import { workGrid, gridFormFactors, planeIlluminance, planeStats, planeHeights } from './workplane.js';
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -25,7 +26,8 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
  *
  * CalcParams = { L, W, H, nx, ny, flux, hc, psi (rad), phot: 'cosine' | 'directIndirect' | 'file', fUp,
  *                table?: PhotTable (photfile.js; phot = 'file'), fileKey?: string (identifies the table),
- *                rho: number[6] (faces 0…5), checks?: boolean }
+ *                rho: number[6] (faces 0…5), hwp?: number (height of the normative work plane, m),
+ *                checks?: boolean }
  * With a file the flux comes from the table (the flux of its interpolant), `flux` is ignored.
  * CalcResult = { key, N, h, Edir, Eind (Float64Array, E₀, lx), iterations, converged, change,
  *                balance, sumpner, ms: { kernel, coarse, direct, solve, checks }, reused: {…},
@@ -35,9 +37,10 @@ export function createCalc() {
   let geo = null;   // { key, room, kernel }
   let dir = null;   // { key, lums, phot, Edir }
   let sol = null;   // { key, Eind }
+  let grids = new Map(); // plane height → { grid, F } of the current room (form factors point → element)
 
   function run(p) {
-    const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, checks: 0 };
+    const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, planes: 0, checks: 0 };
     const reused = { kernel: true, direct: true };
 
     const geoKey = `${p.L}|${p.W}|${p.H}`;
@@ -50,13 +53,13 @@ export function createCalc() {
       coarseData(kernel);
       ms.coarse = now() - t;
       geo = { key: geoKey, room, kernel };
-      dir = null; sol = null;
+      dir = null; sol = null; grids = new Map();
       reused.kernel = false;
     }
     const { room, kernel } = geo;
 
     const isFile = p.phot === 'file';
-    const dirKey = [p.nx, p.ny, isFile ? 0 : p.flux, p.hc, p.psi, p.phot, p.phot === 'directIndirect' ? p.fUp : 0, isFile ? p.fileKey : ''].join('|');
+    const dirKey = [p.nx, p.ny, p.flux, p.hc, p.psi, p.phot, p.phot === 'directIndirect' ? p.fUp : 0, isFile ? p.fileKey : ''].join('|');
     if (!dir || dir.key !== dirKey) {
       const phot = createPhotometry({ type: p.phot, flux: p.flux, fUp: p.fUp, table: p.table });
       const lums = luminaireGrid({ L: p.L, W: p.W, H: p.H, nx: p.nx, ny: p.ny, hc: p.hc, psi: p.psi });
@@ -79,12 +82,28 @@ export function createCalc() {
     const balance = energyBalance(room, Edir, s.Eind, p.rho, emitted);
     const sp = sumpner(room, Edir, s.Eind, p.rho);
 
+    // work planes: direct light at the points and reflected light from all elements
+    const t0 = now();
+    const M = new Float64Array(room.N);
+    for (const face of room.faces) {
+      const r = p.rho[face.id];
+      for (let k = face.offset; k < face.offset + face.count; k++) M[k] = r * (Edir[k] + s.Eind[k]);
+    }
+    const planes = planeHeights(p.hwp ?? 0.8).map(({ z, normative }) => {
+      const zk = z.toFixed(6);
+      if (!grids.has(zk)) grids.set(zk, (() => { const grid = workGrid(p.L, p.W, z); return { grid, F: gridFormFactors(room, grid) }; })());
+      const { grid, F } = grids.get(zk);
+      const e = planeIlluminance(room, grid, F, M, lums, phot);
+      return { z, normative, nx: grid.nx, ny: grid.ny, dx: grid.dx, dy: grid.dy, E: e.E, Edir: e.Edir, Eref: e.Eref, stats: planeStats(e.E) };
+    });
+    ms.planes = now() - t0;
+
     const out = {
       key: geoKey, N: room.N, h: room.h, rho: [...p.rho],
       Edir: Float64Array.from(Edir), Eind: Float64Array.from(s.Eind),
       iterations: s.iterations, converged: s.converged, change: s.change,
       balance, sumpner: sp, ms, reused, lums: lums.map((l) => ({ pos: [...l.pos], psi: l.psi })),
-      flux: phot.flux, lost, directStats: Edir.stats ?? null, fileKey: isFile ? p.fileKey : null,
+      planes, flux: phot.flux, lost, directStats: Edir.stats ?? null, fileKey: isFile ? p.fileKey : null,
     };
     if (p.checks !== false) {
       const t = now();

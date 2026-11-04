@@ -1,5 +1,6 @@
-// Photometric file in the form: picker, drag and drop, luminaire card and polar diagram.
-// lidcCurves is pure (tested in Node); initPhotFile touches the DOM and runs in the browser only.
+// Photometric file in the form: drop zone, luminaire description, compact polar diagram and the
+// choice of the lamp set of an LDT file.
+// lidcCurves and describeLuminaire are pure (tested in Node); initPhotFile touches the DOM.
 // Labels and messages are user-facing and therefore in Russian.
 
 import { parsePhotometryFile, luminaireShape } from './photfile.js';
@@ -15,18 +16,19 @@ export function decodeBytes(buf) {
 }
 
 /**
- * Polar curves of the intensity distribution in cd/klm for the planes C0–C180 and C90–C270
- * (C0 and C90 to the right, C180 and C270 to the left, γ = 0 straight down).
+ * Polar curves of the intensity distribution, normalised to the peak, for the planes C0–C180 and
+ * C90–C270 (C0 and C90 to the right, γ = 0 straight down), and the grid: rings and the γ lines
+ * every 30°.
  * @param {import('./photometry.js').Photometry} phot
  * @param {number} R — radius of the outer ring, px
- * @returns {{ c0: string, c90: string, max: number, rings: number[] }} SVG paths (centre 0, 0)
- *   and the ring values, cd/klm (the outer one is `max`)
+ * @returns {{ c0: string, c90: string, max: number, rings: number[], spokes: string }} SVG paths
+ *   around (0, 0); max — the peak in cd/klm (outer ring); rings — ring radii, px
  */
 export function lidcCurves(phot, R) {
   const k = 1000 / phot.flux;
   let peak = 0;
   for (let C = 0; C < 360; C += 5) for (let g = 0; g <= 180; g += 1) peak = Math.max(peak, phot.intensity(C * DEG, g * DEG) * k);
-  const max = niceCeil(peak);
+  const max = peak > 0 ? peak : 1;
   const curve = (cRight) => {
     const cLeft = (cRight + 180) % 360;
     const pts = [];
@@ -38,18 +40,38 @@ export function lidcCurves(phot, R) {
       return `${i ? 'L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`;
     }).join('') + 'Z';
   };
-  return { c0: curve(0), c90: curve(90), max, rings: [0.25, 0.5, 0.75, 1].map((f) => f * max) };
+  let spokes = '';
+  for (let g = 0; g <= 180; g += 30) {
+    for (const side of g === 0 || g === 180 ? [1] : [1, -1]) {
+      spokes += `M0 0L${(side * R * Math.sin(g * DEG)).toFixed(2)} ${(R * Math.cos(g * DEG)).toFixed(2)}`;
+    }
+  }
+  return { c0: curve(0), c90: curve(90), max, rings: [R / 3, 2 * R / 3, R], spokes };
 }
-function niceCeil(x) {
-  if (!(x > 0)) return 1;
-  const e = 10 ** Math.floor(Math.log10(x));
-  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * e >= x) return m * e;
-  return 10 * e;
+
+/** "0,5 × 0,04 × 0,06 м" or "⌀0,076 × 0,099 м" (length × width × height of the housing). */
+export function sizeText(t) {
+  const s = t.luminaire;
+  const m = (x) => String(Number(x.toFixed(3))).replace('.', ',');
+  if (!(s.length > 0)) return '';
+  const h = s.height > 0 ? ` × ${m(s.height)}` : '';
+  return (s.round ? `⌀${m(s.length)}` : `${m(s.length)} × ${m(s.width)}`) + `${h} м`;
+}
+
+/**
+ * What the form takes from a file: the luminaire flux, the colour temperature and the power of a
+ * lamp set (LDT: Φ_lamps · LORL; IES: the flux of the intensity table).
+ * @param {import('./photfile.js').PhotTable} t
+ * @param {number} [set] — lamp set index (LDT)
+ * @returns {{ flux:number, cct:number|null, power:number|null }}
+ */
+export function setValues(t, tableFlux, set = 0) {
+  const ls = t.lampSets?.[set];
+  if (ls) return { flux: Math.round(ls.flux * t.lor), cct: ls.cct, power: ls.power };
+  return { flux: Math.round(t.ratedFlux ?? tableFlux), cct: t.cct, power: t.power };
 }
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const num = (x, d = 0) => Number(x.toFixed(d)).toLocaleString('ru-RU');
-const SYM = { rot: 'симметрия вращения', quad: 'симметрия к C0–C180 и C90–C270', half0: 'симметрия к C0–C180', half90: 'симметрия к C90–C270', none: 'без симметрии' };
 
 /** Simple hash of the text, so the calculation can tell files apart without comparing tables. */
 function hash(text) {
@@ -58,62 +80,63 @@ function hash(text) {
   return (h >>> 0).toString(16);
 }
 
+function polarSvg(phot) {
+  const R = 52;
+  const { c0, c90, rings, spokes } = lidcCurves(phot, R);
+  return `<svg class="pfpolar" viewBox="-56 -56 112 112" role="img" aria-label="Кривая силы света: C0–C180 сплошная, C90–C270 пунктир">
+    ${rings.map((r) => `<circle r="${r.toFixed(1)}" class="ring"/>`).join('')}<path d="${spokes}" class="ring"/>
+    <path d="${c90}" class="c90"/><path d="${c0}" class="c0"/></svg>`;
+}
+
 /**
- * Builds the file block inside `host` and reports every change.
- * @param {HTMLElement} host
- * @param {HTMLElement} dropZone — element that accepts dropped files (the form card)
- * @param {(f: null | { table, phot, shape, key, name }) => void} onChange
- * @returns {{ current: () => (null | { table, phot, shape, key, name }) }}
+ * Builds the photometry block: the drop zone in `zone`, the luminaire description in `card`.
+ * @param {{ zone: HTMLElement, card: HTMLElement, sets: HTMLElement, dropTarget: HTMLElement }} el
+ * @param {(f: null | { table, phot, shape, key, name, set, values }) => void} onChange
+ *   called with the file (and the values of its lamp set for the form) or null when removed
  */
-export function initPhotFile(host, dropZone, onChange) {
-  host.innerHTML = `
-    <div class="pfpick">
-      <label class="gschipb pfbtn"><input type="file" accept=".ies,.ldt,.IES,.LDT" hidden>Выбрать файл IES или LDT</label>
-      <span class="pfhint">или перетащите файл на форму</span>
-    </div>
-    <div class="pferr" role="alert" hidden></div>
-    <div class="pfcard" hidden></div>`;
-  const input = host.querySelector('input');
-  const err = host.querySelector('.pferr');
-  const card = host.querySelector('.pfcard');
+export function initPhotFile(el, onChange) {
+  el.zone.innerHTML = `
+    <label class="pfdrop">
+      <input type="file" accept=".ies,.ldt,.IES,.LDT" hidden>
+      <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5"/><path d="M4 12.5v3h12v-3"/></svg>
+      <span class="pftext">Перетащите файл IES или LDT сюда или <u>выберите</u></span>
+    </label>
+    <div class="pffile" hidden><span class="pfname"></span><button type="button" class="pfclear" aria-label="Убрать файл" title="Убрать файл">×</button></div>
+    <div class="pferr" role="alert" hidden></div>`;
+  const input = el.zone.querySelector('input');
+  const drop = el.zone.querySelector('.pfdrop');
+  const fileRow = el.zone.querySelector('.pffile');
+  const err = el.zone.querySelector('.pferr');
   let current = null;
 
+  function showCosine() {
+    const p = createPhotometry({ type: 'cosine', flux: 1000 });
+    el.card.innerHTML = `<div class="pfdesc"><div class="pfl1">Файл не загружен</div><div class="pfl2">Косинусная кривая силы света</div></div>${polarSvg(p)}`;
+    el.sets.innerHTML = ''; el.sets.hidden = true;
+  }
   function show(f) {
-    const t = f.table, p = f.phot;
-    const rated = t.ratedFlux;
-    const dims = (s) => (s.round ? `⌀ ${num(s.length * 1000)}` : `${num(s.length * 1000)} × ${num(s.width * 1000)}`) + (s.height ? ` × ${num(s.height * 1000)}` : '') + ' мм';
-    const { c0, c90, max, rings } = lidcCurves(p, 70);
-    const svg = `<svg class="pfpolar" viewBox="-84 -84 168 168" role="img" aria-label="Кривая силы света">
-      ${rings.map((v) => `<circle r="${(v / max * 70).toFixed(1)}" class="ring"/>`).join('')}
-      <line x1="-76" y1="0" x2="76" y2="0" class="ring"/><line x1="0" y1="-76" x2="0" y2="76" class="ring"/>
-      <path d="${c90}" class="c90"/><path d="${c0}" class="c0"/>
-      <text x="2" y="${(70 + 10).toFixed(0)}" class="lbl">${num(max)}</text>
-      <text x="-80" y="-74" class="lbl">C180</text><text x="80" y="-74" class="lbl" text-anchor="end">C0</text></svg>`;
-    card.innerHTML = `
-      <div class="pfname">${esc(t.name || f.name)}${t.catalog ? ` <span>${esc(t.catalog)}</span>` : ''}</div>
-      <div class="pfgrid">
-        <div class="gstech">
-          ${t.manufacturer ? `<div class="gstrow"><span>Производитель</span><b>${esc(t.manufacturer)}</b></div>` : ''}
-          <div class="gstrow"><span>Файл</span><b>${esc(f.name)} · ${t.format === 'ies' ? esc(t.version.replace(/^IESNA:\s*/i, '')) : 'EULUMDAT'}</b></div>
-          <div class="gstrow"><span>Поток светильника</span><b>${num(p.flux)} лм</b></div>
-          ${rated ? `<div class="gstrow"><span>в файле</span><b>${num(rated)} лм (${(100 * (p.flux / rated - 1)).toFixed(2).replace('.', ',')} %)</b></div>` : ''}
-          ${t.power ? `<div class="gstrow"><span>Мощность</span><b>${num(t.power, 1)} Вт · ${num(p.flux / t.power)} лм/Вт</b></div>` : ''}
-          <div class="gstrow"><span>Вниз / вверх</span><b>${num(100 * p.fluxDown / p.flux)} / ${num(100 * p.fluxUp / p.flux)} %</b></div>
-          <div class="gstrow"><span>${t.format === 'ies' ? 'Светящий проём' : 'Светящая часть'}</span><b>${dims(t.luminous)}</b></div>
-          ${t.format === 'ldt' ? `<div class="gstrow"><span>Корпус</span><b>${dims(t.luminaire)}</b></div>` : ''}
-          <div class="gstrow"><span>КСС</span><b>${SYM[t.sym]}; ${t.C.length} × ${t.gamma.length}</b></div>
-        </div>
-        <figure class="pffig">${svg}<figcaption><i class="sw c0"></i>C0–C180 <i class="sw c90"></i>C90–C270, кд/клм</figcaption></figure>
-      </div>
-      ${t.warnings.length ? `<ul class="pfwarn">${t.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}`;
-    card.hidden = false;
+    const t = f.table;
+    const lines = [t.manufacturer, t.name, t.catalog].filter((x) => x && x.trim());
+    el.card.innerHTML = `<div class="pfdesc">${lines.map((x, i) => `<div class="pfl${Math.min(i + 1, 3)}">${esc(x)}</div>`).join('')}
+      ${sizeText(t) ? `<div class="pfl3">${sizeText(t)}</div>` : ''}
+      ${t.warnings.length ? `<ul class="pfwarn">${t.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}</div>${polarSvg(f.phot)}`;
+    const sets = t.lampSets ?? [];
+    el.sets.hidden = sets.length < 2;
+    el.sets.innerHTML = sets.length < 2 ? '' : `<label class="fl" for="lampset"><span class="t">Источник света</span></label>
+      <select id="lampset">${sets.map((s, i) => `<option value="${i}"${i === f.set ? ' selected' : ''}>${esc(s.type || `Набор ${i + 1}`)} · ${s.flux} лм${s.cct ? ` · ${s.cct} К` : ''}${s.power ? ` · ${String(s.power).replace('.', ',')} Вт` : ''}</option>`).join('')}</select>`;
+    el.sets.querySelector('select')?.addEventListener('change', (e) => {
+      current = { ...current, set: Number(e.target.value), values: setValues(t, current.phot.tableFlux, Number(e.target.value)) };
+      onChange(current);
+    });
+    fileRow.querySelector('.pfname').textContent = f.name;
+    fileRow.hidden = false;
   }
 
   function load(text, name, { store = true } = {}) {
     try {
       const table = parsePhotometryFile(text, name);
       const phot = createPhotometry({ type: 'file', table });
-      current = { table, phot, shape: luminaireShape(table), key: `${name}|${text.length}|${hash(text)}`, name };
+      current = { table, phot, shape: luminaireShape(table), key: `${name}|${text.length}|${hash(text)}`, name, set: 0, values: setValues(table, phot.tableFlux, 0) };
       err.hidden = true;
       show(current);
       if (store) { try { localStorage.setItem(STORE_KEY, JSON.stringify({ name, text })); } catch (e) { /* full or blocked */ } }
@@ -124,6 +147,13 @@ export function initPhotFile(host, dropZone, onChange) {
       console.error(e);
     }
   }
+  function clear() {
+    current = null;
+    fileRow.hidden = true; err.hidden = true;
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* storage unavailable */ }
+    showCosine();
+    onChange(null);
+  }
 
   async function readFile(file) {
     if (!file) return;
@@ -132,19 +162,23 @@ export function initPhotFile(host, dropZone, onChange) {
     load(decodeBytes(await file.arrayBuffer()), file.name);
   }
   input.addEventListener('change', () => { readFile(input.files[0]); input.value = ''; });
-  dropZone.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); dropZone.classList.add('dropping'); } });
-  dropZone.addEventListener('dragleave', (e) => { if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dropping'); });
-  dropZone.addEventListener('drop', (e) => {
-    if (!e.dataTransfer.files.length) return;
-    e.preventDefault(); dropZone.classList.remove('dropping');
-    readFile(e.dataTransfer.files[0]);
-  });
+  fileRow.querySelector('.pfclear').addEventListener('click', clear);
+  for (const t of [drop, el.dropTarget]) {
+    t.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); drop.classList.add('dropping'); } });
+    t.addEventListener('dragleave', (e) => { if (!t.contains(e.relatedTarget)) drop.classList.remove('dropping'); });
+    t.addEventListener('drop', (e) => {
+      if (!e.dataTransfer.files.length) return;
+      e.preventDefault(); e.stopPropagation(); drop.classList.remove('dropping');
+      readFile(e.dataTransfer.files[0]);
+    });
+  }
 
+  showCosine();
   // the last file of this browser (a convenience: works without it)
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (saved?.text) load(saved.text, saved.name, { store: false });
   } catch (e) { /* storage unavailable */ }
 
-  return { current: () => current, load };
+  return { current: () => current, load, clear };
 }

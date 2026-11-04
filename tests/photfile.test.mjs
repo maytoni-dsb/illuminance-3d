@@ -258,19 +258,29 @@ test('stage 5 panel checks pass on an asymmetric file', () => {
   }
 });
 
-test('polar diagram: curves in cd/klm, γ = 0 down, C0 right and C180 left', async () => {
+test('polar diagram: normalised curves, γ = 0 down, C0 right; γ lines every 30°', async () => {
   const { lidcCurves } = await import('../js/photui.js');
   const p = photOf(load('ERCO-B0000021.ldt'));
-  const { c0, max, rings } = lidcCurves(p, 70);
-  assert.equal(rings[3], max);
-  const pts = c0.slice(1, -1).split('L').map((s) => s.split(' ').map(Number));
+  const { c0, max, rings, spokes } = lidcCurves(p, 70);
+  assert.deepEqual(rings.map(Math.round), [23, 47, 70]);
+  assert.equal((spokes.match(/M/g) || []).length, 12); // 0°, 180° once; 30…150° on both sides
+  const pts = c0.slice(1, -1).split('L').map((t) => t.split(' ').map(Number));
   assert.equal(pts.length, 2 * 181);
-  // first point: γ = 0 on C0, straight down (x = 0, y = r > 0)
-  assert.ok(Math.abs(pts[0][0]) < 1e-9 && pts[0][1] > 0);
-  // the wallwasher throws towards C0: at γ = 30° the right side reaches much farther than the left
+  assert.ok(Math.abs(pts[0][0]) < 1e-9 && pts[0][1] > 0);  // γ = 0 straight down
   const r = (q) => Math.hypot(q[0], q[1]);
-  assert.ok(r(pts[30]) > 50 * r(pts[2 * 181 - 1 - 30]) && pts[30][0] > 0);
+  assert.ok(r(pts[30]) > 50 * r(pts[2 * 181 - 1 - 30]) && pts[30][0] > 0); // wallwasher: towards C0
   assert.ok(Math.abs(r(pts[30]) / 70 * max - p.intensity(0, 30 * DEG) * 1000 / p.flux) < 0.01 * max);
+  assert.ok(Math.max(...pts.map(r)) <= 70 + 1e-9);
+});
+
+test('luminaire sizes text and the form values of a lamp set', async () => {
+  const { sizeText, setValues } = await import('../js/photui.js');
+  assert.equal(sizeText(load('ERCO-C1000001.ldt')), '0,5 × 0,04 × 0,06 м');
+  assert.equal(sizeText(load('ERCO-B0000021.ldt')), '⌀0,146 × 0,099 м');
+  const t = load('Atom-C016CL-01W-45.ldt');
+  assert.deepEqual(setValues(t, 0, 2), { flux: 510, cct: 3000, power: 5.84 });
+  const i = load('ERCO-C1000005.ies');
+  assert.deepEqual(setValues(i, photOf(i).tableFlux), { flux: 2829, cct: null, power: 20.7 });
 });
 
 // ---- MATLAB reference (matlab/stage5_reference.m) ------------------------------------------------
@@ -304,4 +314,18 @@ test('MATLAB reference: flux and intensities of the fixture files (1e-9)', { ski
   }
   assert.equal(nFlux, REF_FILES.length);
   assert.equal(nI, 200 * REF_FILES.length);
+});
+
+test('LDT lamp sets are read one after another (6 lines each); another set scales the table', () => {
+  const t = load('Atom-C016CL-01W-45.ldt');
+  assert.deepEqual(t.lampSets.map((s) => [s.type, s.flux, s.cct, s.power]),
+    [['LED / 7061', 640, 4000, 6.51], ['LED / 7060', 520, 3000, 6.51], ['LED / 7108', 510, 3000, 5.84], ['LED / 7109', 620, 4000, 6.18]]);
+  const p1 = photOf(t);
+  assert.ok(Math.abs(p1.flux / t.ratedFlux - 1) < 0.01);
+  const p2 = createPhotometry({ type: 'file', table: t, flux: 520 });
+  assert.ok(Math.abs(p2.flux - 520) < 1e-9);
+  assert.ok(Math.abs(p2.intensity(0, 0.3) / p1.intensity(0, 0.3) - 520 / p1.flux) < 1e-12);
+  const n = load('Nostalgia.ldt'); // three sets, 2.5° steps, conversion factor 0.5 (not applied)
+  assert.deepEqual(n.lampSets.map((s) => s.flux), [880, 930, 880]);
+  assert.ok(Math.abs(photOf(n).flux / n.ratedFlux - 1) < 0.01);
 });

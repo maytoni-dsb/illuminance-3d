@@ -161,3 +161,22 @@ node scripts/check-library.mjs <folder> [--verbose] [--json report.json]
 `matlab/stage5_reference.m` parses the fixture files independently and writes fluxes (MATLAB's
 `integral` with the tabulated angles as waypoints) and intensities at 200 directions per file
 (`interp1` / `interp2`) to `stage5_reference.txt`; copy it to `tests/fixtures/` (tolerance 1e-9).
+
+Stage 5, revision 1 (user feedback, 4 Nov 2026):
+- LDT lamp sets are read one after another (six lines each); the form shows a choice of the light
+  source when a file has several; flux (step 100 lm), colour temperature (step 100 K) and power
+  (step 0.1 W) are editable — the table is scaled so that its flux equals the flux in the form;
+- the photometry chips are replaced by the file drop zone; without a file the cosine distribution
+  is used; the luminaire description is manufacturer, name, catalogue number, housing size
+  "length × width × height м" and a compact polar diagram (γ lines every 30°, no labels);
+- the form fields are 32 px high with up / down arrows on the left (and ↑ / ↓ keys), step 0.1 unless
+  stated otherwise (counts 1, ψ 5°, E_n 10 lx); "?" help buttons open a popover (`js/help.js`,
+  texts to be written); MF, the required illuminance E_n and the work plane height h_р are in the
+  room section;
+- results (`js/workplane.js`, computed in the worker): the planes Г-0,0, Г-0,8 and Г-h (when h_р
+  differs from both), grid p = 0.2 · 5^lg d with points at cell centres, E = E_dir(x) + Σ F(x → A_j)
+  M_j with the exact point → element factors (cached per room and plane height). Each plane is a
+  collapsed row with Ē and U₀; the normative plane is marked red / green / orange against E_n and the
+  scale of levels, U₀ < 0.3 red; the others are "* Для справки";
+- 3D view: only the edges of culled faces are drawn; the wheel zooms toward the pointer (orbit and
+  plan); the fitted room is centred in the free part of the view.

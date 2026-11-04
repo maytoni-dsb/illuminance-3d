@@ -48,6 +48,20 @@ export function zoom(s, deltaY) {
   s.distance = clamp(s.distance * Math.exp(deltaY * ZOOM_PER_DELTA), s.minDistance, s.maxDistance);
 }
 
+/**
+ * Zooms toward the pointer: the image around the pivot scales by d / d', and the lens shift is
+ * changed so that the point under the pointer stays where it is (exact for points at the pivot's
+ * depth, close enough for the rest). The pivot itself does not move in the scene.
+ * @param {number} px, py — pointer offset from the viewport centre, CSS px (right, down)
+ */
+export function zoomAt(s, deltaY, px, py) {
+  const d0 = s.distance;
+  zoom(s, deltaY);
+  const k = d0 / s.distance; // image scale factor
+  s.shiftX = px - (px - s.shiftX) * k;
+  s.shiftY = py - (py - s.shiftY) * k;
+}
+
 /** Zooms by a factor (pinch): factor > 1 moves the camera closer. */
 export function zoomBy(s, factor) {
   s.distance = clamp(s.distance / factor, s.minDistance, s.maxDistance);
@@ -113,6 +127,18 @@ export function panPlan(s, dx, dy, viewH) {
 /** Zooms the plan about its centre by a wheel delta (positive = away). */
 export function zoomPlan(s, deltaY) {
   s.half = clamp(s.half * Math.exp(deltaY * ZOOM_PER_DELTA), PLAN_ZOOM_MIN * s.fitHalf, PLAN_ZOOM_MAX * s.fitHalf);
+}
+
+/**
+ * Zooms the plan toward the pointer: the point under it stays in place.
+ * @param {number} px, py — pointer offset from the viewport centre, CSS px (right, down)
+ */
+export function zoomPlanAt(s, deltaY, px, py, viewH) {
+  const k0 = 2 * s.half / Math.max(1, viewH);   // metres per px before
+  const wx = s.cx + px * k0, wz = s.cz + py * k0; // the point under the pointer (screen down = +Z)
+  zoomPlan(s, deltaY);
+  const k1 = 2 * s.half / Math.max(1, viewH);
+  s.cx = wx - px * k1; s.cz = wz - py * k1;
 }
 
 /** Zooms the plan by a factor (pinch): factor > 1 enlarges the image. */

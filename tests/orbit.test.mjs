@@ -122,3 +122,24 @@ test('planToOrbit: from straight above, room +Y up on screen, same floor scale a
   assert.ok(Math.abs(o.shiftX - (target[0] - s.cx) * px) < 1e-9);
   assert.ok(Math.abs(o.shiftY - (target[2] - s.cz) * px) < 1e-9);
 });
+
+test('zoom toward the pointer keeps the point under it (image scale about the pivot)', async () => {
+  const { createOrbit, zoomAt, fitPlan, zoomPlanAt } = await import('../js/orbit.js');
+  const o = createOrbit({ target: [0, 0, 0], azimuth: 0, elevation: 0.5, distance: 10, minDistance: 0.1, maxDistance: 100 });
+  o.shiftX = 30; o.shiftY = -20;
+  // a point at screen offset (px, py) from the centre lies (px − shift) from the pivot's image;
+  // after zooming by k it must lie k(px − shift) from the new pivot image, at the same place
+  const px = 120, py = 80;
+  const before = [px - o.shiftX, py - o.shiftY];
+  zoomAt(o, -300, px, py);
+  const k = 10 / o.distance;
+  assert.ok(k > 1);
+  assert.ok(Math.abs(o.shiftX + k * before[0] - px) < 1e-9 && Math.abs(o.shiftY + k * before[1] - py) < 1e-9);
+  // the plan: the world point under the pointer stays
+  const s = fitPlan({ L: 6, W: 4 }, 800, 600);
+  const world = (q) => [q.cx + 100 * 2 * q.half / 600, q.cz + -50 * 2 * q.half / 600];
+  const w0 = world(s);
+  zoomPlanAt(s, -400, 100, -50, 600);
+  const w1 = world(s);
+  assert.ok(Math.abs(w0[0] - w1[0]) < 1e-12 && Math.abs(w0[1] - w1[1]) < 1e-12);
+});

@@ -28,17 +28,17 @@ export function stage5Checks(room, lums, phot, E, table) {
 
   // 1. The acceptance criterion: flux of the intensity table vs the rated flux, within 1 %
   if (table.ratedFlux) {
-    const dev = phot.flux / table.ratedFlux - 1;
+    const dev = phot.tableFlux / table.ratedFlux - 1;
     out.push({
       name: 'Поток по КСС совпадает с паспортным (1 %)',
       ok: Math.abs(dev) <= 0.01,
-      detail: `интеграл КСС ${lm(phot.flux)}, в файле ${lm(table.ratedFlux)}, отличие ${pct(dev)}`,
+      detail: `интеграл КСС ${lm(phot.tableFlux)}, в файле ${lm(table.ratedFlux)}, отличие ${pct(dev)}` + (phot.scale !== 1 ? `; в расчёте поток ${lm(phot.flux)} (КСС × ${phot.scale.toFixed(4).replace('.', ',')})` : ''),
     });
   } else {
     out.push({
       name: 'Поток по КСС совпадает с паспортным (1 %)',
       ok: true,
-      detail: `в файле IES поток светильника не указан (${table.absolute ? 'абсолютная фотометрия' : `указан поток ламп ${lm(table.lampFlux)}`}); поток светильника — интеграл КСС, ${lm(phot.flux)}`,
+      detail: `в файле IES поток светильника не указан (${table.absolute ? 'абсолютная фотометрия' : `указан поток ламп ${lm(table.lampFlux)}`}); поток светильника — интеграл КСС, ${lm(phot.tableFlux)}`,
     });
   }
 
@@ -57,7 +57,7 @@ export function stage5Checks(room, lums, phot, E, table) {
     }
     for (let k = 0; k < nG; k++) {
       const I = phot.intensity(C >= 2 * Math.PI - 1e-12 ? 0 : C, table.gamma[k]);
-      worst = Math.max(worst, Math.abs(I - table.cd[p * nG + k]) / Imax);
+      worst = Math.max(worst, Math.abs(I - phot.scale * table.cd[p * nG + k]) / (phot.scale * Imax));
     }
   }
   out.push({

@@ -36,7 +36,7 @@ export const MODELS = Object.freeze({
  * }
  */
 export function createPhotometry({ type, flux, fUp = 0, table = null }) {
-  if (type === 'file') return createTablePhotometry(table);
+  if (type === 'file') return createTablePhotometry(table, flux);
   if (!(Number.isFinite(flux) && flux > 0)) throw new RangeError(`createPhotometry: flux=${flux} must be > 0`);
   if (type === 'cosine') {
     const I0 = flux * INV_PI;
@@ -203,16 +203,22 @@ function locator(a) {
 /**
  * Photometry from a parsed file table (photfile.js). Intensities are absolute (cd).
  * @param {import('./photfile.js').PhotTable} table
+ * @param {number} [flux] — luminaire flux wanted, lm: the table is scaled so that the flux of its
+ *   interpolant equals it (another lamp set of an LDT file, or a flux typed by the user);
+ *   without it the table is used as it is
  */
-function createTablePhotometry(table) {
+function createTablePhotometry(table, flux) {
   if (!table || !table.cd || !table.gamma) throw new RangeError('createPhotometry: type "file" needs a table');
-  const { planes, rows } = expandPlanes(table);
+  const ex = expandPlanes(table);
+  const fl0 = tableFlux(ex.planes, ex.rows, table.gamma);
+  const scale = Number.isFinite(flux) && flux > 0 ? flux / fl0.total : 1;
+  const planes = ex.planes, rows = scale === 1 ? ex.rows : ex.rows.map((v) => v * scale);
   const gamma = Float64Array.from(table.gamma);
   const nG = gamma.length, nP = planes.length;
   const g0 = gamma[0], g1 = gamma[nG - 1];
   const gi = locator(gamma);
   const ci = nP > 1 ? locator(planes) : null;
-  const fl = tableFlux(planes, rows, gamma);
+  const fl = { total: fl0.total * scale, down: fl0.down * scale, up: fl0.up * scale };
   const along = (r, gamma_) => {
     if (gamma_ < g0 || gamma_ > g1) return 0;
     const k = gi(gamma_);
@@ -244,6 +250,8 @@ function createTablePhotometry(table) {
     type: 'file',
     flux: fl.total,        // what the model emits: the exact flux of the interpolant
     fluxDown: fl.down, fluxUp: fl.up,
+    tableFlux: fl0.total,  // flux of the unscaled table (stage 5 criterion against the rated flux)
+    scale,                 // intensities = table · scale
     ratedFlux: table.ratedFlux,
     rotational: nP === 1,
     intensity,

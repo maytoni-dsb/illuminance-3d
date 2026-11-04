@@ -61,16 +61,39 @@ test('validateParams: rotation 0…180°, MF 0.1…1', () => {
   assert.ok(validateParams(raw({ mf: '0,05' })).errors.mf);
 });
 
-test('validateParams: f_up only for the direct-indirect model; flux not checked with a file', () => {
-  assert.ok(validateParams(raw({ phot: 'cosine', fUp: 'abc' })).ok);
-  assert.ok(validateParams(raw({ phot: 'directIndirect', fUp: 'abc' })).errors.fUp);
-  const r = validateParams(raw({ phot: 'directIndirect', fUp: '1' }));
+test('validateParams: CCT and power only with a file; photometry is cosine or file', () => {
+  assert.ok(validateParams(raw({ phot: 'cosine', cct: 'abc', power: '' })).ok);
+  assert.ok(validateParams(raw({ phot: 'file', cct: 'abc' })).errors.cct);
+  assert.ok(validateParams(raw({ phot: 'file', power: '0' })).errors.power);
+  const r = validateParams(raw({ phot: 'file', flux: '820', cct: '4000', power: '6,5' }));
   assert.ok(r.ok);
-  assert.equal(r.values.fUp, 1);
-  assert.ok(validateParams(raw({ phot: 'file' })).ok);
-  assert.ok(validateParams(raw({ phot: 'file', flux: 'abc' })).ok);
-  assert.ok(validateParams(raw({ phot: 'cosine', flux: 'abc' })).errors.flux);
+  assert.deepEqual([r.values.flux, r.values.cct, r.values.power], [820, 4000, 6.5]);
+  assert.ok(validateParams(raw({ phot: 'file', flux: 'abc' })).errors.flux);
   assert.ok(validateParams(raw({ phot: 'laser' })).errors.phot);
+});
+
+test('validateParams: required illuminance, work plane height (≤ H − 0.1) and MF', () => {
+  assert.deepEqual([DEFAULTS.En, DEFAULTS.hwp, DEFAULTS.mf], [300, 0.8, 0.75]);
+  assert.ok(validateParams(raw({ En: '500', hwp: '0' })).ok);
+  assert.ok(validateParams(raw({ H: '3', hwp: '2,9' })).ok);
+  assert.match(validateParams(raw({ H: '3', hwp: '2,95' })).errors.hwp, /2,9/);
+  assert.ok(validateParams(raw({ En: '0' })).errors.En);
+});
+
+test('stepValue: steps without float noise, within the bounds', async () => {
+  const { stepValue } = await import('../js/ui.js');
+  const P = Object.fromEntries(PARAMS.map((p) => [p.key, p]));
+  assert.equal(stepValue(P.L, 6, 1), 6.1);
+  assert.equal(stepValue(P.mf, 0.75, -1), 0.65);
+  assert.equal(stepValue(P.mf, 0.15, -1), 0.1);
+  assert.equal(stepValue(P.rhoC, 0.9, 1), 0.9);
+  assert.equal(stepValue(P.flux, 4000, 1), 4100);
+  assert.equal(stepValue(P.power, 6.51, 1), 6.61);
+  assert.equal(stepValue(P.En, 300, -1), 290);
+  assert.equal(stepValue(P.nx, 3, 1), 4);
+  assert.equal(stepValue(P.hc, 2, 1, { H: 3 }), 2.1);
+  assert.equal(stepValue(P.hc, 2.1, 1, { H: 3 }), 2.1);
+  assert.equal(stepValue(P.L, NaN, 1), 6.1); // invalid text starts from the default
 });
 
 test('validateParams: reflectances 0…0.9 with the spec defaults; faceRho orders them by face', () => {

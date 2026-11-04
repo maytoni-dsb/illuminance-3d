@@ -12,25 +12,27 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=bea673c0",
+      "./js/calc.js": "./js/calc.js?v=9ba8f3bc",
       "./js/checks2.js": "./js/checks2.js?v=bec00f91",
       "./js/checks3.js": "./js/checks3.js?v=25f5d271",
       "./js/checks4.js": "./js/checks4.js?v=1b36670e",
-      "./js/checks5.js": "./js/checks5.js?v=25ea001f",
+      "./js/checks5.js": "./js/checks5.js?v=36b0397c",
       "./js/colorscale.js": "./js/colorscale.js?v=85c6fa84",
       "./js/direct.js": "./js/direct.js?v=4fff6c32",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
+      "./js/help.js": "./js/help.js?v=040d65c9",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
-      "./js/orbit.js": "./js/orbit.js?v=264941e1",
-      "./js/photfile.js": "./js/photfile.js?v=95c6ce20",
-      "./js/photometry.js": "./js/photometry.js?v=ac06f848",
-      "./js/photui.js": "./js/photui.js?v=a42ceb30",
+      "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
+      "./js/photfile.js": "./js/photfile.js?v=d103b822",
+      "./js/photometry.js": "./js/photometry.js?v=bd36e3b8",
+      "./js/photui.js": "./js/photui.js?v=34b8da69",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=9c99fa0f",
-      "./js/view3d.js": "./js/view3d.js?v=186b6c0b",
-      "./js/worker.js": "./js/worker.js?v=ab03bae2"
+      "./js/ui.js": "./js/ui.js?v=d37b9bdc",
+      "./js/view3d.js": "./js/view3d.js?v=9a9f3cbb",
+      "./js/worker.js": "./js/worker.js?v=ab03bae2",
+      "./js/workplane.js": "./js/workplane.js?v=3bc76d64"
     }
   }
   </script>
@@ -111,12 +113,34 @@
     .fld{display:flex;flex-direction:column;gap:3px;min-width:0}
     .fld > .fl{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink3);height:17px;white-space:nowrap}
     .fld > .fl i{color:var(--muted)}
+    .fld > .fl .t{overflow:hidden;text-overflow:ellipsis}
     .fld .ibox{position:relative;display:flex;align-items:center}
-    .fld input{height:40px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 30px 0 9px;
-      font-size:14px;color:var(--ink);background:var(--card);font-variant-numeric:tabular-nums}
+    .fld input{height:32px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 28px 0 22px;
+      font-size:13.5px;color:var(--ink);background:var(--card);font-variant-numeric:tabular-nums}
+    /* up / down arrows on the left of a field (as in InDesign) */
+    .fld .spin{position:absolute;left:1px;top:1px;bottom:1px;width:17px;display:flex;flex-direction:column;
+      border-right:1px solid var(--rule);border-radius:4px 0 0 4px;overflow:hidden;z-index:1}
+    .fld .spin button{flex:1;display:flex;align-items:center;justify-content:center;border:0;padding:0;margin:0;
+      background:var(--soft2);color:var(--ink3);cursor:pointer}
+    .fld .spin button:hover{background:var(--soft);color:var(--ink)}
+    .fld .spin button:active{background:var(--accent-soft);color:var(--accent)}
+    .fld .spin button + button{border-top:1px solid var(--rule)}
     .fld input:hover{border-color:var(--line)}
     .fld input:focus{outline:none;border-color:var(--accent)}
-    .fld .unit{position:absolute;right:9px;font-size:11.5px;color:var(--muted);pointer-events:none}
+    .fld .unit{position:absolute;right:8px;font-size:11.5px;color:var(--muted);pointer-events:none}
+    .fld select{height:32px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 8px;
+      font-size:13px;color:var(--ink);background:var(--card)}
+    .fld select:focus{outline:none;border-color:var(--accent)}
+    /* help */
+    .help{width:16px;height:16px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink3);
+      font-size:10.5px;font-weight:600;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;
+      cursor:pointer;flex:0 0 auto;font-family:var(--sans)}
+    .help:hover,.help[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+    .fsub{display:flex;align-items:center;gap:6px}
+    .helppop{position:absolute;z-index:50;max-width:280px;padding:12px 14px;border-radius:10px;background:var(--card);
+      color:var(--ink);border:1px solid var(--rule);box-shadow:0 8px 28px rgba(0,0,0,.16);font-size:12.5px;line-height:1.45}
+    .helppop .hpt{font-weight:600;margin-bottom:4px}
+    .helppop .hpx{color:var(--ink2)}
     .fld.bad input{border-color:var(--err)}
     .fld .ferr{font-size:11px;color:var(--err);line-height:1.3}
     .fld.wide{grid-column:1/-1}
@@ -165,25 +189,40 @@
     .vstatus:not(:empty) + .vhint{visibility:hidden}
     .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
     .vhint b{font-weight:600;color:var(--ink3)}
-    /* photometric file: picker, card, polar diagram */
-    .pfpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .pfbtn{display:inline-flex;align-items:center;cursor:pointer}
-    .pfhint{font-size:12px;color:var(--muted)}
-    .pferr{font-size:12px;color:var(--err);line-height:1.4}
-    .pfcard{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--rule);border-radius:12px;background:var(--soft2)}
-    .pfname{font-weight:600;font-size:13.5px;line-height:1.3}
-    .pfname span{font-weight:400;color:var(--ink3)}
-    .pfgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-    .pffig{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
-    .pfpolar{width:168px;height:168px}
+    /* photometric file: drop zone, luminaire description, compact polar diagram */
+    .pfdrop{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:10px;
+      color:var(--ink3);font-size:12.5px;cursor:pointer;line-height:1.35}
+    .pfdrop:hover,.pfdrop.dropping{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
+    .pfdrop u{color:var(--accent);text-underline-offset:2px}
+    .pffile{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--ink3);min-width:0}
+    .pffile .pfname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pfclear{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 2px;cursor:pointer}
+    .pfclear:hover{color:var(--err)}
+    .pferr{font-size:12px;color:var(--err);line-height:1.4;margin-top:6px}
+    .pfcard{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+    .pfdesc{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12.5px;line-height:1.35}
+    .pfl1{color:var(--ink3)}
+    .pfl2{font-weight:600;font-size:13.5px}
+    .pfl3{color:var(--ink2);font-variant-numeric:tabular-nums}
+    .pfpolar{width:112px;height:112px;flex:0 0 auto}
     .pfpolar .ring{fill:none;stroke:var(--line);stroke-width:.6}
     .pfpolar .c0{fill:none;stroke:var(--accent);stroke-width:1.6}
     .pfpolar .c90{fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:3 2}
-    .pfpolar .lbl{font-size:8px;fill:var(--muted)}
-    .pffig figcaption{font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:4px}
-    .pffig .sw{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);margin-left:6px}
-    .pffig .sw.c90{border-top:2px dashed var(--ink3)}
-    .pfwarn{margin:0;padding-left:16px;font-size:11.5px;color:var(--ink3);line-height:1.4}
+    .pfwarn{margin:4px 0 0;padding-left:14px;font-size:11px;color:var(--ink3);line-height:1.35}
+    /* results: work planes */
+    .planes{display:flex;flex-direction:column}
+    .prow{border-bottom:1px solid var(--rule)}
+    .prow summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:14px 64px 1fr 1fr;align-items:center;gap:6px;
+      padding:8px 0;font-size:13px;font-variant-numeric:tabular-nums}
+    .prow summary::-webkit-details-marker{display:none}
+    .prow summary::before{content:"";width:0;height:0;border-left:5px solid var(--ink3);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .1s}
+    .prow[open] summary::before{transform:rotate(90deg)}
+    .prow .pn{font-weight:600}
+    .prow .pv{display:flex;align-items:center;gap:5px;white-space:nowrap}
+    .prow .pv i{font-style:normal;color:var(--ink3)}
+    .prow .gstech{padding:0 0 10px 20px}
+    .st{display:inline-block;width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+    .st.low{background:var(--err)} .st.ok{background:var(--ok)} .st.high{background:#F29100}
     .form.dropping{outline:2px dashed var(--accent);outline-offset:-6px}
     .fatal{padding:24px;color:var(--err)}
     /* calculation in progress: a pill in the upper left corner of the view */
@@ -273,21 +312,22 @@
     <section class="gscard side form" aria-label="Исходные данные">
       <form id="form" autocomplete="off" onsubmit="return false">
         <div class="fsec">
-          <div class="shd">Помещение</div>
+          <div class="shd">Помещение <button type="button" class="help" data-help="room" aria-label="Справка: размеры помещения" aria-expanded="false">?</button></div>
           <div class="fgrid" data-group="room" style="--cols:3"></div>
-          <div class="fsub">Коэффициенты отражения</div>
+          <div class="fsub">Коэффициенты отражения <button type="button" class="help" data-help="refl" aria-label="Справка: коэффициенты отражения" aria-expanded="false">?</button></div>
           <div class="fgrid" data-group="refl" style="--cols:3"></div>
+          <div class="fsub">Нормы <button type="button" class="help" data-help="norm" aria-label="Справка: нормы освещения" aria-expanded="false">?</button></div>
+          <div class="fgrid" data-group="norm" style="--cols:3"></div>
         </div>
         <div class="fsec">
-          <div class="shd">Светильники</div>
-          <div class="fgrid" data-group="lum" style="--cols:3"></div>
-          <div class="fgrid" data-group="phot" style="--cols:3"></div>
-          <div id="photfile" hidden></div>
-        </div>
-        <div class="fsec">
-          <div class="shd">Эксплуатация</div>
-          <div class="fgrid" data-group="maint" style="--cols:3"></div>
-          <div class="gshint">Коэффициент эксплуатации по таблице 4.3 СП 52.13330.2016; умножает все результаты.</div>
+          <div class="shd">Светильники <button type="button" class="help" data-help="lum" aria-label="Справка: расположение светильников" aria-expanded="false">?</button></div>
+          <div class="fgrid" data-group="lum" style="--cols:2"></div>
+          <div class="fsub">Фотометрия <button type="button" class="help" data-help="file" aria-label="Справка: фотометрический файл" aria-expanded="false">?</button></div>
+          <div id="photfile"></div>
+          <div class="pfcard" id="lumcard"></div>
+          <div class="fld wide" id="lampsets" hidden></div>
+          <div class="fsub">Параметры светильника <button type="button" class="help" data-help="lumdata" aria-label="Справка: параметры светильника" aria-expanded="false">?</button></div>
+          <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
         </div>
       </form>
 
@@ -315,12 +355,19 @@
 
     <section class="gscard side results" aria-label="Результаты">
       <div class="fsec">
-        <div class="shd">Освещённость граней</div>
-        <table class="htable" id="results">
-          <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Прямая</th><th>Отраж.</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="gshint" id="mfnote"></div>
+        <div class="shd">Результаты <button type="button" class="help" data-help="results" aria-label="Справка: результаты" aria-expanded="false">?</button></div>
+        <div class="planes" id="planes"></div>
+        <div class="gshint" id="planenote"></div>
+        <details class="dev" id="facesbox">
+          <summary>Освещённость граней</summary>
+          <div class="devbody">
+            <table class="htable" id="results">
+              <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Прямая</th><th>Отраж.</th></tr></thead>
+              <tbody></tbody>
+            </table>
+            <div class="gshint" id="mfnote"></div>
+          </div>
+        </details>
         <div class="shd" style="font-size:13px;margin-top:4px">Карта на гранях</div>
         <div class="gschips" role="radiogroup" aria-label="Карта на гранях" id="mapmode">
           <button type="button" class="gschipb" role="radio" data-v="total" aria-pressed="true" aria-checked="true">Полная</button>
@@ -385,6 +432,8 @@
   import { luminance, exposure } from './js/tonemap.js';
   import { LEVELS, COLORS_HEX } from './js/colorscale.js';
   import { initPhotFile } from './js/photui.js';
+  import { initHelp } from './js/help.js';
+  import { levelStatus, U0_MIN } from './js/workplane.js';
 
   const $ = (s) => document.querySelector(s);
   const DEG = Math.PI / 180;
@@ -488,13 +537,14 @@
   let mapMode = 'total', falseOn = true, faceColors = false, stops = 0;
   const sentKey = { v: '' };
 
-  let photFile = null;  // { table, phot, shape, key, name } of the loaded IES / LDT file
+  let photFile = null;  // { table, phot, shape, key, name, set, values } of the loaded IES / LDT file
   function calcParams(v) {
+    const file = v.phot === 'file' && photFile;
     const p = {
       L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: v.hc, psi: v.psi * DEG,
-      phot: v.phot, fUp: v.fUp, rho: faceRho(v),
+      phot: file ? 'file' : 'cosine', rho: faceRho(v), hwp: v.hwp,
     };
-    if (v.phot === 'file' && photFile) { p.fileKey = photFile.key; p.table = photFile.table; }
+    if (file) { p.fileKey = photFile.key; p.table = photFile.table; }
     return p;
   }
 
@@ -525,8 +575,6 @@
       result = null; shown = null;
       lastRoomKey = roomKey;
     }
-    $('#photfile').hidden = values.phot !== 'file';
-    if (values.phot === 'file' && !photFile) { setBusy('Выберите файл IES или LDT'); return; }
     if (!busy && !pending) setBusy('');
     // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
     // The table itself is not part of the key: fileKey identifies it.
@@ -569,6 +617,38 @@
     flush();
   }
 
+  /**
+   * Work planes: a collapsed row per plane (Ē and U₀), details inside. The normative plane gets the
+   * status marks: Ē against the required illuminance (red below it, green within its step of the
+   * scale, orange above) and U₀ (red below 0.3); the others are marked * "Для справки".
+   */
+  function renderPlanes(mf) {
+    const host = $('#planes');
+    const open = new Set([...host.querySelectorAll('details[open]')].map((d) => d.dataset.z));
+    const n0 = (x) => formatNumber(x, 0), n2 = (x) => formatNumber(x, 2);
+    const LABEL = { low: 'ниже нормы', ok: 'в пределах ступени шкалы', high: 'выше ступени шкалы' };
+    let ref = false;
+    host.innerHTML = result.planes.map((pl) => {
+      const st = pl.stats, avg = mf * st.avg, min = mf * st.min, max = mf * st.max, u0 = st.u0;
+      const name = `Г-${formatNumber(pl.z, 2).includes(',') ? formatNumber(pl.z, 2) : `${formatNumber(pl.z, 2)},0`}`;
+      const level = pl.normative ? levelStatus(avg, current.En) : null;
+      const uBad = pl.normative && u0 < U0_MIN;
+      if (!pl.normative) ref = true;
+      return `<details class="prow" data-z="${pl.z}"${open.has(String(pl.z)) ? ' open' : ''}>
+        <summary><span class="pn">${name}${pl.normative ? '' : '*'}</span>
+          <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` <span class="st ${level}" title="${LABEL[level]}: Eн = ${current.En} лк"></span>` : ''}</span>
+          <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ' <span class="st low" title="U₀ меньше 0,3"></span>' : ''}</span></summary>
+        <div class="gstech">
+          ${row('E<sub>min</sub> · E<sub>max</sub>, лк', `${n0(min)} · ${n0(max)}`)}
+          ${row('Прямая · отражённая Ē, лк', `${n0(mf * mean(pl.Edir))} · ${n0(mf * mean(pl.Eref))}`)}
+          ${pl.normative ? row('Норма', `${current.En} лк, ${LABEL[level]}`) : ''}
+          ${row('Сетка', `${pl.nx} × ${pl.ny}, шаг ${formatNumber(pl.dx, 2)} × ${formatNumber(pl.dy, 2)} м`)}
+        </div></details>`;
+    }).join('');
+    $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учётом MF = ${formatNumber(mf, 2)}.`;
+  }
+  const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+
   /** Applies MF, the map mode and the exposure to the last result (no recalculation). */
   function render() {
     if (!result || !current) return;
@@ -591,6 +671,8 @@
     $('#mfnote').innerHTML = `Средние по граням с учётом MF = ${formatNumber(mf, 2)}. Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.` +
       (result.lost > 1e-6 * result.balance.emitted ? ` Поток вверх ${formatNumber(mf * result.lost, 0)} лм не учтён: светильник у потолка (свес 0).` : '');
 
+    renderPlanes(mf);
+
     if (view) {
       view.setLuminaires(result.lums, result.fileKey && photFile?.key === result.fileKey ? photFile.shape : null);
       view.setValues(mapMode === 'direct' ? Ed : mapMode === 'indirect' ? Ei : E);
@@ -599,7 +681,13 @@
   }
 
   const form = initForm($('#form'), update);
-  initPhotFile($('#photfile'), $('.form'), (f) => { photFile = f; update(form.values()); });
+  // a file sets the photometry and fills flux, colour temperature and power from its lamp set
+  initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('.form') }, (f) => {
+    photFile = f;
+    if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
+    else form.set({ phot: 'cosine', flux: 4000 });
+  });
+  initHelp(document);
   update(form.values());
 
   function toggle(btn, apply) {

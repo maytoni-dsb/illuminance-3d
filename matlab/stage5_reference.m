@@ -110,7 +110,7 @@ function t = read_ldt(txt)
   num = @(i) str2double(strrep(strtrim(L{i}), ',', '.'));
   isym = num(3); Mc = num(4); Ng = num(6);
   n = num(26);
-  flux = num(26 + 2 * n + 1);                 % 26c of set 1
+  flux = num(26 + 2 + 1);                     % 26c of set 1 (sets follow one another, 6 lines each)
   s = 26 + 6 * n + 10 + 1;                    % first line after the direct ratios
   v = str2double(strrep(regexp(strtrim(strjoin(L(s:end), ' ')), '\s+', 'split'), ',', '.'));
   Cd = v(1:Mc); G = v(Mc+1:Mc+Ng); d = v(Mc+Ng+1:end);

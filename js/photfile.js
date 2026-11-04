@@ -169,6 +169,7 @@ export function parseIes(text, fileName = '') {
     power: watts > 0 ? watts : null,
     cct: Number(kw._SEARCH_COLORTEMP) || null,
     cri: Number(kw._SEARCH_CRI) || null,
+    lampSets: null,
     // LM-63 gives only the luminous opening; the housing is taken to be the same size.
     luminaire: opening,
     luminous: { ...opening, height: 0 },
@@ -218,13 +219,26 @@ export function parseLdt(text, fileName = '') {
   const tilt = num(25, 'наклон при измерении');
   const nSets = int(26, 'число наборов ламп');
   if (!(nSets >= 1 && nSets <= 50)) fail(`Неверное число наборов ламп: ${nSets}`);
-  const set = (field) => 26 + field * nSets + 1; // first line of field 26a…26f for set 1
-  const nLamps = num(set(0), 'число ламп');
-  const lampType = line(set(1)).trim();
-  const lampFlux = num(set(2), 'поток ламп');
-  const cct = line(set(3)).trim();
-  const cri = line(set(4)).trim();
-  const power = num(set(5), 'мощность');
+  // field 26a…26f of lamp set k (0-based): files write the sets one after another, six lines each
+  // (line 26 + 6k + field + 1). The sets are alternative lamps for the same optics (one is used at
+  // a time); the table is in cd/klm of the chosen set.
+  const at = (field, k) => 26 + 6 * k + field + 1;
+  const numOr = (n, what) => { const s = line(n).trim().replace(',', '.'); const v = Number(s); return s !== '' && Number.isFinite(v) ? v : null; };
+  const lampSets = Array.from({ length: nSets }, (_, k) => {
+    const flux = num(at(2, k), 'поток ламп');
+    if (!(flux > 0)) fail(`Поток ламп набора ${k + 1} должен быть больше нуля, а не ${flux}`);
+    return Object.freeze({
+      count: num(at(0, k), 'число ламп'),
+      type: line(at(1, k)).trim(),
+      flux,
+      cct: Number((line(at(3, k)).match(/\d+(?:[.,]\d+)?/) ?? [''])[0].replace(',', '.')) || null,
+      cri: Number((line(at(4, k)).match(/\d+(?:[.,]\d+)?/) ?? [''])[0].replace(',', '.')) || null,
+      power: (numOr(at(5, k)) ?? 0) > 0 ? numOr(at(5, k)) : null,
+    });
+  });
+  const nLamps = lampSets[0].count;
+  const lampType = lampSets[0].type;
+  const lampFlux = lampSets[0].flux;
   const dataStart = 26 + 6 * nSets + 10 + 1; // after the 10 direct ratios
   const toks = lines.slice(dataStart - 1).join(' ').split(/\s+/).filter((x) => x !== '');
   let q = 0;
@@ -298,9 +312,10 @@ export function parseLdt(text, fileName = '') {
     lampFlux,
     lor: lorl / 100,
     absolute: nLamps < 0,
-    power: power > 0 ? power : null,
-    cct: Number(cct) || null,
-    cri: Number(cri) || null,
+    power: lampSets[0].power,
+    cct: lampSets[0].cct,
+    cri: lampSets[0].cri,
+    lampSets: Object.freeze(lampSets),
     luminaire: { round, length: lumL, width: round ? lumL : lumB, height: lumH },
     luminous: { round: roundArea, length: areaL, width: roundArea ? areaL : areaB, height: Math.max(...areaH) },
     warnings,
@@ -337,6 +352,8 @@ const mod360 = (x) => ((x % 360) + 360) % 360;
  * @property {Float64Array} cd — intensity, cd, plane-major
  * @property {'rot'|'quad'|'half0'|'half90'|'none'} sym
  * @property {number|null} ratedFlux, lampFlux, power, cct, cri
+ * @property {{count:number, type:string, flux:number, cct:number|null, cri:number|null, power:number|null}[]|null} lampSets
+ *   — LDT lamp sets (alternatives; the table is scaled by the first one), null for IES
  * @property {{round:boolean, length:number, width:number, height:number}} luminaire, luminous — m
  * @property {string[]} warnings
  */
