@@ -72,4 +72,6 @@ The form has luminaire inputs, photometry, f_up and MF (results are E = MF · E�
 `js/checks3.js` is the on-page "Критерии этапа 3" panel, `tests/direct.test.mjs` the tests.
 `matlab/stage3_reference.m` writes `stage3_point_reference.txt` and `stage3_element_reference.txt`
 (element averages by `integral2` of the point formula, independent of the form-factor route);
-put them into `tests/fixtures/` — until then the two comparison tests are skipped.
+they are in `tests/fixtures/`. MATLAB R2025b comparison (4 Nov 2026): 1256 point cases agree within
+1.2e-13 relative, 400 element averages within 7.5e-12 (the accuracy of integral2 itself: MATLAB's
+integral2 and the form-factor route differ by 7.8e-12).

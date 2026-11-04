@@ -224,7 +224,7 @@ const readRows = (file) => readFileSync(file, 'utf8').split('\n').filter((l) => 
 const photOf = (flux, fUp) => (fUp === 0 ? createPhotometry({ type: 'cosine', flux }) : createPhotometry({ type: 'directIndirect', flux, fUp }));
 
 const POINT_FILE = fixture('stage3_point_reference.txt');
-test('MATLAB: direct illuminance at points', { skip: !existsSync(POINT_FILE) && 'tests/fixtures/stage3_point_reference.txt not found' }, () => {
+test('MATLAB: direct illuminance at points', { skip: !existsSync(POINT_FILE) && 'tests/fixtures/stage3_point_reference.txt not found' }, (t) => {
   // id x(3) n(3) s(3) flux fUp psi E
   const rows = readRows(POINT_FILE);
   assert.ok(rows.length >= 100, `${rows.length} rows`);
@@ -236,14 +236,16 @@ test('MATLAB: direct illuminance at points', { skip: !existsSync(POINT_FILE) && 
     worst = Math.max(worst, err);
     assert.ok(err <= 1e-12, `case ${r[0]}: JS ${E}, MATLAB ${r[13]}`);
   }
+  t.diagnostic(`MATLAB stage 3 points: ${rows.length} cases, max relative |ΔE| = ${worst.toExponential(2)}`);
 });
 
 const ELEM_FILE = fixture('stage3_element_reference.txt');
-test('MATLAB: element-average direct illuminance (integral2 of the point formula)', { skip: !existsSync(ELEM_FILE) && 'tests/fixtures/stage3_element_reference.txt not found' }, async () => {
+test('MATLAB: element-average direct illuminance (integral2 of the point formula)', { skip: !existsSync(ELEM_FILE) && 'tests/fixtures/stage3_element_reference.txt not found' }, async (t) => {
   const { pointToRect } = await import('../js/formfactor.js');
   // id s(3) flux fUp p0(3) a(3) b(3) nA(3) E
   const rows = readRows(ELEM_FILE);
   assert.ok(rows.length >= 100, `${rows.length} rows`);
+  let worst = 0;
   for (const r of rows) {
     assert.equal(r.length, 19, `row ${r[0]}`);
     const s = r.slice(1, 4), phot = photOf(r[4], r[5]);
@@ -253,8 +255,10 @@ test('MATLAB: element-average direct illuminance (integral2 of the point formula
     for (const l of phot.lobes) flux += l.flux * pointToRect(s, l.axis, p0, a, b, nA);
     const E = flux / area;
     const err = Math.abs(E - r[18]) / Math.max(Math.abs(r[18]), 1e-3);
+    worst = Math.max(worst, err);
     assert.ok(err <= 1e-9, `case ${r[0]}: JS ${E}, MATLAB ${r[18]}, rel ${err}`);
   }
+  t.diagnostic(`MATLAB stage 3 elements: ${rows.length} cases, max relative |ΔE| = ${worst.toExponential(2)}`);
 });
 
 // ---------------------------------------------------------------------------------------------
