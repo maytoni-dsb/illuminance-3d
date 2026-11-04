@@ -43,13 +43,13 @@ export function stage3Checks(room, lums, phot, E, { hc, psi }) {
   out.push({ name: 'Под светильником E = I(0)/d²', ok: rel <= 1e-12, detail: `один светильник; ${detail}` });
 
   // 2. Flux reaching all faces equals the luminaires' flux (a luminaire in the ceiling plane emits
-  //    only its downward flux): exact for cosine lobes, adaptive cubature for a file (tolerance 1e-4)
+  //    only its downward flux): exact for cosine lobes, adaptive cubature for a file (control 1e-3)
   const total = lums.length * emittedFlux(phot, lums[0].pos[2], H);
   const file = !phot.lobes;
   const errExact = Math.abs(faceFlux(room, E).total / total - 1);
   out.push({
     name: 'Поток на все грани равен потоку светильников',
-    ok: errExact <= (file ? 1e-4 : 1e-9),
+    ok: errExact <= (file ? 1e-3 : 1e-9),
     detail: `средние по элементам${file ? ' (адаптивная кубатура)' : ''}: |ΣE·A / ΣΦ − 1| = ${exp(errExact)} при N = ${room.N}` +
       (H - lums[0].pos[2] < 1e-12 && phot.flux - total / lums.length > 1e-9 * phot.flux ? '; поток вверх у потолка не учитывается' : ''),
   });

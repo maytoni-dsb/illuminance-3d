@@ -23,7 +23,7 @@ export const PARAMS = Object.freeze([
   { key: 'rhoF', group: 'refl', label: 'Пол', sym: 'ρ<sub>0</sub>', unit: '', def: 0.2, min: 0, max: 0.9 },
   { key: 'nx', group: 'lum', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true },
   { key: 'ny', group: 'lum', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true },
-  { key: 'flux', group: 'lum', label: 'Поток', sym: 'Φ', unit: 'лм', def: 4000, gt: 0, max: 1e6 },
+  { key: 'flux', group: 'lum', label: 'Поток', sym: 'Φ', unit: 'лм', def: 4000, gt: 0, max: 1e6, when: (v) => v.phot !== 'file' },
   {
     key: 'hc', group: 'lum', label: 'Свес', sym: 'h<sub>c</sub>', unit: 'м', def: 0, min: 0,
     max: (v) => Math.max(0, (v.H ?? 20) - HC_CLEARANCE), maxNote: 'H − 0,9',
@@ -34,7 +34,7 @@ export const PARAMS = Object.freeze([
     options: [
       { value: 'cosine', label: 'Косинусная' },
       { value: 'directIndirect', label: 'Прямо-отражённая' },
-      { value: 'file', label: 'Файл IES / LDT', disabled: true, title: 'Появится на этапе 5' },
+      { value: 'file', label: 'Файл IES / LDT' },
     ],
   },
   { key: 'fUp', group: 'phot', label: 'Доля потока вверх', sym: 'f<sub>up</sub>', unit: '', def: 0.3, min: 0, max: 1, when: (v) => v.phot === 'directIndirect' },
@@ -71,6 +71,9 @@ export const DEFAULTS = Object.freeze(Object.fromEntries(PARAMS.map((p) => [p.ke
  */
 export function validateParams(raw) {
   const values = {}, errors = {};
+  // choices are known up front, so a field placed before its choice (flux before the photometry)
+  // can depend on it
+  const choices = Object.fromEntries(PARAMS.filter((p) => p.kind === 'choice').map((p) => [p.key, raw[p.key] ?? p.def]));
   for (const p of PARAMS) {
     if (p.kind === 'choice') {
       const x = raw[p.key] ?? p.def;
@@ -79,7 +82,7 @@ export function validateParams(raw) {
       else values[p.key] = x;
       continue;
     }
-    if (p.when && !p.when(values)) { values[p.key] = p.def; continue; }
+    if (p.when && !p.when({ ...choices, ...values })) { values[p.key] = p.def; continue; }
     const x = parseNumber(raw[p.key] ?? '');
     if (!Number.isFinite(x)) { errors[p.key] = 'Введите число'; continue; }
     if (p.int && !Number.isInteger(x)) { errors[p.key] = 'Введите целое число'; continue; }

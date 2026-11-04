@@ -84,7 +84,7 @@ export function createCalc() {
       Edir: Float64Array.from(Edir), Eind: Float64Array.from(s.Eind),
       iterations: s.iterations, converged: s.converged, change: s.change,
       balance, sumpner: sp, ms, reused, lums: lums.map((l) => ({ pos: [...l.pos], psi: l.psi })),
-      flux: phot.flux, lost, directStats: Edir.stats ?? null,
+      flux: phot.flux, lost, directStats: Edir.stats ?? null, fileKey: isFile ? p.fileKey : null,
     };
     if (p.checks !== false) {
       const t = now();

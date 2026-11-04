@@ -129,3 +129,35 @@ solves (I − F R) E_ind = F R E_dir directly; its `stage4_reference.txt` is in 
 (tolerance 1e-9). MATLAB R2025b comparison (4 Nov 2026): 1352 elements in four rooms, E_dir within
 2.4e-15 and E_ind within 1.0e-13 relative. Timing for 10 × 10 × 3 m (4176 elements, headless Chromium): kernel 0.3 s once per
 geometry, direct component 10 ms, solver 0.3 s (6 sweeps).
+
+Stage 5 — photometric files (IES LM-63 and EULUMDAT):
+- `js/photfile.js`: parsers reducing both formats to one table (stored C planes × γ angles, cd) with
+  the symmetry (`rot`, `quad`, `half0`, `half90` — LDT Isym 3 starts at C270 —, `none`), sizes and the
+  rated flux (LDT: Φ_lamps of the first lamp set · LORL; IES states no luminaire flux). Quirks met in
+  the Maytoni library are tolerated with a warning (an LDT declaring Isym 0/2/4 with one plane is
+  read as rotational; the LDT conversion factor is not applied: the tables integrate to the rated
+  flux without it); broken files are rejected with a message in Russian. IES horizontal angles are
+  read as C angles as they are; the luminaire length lies along C0–C180 in IES and along C90–C270
+  in LDT (ERCO pairs: IES width = LDT length, identical C angles);
+- `js/photometry.js`: the table expanded to the full circle, a bilinear interpolant in (C, γ) and the
+  exact closed-form flux of that interpolant (total, downward, upward). A luminaire in the ceiling
+  plane (h_c = 0) emits only its downward flux; the page says how much upward flux is lost;
+- `js/direct.js`: element averages for tabulated photometry by adaptive cubature (Gauss 3 × 3 against
+  its four quarters, tolerance max(1e-3 · value, 1e-7 · Φ) per element and luminaire) with a flux
+  balance control of 1e-3 per luminaire; 10 × 10 × 3 m with 16–36 luminaires: 0.2–0.4 s;
+- `js/photui.js`: the file picker (button or drop onto the form), the luminaire card with a polar
+  diagram (C0–C180 and C90–C270, cd/klm); the last file is kept in this browser's localStorage;
+  `js/view3d.js` draws the luminous surface in its size and, for pendants, the grey housing;
+- `js/checks5.js`: the on-page "Критерии этапа 5" panel; `tests/photfile.test.mjs` the tests with
+  synthetic files of every symmetry and real files in `tests/fixtures/photometry/`.
+
+Check a whole folder of photometric files (every file must parse, the flux of the table must agree
+with the rated flux within 1 %, IES/LDT pairs of the same name are compared direction by direction):
+
+```
+node scripts/check-library.mjs <folder> [--verbose] [--json report.json]
+```
+
+`matlab/stage5_reference.m` parses the fixture files independently and writes fluxes (MATLAB's
+`integral` with the tabulated angles as waypoints) and intensities at 200 directions per file
+(`interp1` / `interp2`) to `stage5_reference.txt`; copy it to `tests/fixtures/` (tolerance 1e-9).

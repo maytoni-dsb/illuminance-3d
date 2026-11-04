@@ -61,13 +61,15 @@ test('validateParams: rotation 0…180°, MF 0.1…1', () => {
   assert.ok(validateParams(raw({ mf: '0,05' })).errors.mf);
 });
 
-test('validateParams: f_up is checked only for the direct-indirect model; file is not yet available', () => {
+test('validateParams: f_up only for the direct-indirect model; flux not checked with a file', () => {
   assert.ok(validateParams(raw({ phot: 'cosine', fUp: 'abc' })).ok);
   assert.ok(validateParams(raw({ phot: 'directIndirect', fUp: 'abc' })).errors.fUp);
   const r = validateParams(raw({ phot: 'directIndirect', fUp: '1' }));
   assert.ok(r.ok);
   assert.equal(r.values.fUp, 1);
-  assert.ok(validateParams(raw({ phot: 'file' })).errors.phot);
+  assert.ok(validateParams(raw({ phot: 'file' })).ok);
+  assert.ok(validateParams(raw({ phot: 'file', flux: 'abc' })).ok);
+  assert.ok(validateParams(raw({ phot: 'cosine', flux: 'abc' })).errors.flux);
   assert.ok(validateParams(raw({ phot: 'laser' })).errors.phot);
 });
 

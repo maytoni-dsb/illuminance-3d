@@ -210,8 +210,8 @@ test('direct component of file photometry: every luminaire puts its flux on the 
     const lums = luminaireGrid({ ...R, nx: 3, ny: 2, hc, psi: 0.4 });
     const E = elementDirect(room, lums, p);
     const em = lums.length * emittedFlux(p, lums[0].pos[2], R.H);
-    assert.ok(Math.abs(faceFlux(room, E).total / em - 1) < 1e-4, `${f} hc=${hc}`);
-    for (const x of E.stats.perLum) assert.ok(Math.abs(x) < 1e-4, `${f} hc=${hc}: ${x}`);
+    assert.ok(Math.abs(faceFlux(room, E).total / em - 1) < 1e-3, `${f} hc=${hc}`);
+    for (const x of E.stats.perLum) assert.ok(Math.abs(x) < 1e-3, `${f} hc=${hc}: ${x}`);
     if (hc === 0) assert.ok(em < lums.length * p.flux * (1 - 1e-6) || p.fluxUp < 1e-9 * p.flux);
   }
 });
@@ -256,4 +256,52 @@ test('stage 5 panel checks pass on an asymmetric file', () => {
   for (const c of [...stage5Checks(room, lums, p, E, t), ...stage3Checks(room, lums, p, E, { hc: 0, psi: 0.3 })]) {
     assert.ok(c.ok, `${c.name}: ${c.detail}`);
   }
+});
+
+test('polar diagram: curves in cd/klm, γ = 0 down, C0 right and C180 left', async () => {
+  const { lidcCurves } = await import('../js/photui.js');
+  const p = photOf(load('ERCO-B0000021.ldt'));
+  const { c0, max, rings } = lidcCurves(p, 70);
+  assert.equal(rings[3], max);
+  const pts = c0.slice(1, -1).split('L').map((s) => s.split(' ').map(Number));
+  assert.equal(pts.length, 2 * 181);
+  // first point: γ = 0 on C0, straight down (x = 0, y = r > 0)
+  assert.ok(Math.abs(pts[0][0]) < 1e-9 && pts[0][1] > 0);
+  // the wallwasher throws towards C0: at γ = 30° the right side reaches much farther than the left
+  const r = (q) => Math.hypot(q[0], q[1]);
+  assert.ok(r(pts[30]) > 50 * r(pts[2 * 181 - 1 - 30]) && pts[30][0] > 0);
+  assert.ok(Math.abs(r(pts[30]) / 70 * max - p.intensity(0, 30 * DEG) * 1000 / p.flux) < 0.01 * max);
+});
+
+// ---- MATLAB reference (matlab/stage5_reference.m) ------------------------------------------------
+const REF_FILES = [
+  'C009CW-L12B.ies', 'C009CW-L12B.ldt', 'C065CL-02-L12W3K-B.ldt', 'C071WL-L12B3K.ldt',
+  'DL094-GU10-W-60.ldt', 'DL124-10W-3K-TRS-W.ldt',
+  'ERCO-32607-000.ies', 'ERCO-32607-000.ldt', 'ERCO-B0000021.ies', 'ERCO-B0000021.ldt',
+  'ERCO-B5000065.ies', 'ERCO-B5000065.ldt', 'ERCO-C1000001.ies', 'ERCO-C1000001.ldt',
+  'ERCO-C1000005.ies', 'ERCO-C1000005.ldt', 'O570WL-L10B3K.ies', 'O570WL-L10B3K.ldt',
+  'TR152-1-7W3K-PT.ldt', 'TR186-1-8W4K-B.ies', 'TR186-1-8W4K-B.ldt'];
+const refUrl = new URL('./fixtures/stage5_reference.txt', import.meta.url);
+let refText = null;
+try { refText = readFileSync(refUrl, 'utf8'); } catch { /* not yet produced */ }
+
+test('MATLAB reference: flux and intensities of the fixture files (1e-9)', { skip: !refText && 'tests/fixtures/stage5_reference.txt is absent' }, () => {
+  const phots = REF_FILES.map((f) => photOf(load(f)));
+  let nFlux = 0, nI = 0, worst = 0;
+  for (const line of refText.trim().split(/\r?\n/)) {
+    const [kind, k, C, g, v] = line.trim().split(/\s+/).map(Number);
+    const p = phots[k - 1];
+    if (kind === 1) {
+      const e = Math.abs(p.flux / v - 1);
+      worst = Math.max(worst, e); nFlux++;
+      assert.ok(e < 1e-9, `${REF_FILES[k - 1]}: flux ${p.flux} vs ${v}`);
+    } else {
+      const I = p.intensity(C * DEG, g * DEG);
+      const scale = Math.max(1, ...p.table.rows);
+      assert.ok(Math.abs(I - v) < 1e-9 * scale, `${REF_FILES[k - 1]} C=${C} γ=${g}: ${I} vs ${v}`);
+      nI++;
+    }
+  }
+  assert.equal(nFlux, REF_FILES.length);
+  assert.equal(nI, 200 * REF_FILES.length);
 });

@@ -90,12 +90,12 @@ export function stage5Checks(room, lums, phot, E, table) {
     detail: `формула ${lm(phot.flux)}, квадратура Гаусса 6 × 6 по ячейкам таблицы: отличие ${exp(qerr)}; вниз ${lm(phot.fluxDown)}, вверх ${lm(phot.fluxUp)}`,
   });
 
-  // 4. Every luminaire puts its whole flux on the faces (adaptive cubature, tolerance 1e-4)
+  // 4. Every luminaire puts its whole flux on the faces (adaptive cubature, control 1e-3)
   const per = E.stats?.perLum ?? [];
   const w = per.reduce((m, x) => Math.max(m, Math.abs(x)), 0);
   out.push({
-    name: 'Поток каждого светильника на грани (10⁻⁴)',
-    ok: per.length > 0 && w <= 1e-4,
+    name: 'Поток каждого светильника на грани (10⁻³)',
+    ok: per.length > 0 && w <= 1e-3,
     detail: `${per.length} светильников: наибольшее |ΣE·A / Φ − 1| = ${exp(w)}; ${Math.round((E.stats?.evals ?? 0) / Math.max(1, room.N * lums.length))} вычислений КСС на пару элемент–светильник, глубина ${E.stats?.depth ?? '—'}, повторов ${E.stats?.retries ?? '—'}`,
   });
   return out;

@@ -12,23 +12,24 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=a46b5df6",
+      "./js/calc.js": "./js/calc.js?v=bea673c0",
       "./js/checks2.js": "./js/checks2.js?v=bec00f91",
-      "./js/checks3.js": "./js/checks3.js?v=a365fbb7",
+      "./js/checks3.js": "./js/checks3.js?v=25f5d271",
       "./js/checks4.js": "./js/checks4.js?v=1b36670e",
-      "./js/checks5.js": "./js/checks5.js?v=aca3969f",
+      "./js/checks5.js": "./js/checks5.js?v=25ea001f",
       "./js/colorscale.js": "./js/colorscale.js?v=85c6fa84",
-      "./js/direct.js": "./js/direct.js?v=abcda3b8",
+      "./js/direct.js": "./js/direct.js?v=4fff6c32",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
       "./js/orbit.js": "./js/orbit.js?v=264941e1",
-      "./js/photfile.js": "./js/photfile.js?v=5ed7d850",
+      "./js/photfile.js": "./js/photfile.js?v=95c6ce20",
       "./js/photometry.js": "./js/photometry.js?v=ac06f848",
+      "./js/photui.js": "./js/photui.js?v=a42ceb30",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=c20ba6fd",
-      "./js/view3d.js": "./js/view3d.js?v=7fc7a468",
+      "./js/ui.js": "./js/ui.js?v=9c99fa0f",
+      "./js/view3d.js": "./js/view3d.js?v=186b6c0b",
       "./js/worker.js": "./js/worker.js?v=ab03bae2"
     }
   }
@@ -164,6 +165,26 @@
     .vstatus:not(:empty) + .vhint{visibility:hidden}
     .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
     .vhint b{font-weight:600;color:var(--ink3)}
+    /* photometric file: picker, card, polar diagram */
+    .pfpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .pfbtn{display:inline-flex;align-items:center;cursor:pointer}
+    .pfhint{font-size:12px;color:var(--muted)}
+    .pferr{font-size:12px;color:var(--err);line-height:1.4}
+    .pfcard{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--rule);border-radius:12px;background:var(--soft2)}
+    .pfname{font-weight:600;font-size:13.5px;line-height:1.3}
+    .pfname span{font-weight:400;color:var(--ink3)}
+    .pfgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+    .pffig{margin:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+    .pfpolar{width:168px;height:168px}
+    .pfpolar .ring{fill:none;stroke:var(--line);stroke-width:.6}
+    .pfpolar .c0{fill:none;stroke:var(--accent);stroke-width:1.6}
+    .pfpolar .c90{fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:3 2}
+    .pfpolar .lbl{font-size:8px;fill:var(--muted)}
+    .pffig figcaption{font-size:11px;color:var(--ink3);display:flex;align-items:center;gap:4px}
+    .pffig .sw{display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);margin-left:6px}
+    .pffig .sw.c90{border-top:2px dashed var(--ink3)}
+    .pfwarn{margin:0;padding-left:16px;font-size:11.5px;color:var(--ink3);line-height:1.4}
+    .form.dropping{outline:2px dashed var(--accent);outline-offset:-6px}
     .fatal{padding:24px;color:var(--err)}
     /* calculation in progress: a pill in the upper left corner of the view */
     .vbusy{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:8px;background:var(--card);
@@ -244,7 +265,7 @@
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle">Расчёт освещения<br>помещения</span>
-    <span class="stagebadge">Этап 4 · отражённый свет</span>
+    <span class="stagebadge">Этап 5 · файлы IES и LDT</span>
     <button type="button" class="themebtn" id="themebtn" title="Светлая или тёмная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
   </header>
 
@@ -261,6 +282,7 @@
           <div class="shd">Светильники</div>
           <div class="fgrid" data-group="lum" style="--cols:3"></div>
           <div class="fgrid" data-group="phot" style="--cols:3"></div>
+          <div id="photfile" hidden></div>
         </div>
         <div class="fsec">
           <div class="shd">Эксплуатация</div>
@@ -346,6 +368,8 @@
             <ul class="checks" id="checks3"></ul>
             <div class="shd">Критерии этапа 4</div>
             <ul class="checks" id="checks4"></ul>
+            <div class="shd" id="checks5h" hidden>Критерии этапа 5</div>
+            <ul class="checks" id="checks5" hidden></ul>
           </div>
         </details>
       </div>
@@ -360,6 +384,7 @@
   import { faceAverages } from './js/direct.js';
   import { luminance, exposure } from './js/tonemap.js';
   import { LEVELS, COLORS_HEX } from './js/colorscale.js';
+  import { initPhotFile } from './js/photui.js';
 
   const $ = (s) => document.querySelector(s);
   const DEG = Math.PI / 180;
@@ -463,11 +488,14 @@
   let mapMode = 'total', falseOn = true, faceColors = false, stops = 0;
   const sentKey = { v: '' };
 
+  let photFile = null;  // { table, phot, shape, key, name } of the loaded IES / LDT file
   function calcParams(v) {
-    return {
+    const p = {
       L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: v.hc, psi: v.psi * DEG,
       phot: v.phot, fUp: v.fUp, rho: faceRho(v),
     };
+    if (v.phot === 'file' && photFile) { p.fileKey = photFile.key; p.table = photFile.table; }
+    return p;
   }
 
   function update(values) {
@@ -497,9 +525,13 @@
       result = null; shown = null;
       lastRoomKey = roomKey;
     }
+    $('#photfile').hidden = values.phot !== 'file';
+    if (values.phot === 'file' && !photFile) { setBusy('Выберите файл IES или LDT'); return; }
+    if (!busy && !pending) setBusy('');
     // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
+    // The table itself is not part of the key: fileKey identifies it.
     const p = calcParams(values);
-    const key = JSON.stringify(p);
+    const key = JSON.stringify({ ...p, table: undefined });
     if (key !== sentKey.v) { sentKey.v = key; request(p); }
     else render();
   }
@@ -513,7 +545,8 @@
       render();
       $('#timing').innerHTML =
         row('Ядро', r.reused.kernel ? 'из кэша' : `${ms(r.ms.kernel)} + поправка ${ms(r.ms.coarse)}`) +
-        row('Прямая составляющая', r.reused.direct ? 'из кэша' : `${ms(r.ms.direct)} · ${r.lums.length} св. × ${r.N.toLocaleString('ru-RU')} эл.`) +
+        row('Прямая составляющая', r.reused.direct ? 'из кэша' : `${ms(r.ms.direct)} · ${r.lums.length} св. × ${r.N.toLocaleString('ru-RU')} эл.` +
+          (r.directStats ? ` · ${Math.round(r.directStats.evals / (r.lums.length * r.N))} выч./пару` : '')) +
         row('Решатель', `${ms(r.ms.solve)} · ${r.iterations} итер.`) +
         row('Проверки этапов 3–4', ms(r.ms.checks));
       $('#checks3').innerHTML = checkList(r.checks3);
@@ -527,6 +560,9 @@
         });
       }
       $('#checks4').innerHTML = checkList(c4);
+      $('#checks5').innerHTML = r.checks5 ? checkList(r.checks5) : '';
+      $('#checks5').hidden = $('#checks5h').hidden = !r.checks5;
+      window.__stage5 = { room, result: r, checks: r.checks5 ?? null, file: photFile };
       window.__stage3 = { room, result: r, checks: r.checks3 };
       window.__stage4 = { room, result: r, checks: c4, shown, exposure: ex };
     }
@@ -552,16 +588,18 @@
     const n0 = (x) => formatNumber(x, 0);
     $('#results tbody').innerHTML = room.faces.map((fc) =>
       `<tr><td>${fc.name}</td><td><b>${n0(avg[fc.id])}</b></td><td>${n0(avgD[fc.id])}</td><td>${n0(avgI[fc.id])}</td></tr>`).join('');
-    $('#mfnote').innerHTML = `Средние по граням с учётом MF = ${formatNumber(mf, 2)}. Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.`;
+    $('#mfnote').innerHTML = `Средние по граням с учётом MF = ${formatNumber(mf, 2)}. Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.` +
+      (result.lost > 1e-6 * result.balance.emitted ? ` Поток вверх ${formatNumber(mf * result.lost, 0)} лм не учтён: светильник у потолка (свес 0).` : '');
 
     if (view) {
-      view.setLuminaires(result.lums);
+      view.setLuminaires(result.lums, result.fileKey && photFile?.key === result.fileKey ? photFile.shape : null);
       view.setValues(mapMode === 'direct' ? Ed : mapMode === 'indirect' ? Ei : E);
       view.setLuminance(L, ex.m);
     }
   }
 
   const form = initForm($('#form'), update);
+  initPhotFile($('#photfile'), $('.form'), (f) => { photFile = f; update(form.values()); });
   update(form.values());
 
   function toggle(btn, apply) {

@@ -340,3 +340,22 @@ const mod360 = (x) => ((x % 360) + 360) % 360;
  * @property {{round:boolean, length:number, width:number, height:number}} luminaire, luminous — m
  * @property {string[]} warnings
  */
+
+/**
+ * Luminaire shape for the 3D view, in the luminaire frame: `a` along the C0–C180 plane, `b` along
+ * C90–C270, m. IES (LM-63): length along C0–C180, width along C90–C270. EULUMDAT: length along
+ * C90–C270 and width along C0–C180 — as ERCO writes its IES/LDT pairs (IES width = LDT length,
+ * with identical C angles); the Maytoni library pairs disagree with each other on this.
+ * Zero sizes give null (the view then draws a default marker).
+ * @param {PhotTable} t
+ * @returns {{ luminous: {round:boolean, a:number, b:number} | null,
+ *             housing: {round:boolean, a:number, b:number, h:number} | null }}
+ */
+export function luminaireShape(t) {
+  const ab = (s) => (t.format === 'ies' ? [s.length, s.width] : [s.width, s.length]);
+  const lum = t.luminous, hou = t.luminaire;
+  const [la, lb] = ab(lum), [ha, hb] = ab(hou);
+  const luminous = la > 0 && lb > 0 ? { round: lum.round, a: la, b: lb } : (ha > 0 && hb > 0 ? { round: hou.round, a: ha, b: hb } : null);
+  const housing = ha > 0 && hb > 0 ? { round: hou.round, a: Math.max(ha, luminous?.a ?? 0), b: Math.max(hb, luminous?.b ?? 0), h: hou.height } : null;
+  return { luminous, housing };
+}

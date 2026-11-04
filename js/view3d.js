@@ -175,32 +175,61 @@ function buildFaceGrid(face) {
 }
 
 /**
- * Luminaire markers: light squares facing down at the photometric centre, turned by ψ,
- * with a suspension line for pendants. The luminaire size is not known before stage 5,
- * so the square side is a fixed fraction of the grid pitch (at most 0.3 m).
+ * Luminaires: the luminous surface (light, facing down) at the photometric centre, turned by ψ,
+ * and for pendants the grey housing above it with a suspension line to the ceiling. Sizes come
+ * from the photometric file (photfile.luminaireShape: `a` along C0, `b` along C90); without a
+ * file the luminous surface is a square of min(0.3 m, 0.35 · grid pitch).
+ * @param {{ luminous: {round:boolean,a:number,b:number}|null, housing: {round:boolean,a:number,b:number,h:number}|null } | null} shape
  */
-function buildLuminaires(r, lums, edgeColor) {
+function buildLuminaires(r, lums, edgeColor, shape = null) {
   const group = new THREE.Group();
   if (!lums.length) return group;
   const zs = lums[0].pos[2];
-  const xs = new Set(lums.map((s) => s.pos[0])).size, ys = new Set(lums.map((s) => s.pos[1])).size;
-  const side = Math.min(0.3, 0.35 * Math.min(r.L / xs, r.W / ys));
-  const plane = new THREE.PlaneGeometry(side, side);
-  plane.rotateX(Math.PI / 2); // PlaneGeometry faces +Z; after rotation it faces −Y (down in Three.js)
+  const pendant = r.H - zs > 1e-6;
+  let lumGeo;
+  if (shape?.luminous) {
+    const { round, a, b } = shape.luminous;
+    lumGeo = round ? new THREE.CircleGeometry(0.5, 48) : new THREE.PlaneGeometry(1, 1);
+    lumGeo.scale(a, b, 1);
+  } else {
+    const xs = new Set(lums.map((s) => s.pos[0])).size, ys = new Set(lums.map((s) => s.pos[1])).size;
+    const side = Math.min(0.3, 0.35 * Math.min(r.L / xs, r.W / ys));
+    lumGeo = new THREE.PlaneGeometry(side, side);
+  }
+  lumGeo.rotateX(Math.PI / 2); // faces +Z → faces −Y (down in Three.js); local x stays along C0
   const fill = new THREE.MeshBasicMaterial({ color: 0xfffbea, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-  const edges = new THREE.EdgesGeometry(plane);
+  const edges = new THREE.EdgesGeometry(lumGeo);
   const edgeMat = new THREE.LineBasicMaterial({ color: edgeColor });
+  // housing of a pendant: from the luminous surface up by its height (at most to the ceiling)
+  let houGeo = null, houH = 0;
+  if (pendant && shape?.housing && shape.housing.h > 0) {
+    const { round, a, b, h } = shape.housing;
+    houH = Math.min(h, r.H - zs);
+    houGeo = round ? new THREE.CylinderGeometry(0.5, 0.5, 1, 48) : new THREE.BoxGeometry(1, 1, 1);
+    houGeo.scale(a, houH, b);
+    houGeo.translate(0, houH / 2, 0);
+  }
+  const houMat = new THREE.MeshBasicMaterial({ color: 0x8c8c8c });
+  const houEdges = houGeo ? new THREE.EdgesGeometry(houGeo, 30) : null;
   const hangs = [];
-  const zMark = Math.min(zs, r.H - 0.004); // keep the square just below the ceiling plane
+  const zMark = pendant ? zs - 0.001 : Math.min(zs, r.H - 0.004); // just below the ceiling plane
   for (const s of lums) {
     const t = toThree([s.pos[0], s.pos[1], zMark]);
-    const m = new THREE.Mesh(plane, fill);
+    const m = new THREE.Mesh(lumGeo, fill);
     m.position.set(t[0], t[1], t[2]);
     m.rotation.y = s.psi; // Three.js +Y is room +Z: rotation about it is counterclockwise viewed from above
     const e = new THREE.LineSegments(edges, edgeMat);
     e.position.copy(m.position); e.rotation.copy(m.rotation);
     group.add(m, e);
-    if (r.H - zs > 1e-6) hangs.push(...toThree([s.pos[0], s.pos[1], r.H]), ...t);
+    if (houGeo) {
+      const hm = new THREE.Mesh(houGeo, houMat);
+      const ht = toThree([s.pos[0], s.pos[1], zs]);
+      hm.position.set(ht[0], ht[1], ht[2]); hm.rotation.y = s.psi;
+      const he = new THREE.LineSegments(houEdges, edgeMat);
+      he.position.copy(hm.position); he.rotation.copy(hm.rotation);
+      group.add(hm, he);
+    }
+    if (pendant && zs + houH < r.H - 1e-6) hangs.push(...toThree([s.pos[0], s.pos[1], r.H]), ...toThree([s.pos[0], s.pos[1], zs + houH]));
   }
   if (hangs.length) {
     const g = new THREE.BufferGeometry();
@@ -473,10 +502,10 @@ export function createView(container, opts = {}) {
     return { views: seen.length, values: seen, expected: want, same: seen.every((v) => v === want) };
   }
 
-  /** Luminaire markers (photometry.luminaireGrid). */
-  function setLuminaires(lums) {
+  /** Luminaires (photometry.luminaireGrid) with an optional shape (photfile.luminaireShape). */
+  function setLuminaires(lums, shape = null) {
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); }
-    lumGroup = room ? buildLuminaires(room, lums, cssColor('--view-edge', '#444444')) : null;
+    lumGroup = room ? buildLuminaires(room, lums, cssColor('--view-edge', '#444444'), shape) : null;
     if (lumGroup) scene.add(lumGroup);
     requestRender();
   }
