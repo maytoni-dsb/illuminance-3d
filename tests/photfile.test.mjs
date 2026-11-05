@@ -149,7 +149,7 @@ test('errors are reported in Russian with a reason', () => {
 // ---- real files ---------------------------------------------------------------------------------
 
 test('fixtures: LDT flux by the table within 1 % of the rated flux (the stage 5 criterion)', () => {
-  const files = readdirSync(FIX).filter((f) => /\.ldt$/i.test(f) && !f.startsWith('DL058'));
+  const files = readdirSync(FIX).filter((f) => /\.ldt$/i.test(f) && !f.startsWith('DL058') && !f.startsWith('Zoom')); // Zoom: LORL = 1 % by mistake
   assert.ok(files.length >= 10);
   for (const f of files) {
     const t = load(f);
@@ -278,7 +278,7 @@ test('luminaire sizes text and the form values of a lamp set', async () => {
   assert.equal(sizeText(load('ERCO-C1000001.ldt')), '0,5 × 0,04 × 0,06 м');
   assert.equal(sizeText(load('ERCO-B0000021.ldt')), '⌀0,146 × 0,099 м');
   const t = load('Atom-C016CL-01W-45.ldt');
-  assert.deepEqual(setValues(t, 0, 2), { flux: 510, cct: 3000, power: 5.84 });
+  assert.deepEqual(setValues(t, photOf(t).tableFlux, 2), { flux: 510, cct: 3000, power: 5.84 });
   const i = load('ERCO-C1000005.ies');
   assert.deepEqual(setValues(i, photOf(i).tableFlux), { flux: 2829, cct: null, power: 20.7 });
 });
@@ -328,4 +328,15 @@ test('LDT lamp sets are read one after another (6 lines each); another set scale
   const n = load('Nostalgia.ldt'); // three sets, 2.5° steps, conversion factor 0.5 (not applied)
   assert.deepEqual(n.lampSets.map((s) => s.flux), [880, 930, 880]);
   assert.ok(Math.abs(photOf(n).flux / n.ratedFlux - 1) < 0.01);
+});
+
+test('LDT with LORL = 1 instead of 100: the flux comes from the intensity table, with a warning', async () => {
+  const { setValues } = await import('../js/photui.js');
+  const t = load('Zoom-C029CL-01W-45.ldt');
+  assert.ok(Math.abs(t.ratedFlux - 5.2) < 1e-9);          // 520 lm · 1 %
+  assert.match(t.warnings.join(' '), /не совпадает с потоком по кривой силы света 520 лм/);
+  const p = photOf(t);
+  assert.ok(Math.abs(p.tableFlux - 520) < 1);
+  assert.deepEqual([0, 1, 2, 3].map((k) => setValues(t, p.tableFlux, k).flux), [520, 640, 510, 620]);
+  assert.equal(load('Atom-C016CL-01W-45.ldt').warnings.some((w) => /не совпадает/.test(w)), false);
 });

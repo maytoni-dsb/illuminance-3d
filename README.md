@@ -194,3 +194,8 @@ Stage 5, revision 2 (5 Nov 2026):
   run when a file is loaded and by the "Предложить" button, never on other changes;
 - the form: fields 26 px high; the luminaire section is the drop zone (file name inside it, a new file
   can be dropped onto it), the luminaire description and parameters, then the grid; no edges in 3D.
+- (5 Nov 2026) The luminaire flux of an LDT file is the flux of its intensity table (cd/klm × the lamp
+  flux of the chosen set), not Φ_lamps · LORL: some files state LORL = 1 instead of 100 (the parser
+  warns when the two differ by more than 1 %). At most 500 luminaires (`MAX_LUMINAIRES`); an estimate
+  above it leaves the grid as it is and asks to check the flux. The stage checks run only while the
+  "Для разработчика" block is open (they cost as much as the calculation).

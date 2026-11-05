@@ -3,6 +3,13 @@
 // and is only called from the browser.
 // Labels and error messages are user-facing and therefore in Russian.
 
+/**
+ * Largest number of luminaires n_x · n_y: beyond it a recalculation takes many seconds (500 in a
+ * 6 × 4 × 3 m room with a file: about 6 s), and such counts mean a wrong flux more often than a
+ * real room (spec, accepted 5 Nov 2026).
+ */
+export const MAX_LUMINAIRES = 500;
+
 /** Clearance between the luminaire and the 0.8 m work plane: h_c ≤ H − 0.9 m (spec, "Входные параметры"). */
 export const HC_CLEARANCE = 0.9;
 
@@ -109,6 +116,10 @@ export function validateParams(raw) {
       continue;
     }
     values[p.key] = x;
+  }
+  if (Number.isInteger(values.nx) && Number.isInteger(values.ny) && values.nx * values.ny > MAX_LUMINAIRES) {
+    errors.ny = `Не более ${MAX_LUMINAIRES} светильников, сейчас ${values.nx} × ${values.ny} = ${values.nx * values.ny}`;
+    delete values.ny;
   }
   return { ok: Object.keys(errors).length === 0, values, errors };
 }

@@ -103,3 +103,15 @@ test('validateParams: reflectances 0…0.9 with the spec defaults; faceRho order
   const r = validateParams(raw({ rhoC: '0,95', rhoW: '-0,1', rhoF: '1' }));
   assert.deepEqual(Object.keys(r.errors).sort(), ['rhoC', 'rhoF', 'rhoW']);
 });
+
+test('validateParams: at most 500 luminaires; the grid suggestion respects it', async () => {
+  const { MAX_LUMINAIRES } = await import('../js/ui.js');
+  const { gridFor } = await import('../js/estimate.js');
+  assert.equal(MAX_LUMINAIRES, 500);
+  assert.ok(validateParams(raw({ nx: '25', ny: '20' })).ok);
+  assert.match(validateParams(raw({ nx: '30', ny: '17' })).errors.ny, /500/);
+  for (const N of [480, 500]) {
+    const g = gridFor(N, 20, 20, 30, MAX_LUMINAIRES);
+    assert.ok(g.n >= N && g.n <= 500, `${N}: ${JSON.stringify(g)}`);
+  }
+});

@@ -60,15 +60,16 @@ export function sizeText(t) {
 
 /**
  * What the form takes from a file: the luminaire flux, the colour temperature and the power of a
- * lamp set (LDT: Φ_lamps · LORL; IES: the flux of the intensity table).
+ * lamp set. The flux is the flux of the intensity table (cd/klm × the lamp flux of the set), not
+ * Φ_lamps · LORL: some files state LORL = 1 instead of 100 while their table is right.
  * @param {import('./photfile.js').PhotTable} t
  * @param {number} [set] — lamp set index (LDT)
  * @returns {{ flux:number, cct:number|null, power:number|null }}
  */
 export function setValues(t, tableFlux, set = 0) {
   const ls = t.lampSets?.[set];
-  if (ls) return { flux: Math.round(ls.flux * t.lor), cct: ls.cct, power: ls.power };
-  return { flux: Math.round(t.ratedFlux ?? tableFlux), cct: t.cct, power: t.power };
+  if (ls) return { flux: Math.round(tableFlux * ls.flux / t.lampSets[0].flux), cct: ls.cct, power: ls.power };
+  return { flux: Math.round(tableFlux), cct: t.cct, power: t.power };
 }
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

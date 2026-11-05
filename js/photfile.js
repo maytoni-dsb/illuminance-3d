@@ -24,6 +24,8 @@
 //   lampFlux  — lamp flux, lm (LDT set 1; IES: number of lamps · lumens per lamp), or null.
 // The flux of the model itself is the exact integral of the interpolated table (photometry.js).
 
+import { expandPlanes, tableFlux } from './photometry.js';
+
 const DEG = Math.PI / 180;
 const FT = 0.3048;
 
@@ -325,6 +327,15 @@ export function parseLdt(text, fileName = '') {
 // ---------------------------------------------------------------------------------------------
 
 function finish(t) {
+  // the stated luminaire flux against the intensity table: files with a wrong LORL (1 instead of
+  // 100, met in the Maytoni library) would otherwise give a flux 100 times too small
+  if (t.ratedFlux) {
+    const { planes, rows } = expandPlanes({ ...t, C: Float64Array.from(t.C), gamma: Float64Array.from(t.gamma) });
+    const f = tableFlux(planes, rows, Float64Array.from(t.gamma)).total;
+    if (Math.abs(f / t.ratedFlux - 1) > 0.01) {
+      t.warnings.push(`Поток светильника в файле ${fmt1(t.ratedFlux)} лм (поток ламп × КПД ${fmt1(100 * t.lor)} %) не совпадает с потоком по кривой силы света ${fmt1(f)} лм; принят поток по кривой`);
+    }
+  }
   for (let i = 0; i < t.cd.length; i++) {
     if (!(t.cd[i] >= 0)) {
       if (t.cd[i] < 0 && t.cd[i] > -1e-6) { t.cd[i] = 0; continue; }
@@ -340,6 +351,7 @@ function finish(t) {
 function checkAscending(a, what) {
   for (let i = 1; i < a.length; i++) if (!(a[i] > a[i - 1])) fail(`${what[0].toUpperCase()}${what.slice(1)} должны возрастать: ${a[i - 1]}, ${a[i]}`);
 }
+const fmt1 = (x) => String(Number(x.toFixed(1))).replace('.', ',');
 const range = (a, b) => Array.from({ length: b - a }, (_, i) => a + i);
 const mod360 = (x) => ((x % 360) + 360) % 360;
 

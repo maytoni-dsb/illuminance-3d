@@ -19,18 +19,18 @@
       "./js/checks5.js": "./js/checks5.js?v=36b0397c",
       "./js/colorscale.js": "./js/colorscale.js?v=85c6fa84",
       "./js/direct.js": "./js/direct.js?v=4fff6c32",
-      "./js/estimate.js": "./js/estimate.js?v=78cc21af",
+      "./js/estimate.js": "./js/estimate.js?v=8262379e",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
       "./js/help.js": "./js/help.js?v=7ed7c282",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
       "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
-      "./js/photfile.js": "./js/photfile.js?v=d103b822",
+      "./js/photfile.js": "./js/photfile.js?v=a8a26e0c",
       "./js/photometry.js": "./js/photometry.js?v=bd36e3b8",
-      "./js/photui.js": "./js/photui.js?v=3a08a16d",
+      "./js/photui.js": "./js/photui.js?v=8fe44dbd",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=1cdda212",
+      "./js/ui.js": "./js/ui.js?v=d05b20d5",
       "./js/view3d.js": "./js/view3d.js?v=601695d7",
       "./js/worker.js": "./js/worker.js?v=ab03bae2",
       "./js/workplane.js": "./js/workplane.js?v=a8ea1b64"
@@ -201,6 +201,7 @@
     .pfdrop .pft span{font-size:11.5px;color:var(--ink3)}
     .pfclear{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;cursor:pointer;flex:none}
     .pfclear:hover{color:var(--err)}
+    #estnote.warn{color:var(--err)}
     .pferr{font-size:12px;color:var(--err);line-height:1.4;margin-top:6px}
     .pfcard{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
     .pfdesc{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12.5px;line-height:1.35}
@@ -430,7 +431,7 @@
 
 <script type="module">
   import { createRoom, autoStep } from './js/geometry.js';
-  import { initForm, formatNumber, faceRho } from './js/ui.js';
+  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES } from './js/ui.js';
   import { stage2Checks } from './js/checks2.js';
   import { faceAverages } from './js/direct.js';
   import { luminance, exposure } from './js/tonemap.js';
@@ -549,6 +550,7 @@
     const p = {
       L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: v.hc, psi: v.psi * DEG,
       phot: file ? 'file' : 'cosine', rho: faceRho(v), hwp: v.hwp,
+      checks: $('#dev').open, // the stage checks cost as much as the calculation: only when shown
     };
     if (file) { p.fileKey = photFile.key; p.table = photFile.table; }
     return p;
@@ -603,10 +605,10 @@
           (r.directStats ? ` · ${Math.round(r.directStats.evals / (r.lums.length * r.N))} выч./пару` : '')) +
         row('Решатель', `${ms(r.ms.solve)} · ${r.iterations} итер.`) +
         row('Проверки этапов 3–4', ms(r.ms.checks));
-      $('#checks3').innerHTML = checkList(r.checks3);
-      const c4 = [...r.checks4];
+      $('#checks3').innerHTML = r.checks3 ? checkList(r.checks3) : '';
+      const c4 = [...(r.checks4 ?? [])];
       const ex = view?.exposureCheck();
-      if (ex) {
+      if (ex && r.checks4) {
         c4.splice(3, 0, {
           name: 'Экспозиция не меняется при вращении',
           ok: ex.same,
@@ -671,11 +673,17 @@
       note.textContent = 'Оценка невозможна: светильники должны быть выше рабочей поверхности.';
       note.hidden = false; return;
     }
-    const g = gridFor(Math.min(e.N, 900), v.L, v.W);
     const n = (k) => `${k} ${k % 10 === 1 && k % 100 !== 11 ? 'светильник' : k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 12 || k % 100 > 14) ? 'светильника' : 'светильников'}`;
+    const g = gridFor(e.N, v.L, v.W, 30, MAX_LUMINAIRES);
+    if (e.N > MAX_LUMINAIRES || !g || g.n < e.N) {
+      // a wrong flux in the file is the usual cause: say so and leave the grid as it is
+      note.innerHTML = `По предварительной оценке нужно ${n(e.N)} (расчётное ${formatNumber(e.raw, 1)}) — больше, чем можно разместить (не более ${MAX_LUMINAIRES}). ` +
+        `Проверьте световой поток светильника: ${formatNumber(v.flux, 0)} лм. Сетка не изменена.`;
+      note.classList.add('warn'); note.hidden = false; return;
+    }
+    note.classList.remove('warn');
     note.innerHTML = `По предварительной оценке ${g.n > e.N ? 'достаточно' : 'нужно'} ${n(e.N)} (расчётное ${formatNumber(e.raw, 1)}, u = ${formatNumber(e.u, 2)})` +
-      (g.n > e.N ? `; размещено ${g.n} — сетка ${g.nx} × ${g.ny}, чтобы шаг по длине и ширине был близким.` : `; сетка ${g.nx} × ${g.ny}.`) +
-      (e.N > 900 ? ' Больше 30 × 30 разместить нельзя.' : '');
+      (g.n > e.N ? `; размещено ${g.n} — сетка ${g.nx} × ${g.ny}, чтобы шаг по длине и ширине был близким.` : `; сетка ${g.nx} × ${g.ny}.`);
     note.hidden = false;
     form.set({ nx: g.nx, ny: g.ny });
   }
@@ -721,6 +729,7 @@
     if (f && f.reason !== 'set') suggestGrid();
   });
   $('#suggest').addEventListener('click', suggestGrid);
+  $('#dev').addEventListener('toggle', () => { if ($('#dev').open && current) update(current); });
   initHelp(document);
   update(form.values());
 

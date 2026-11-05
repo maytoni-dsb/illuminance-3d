@@ -87,11 +87,11 @@ export function estimate(curve, R, F) {
  * rather than 4 × 2 (spacings 1.05 and 2 m), and 1 stays 1.
  * @returns {{ nx:number, ny:number, n:number }}
  */
-export function gridFor(N, L, W, max = 30) {
+export function gridFor(N, L, W, max = 30, maxTotal = Infinity) {
   let best = null;
   for (let nx = 1; nx <= max; nx++) {
     const ny = Math.ceil(N / nx);
-    if (ny > max || ny < 1) continue;
+    if (ny > max || ny < 1 || nx * ny > maxTotal) continue;
     const sx = L / nx, sy = W / ny, r = Math.max(sx, sy) / Math.min(sx, sy);
     const c = { nx, ny, n: nx * ny, r, score: nx * ny * (1 + 0.25 * (r - 1)) };
     if (!best || c.score < best.score - 1e-12 || (Math.abs(c.score - best.score) <= 1e-12 && c.r < best.r)) best = c;
