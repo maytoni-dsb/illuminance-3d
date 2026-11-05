@@ -11,8 +11,10 @@
 //      imports the result. Every module is thus fetched by its stamped URL and evaluated once.
 // Relative imports between js/ modules must have the form `from './name.js'` (checked by the tests).
 //
-// Protocol (page → worker): { type: 'init', imports } then { type: 'run', id, params }.
-// Worker → page: { type: 'ready' } | { type: 'result', id, result } | { type: 'error', id, message }.
+// Protocol (page → worker): { type: 'init', imports } then { type: 'run', id, params } and
+// { type: 'plan', id, z } (field of the plan of a plane for the last run).
+// Worker → page: { type: 'ready' } | { type: 'result', id, result } | { type: 'plan', id, plan } |
+// { type: 'error', id, message }.
 
 /** Relative specifiers './name.js' imported by a module's source text (static imports and re-exports). */
 export function moduleDeps(text) {
@@ -77,6 +79,15 @@ if (isWorker) {
         self.postMessage({ type: 'result', id: m.id, result }, [result.Edir.buffer, result.Eind.buffer]);
       } catch (err) {
         self.postMessage({ type: 'error', id: m.id, message: String(err?.stack ?? err?.message ?? err) });
+      }
+    }
+    if (m.type === 'plan') {
+      try {
+        await ready;
+        const plan = calc.plan(m.z);
+        self.postMessage({ type: 'plan', id: m.id, plan }, [plan.E.buffer]);
+      } catch (err) {
+        self.postMessage({ type: 'error', id: m.id, plan: true, message: String(err?.stack ?? err?.message ?? err) });
       }
     }
   };

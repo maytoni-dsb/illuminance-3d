@@ -127,7 +127,7 @@ export const U0_MIN = 0.3;
 // Wall rows are clipped at the plane: only the part above z lights the upper side of the plane;
 // floor elements are below or in it and give nothing.
 
-import { axisRect, rectToRect } from './formfactor.js';
+import { axisRect, rectToRect, pointToRect } from './formfactor.js';
 import { elementDirectAdaptive, elementDirectExact } from './direct.js';
 
 /** A face-like description of the plane at height z, on the floor mesh (for direct.js). */
@@ -230,4 +230,187 @@ export function cellStats(E) {
   return { ...s, minMax: s.max > 0 ? s.min / s.max : 0 };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Plans of the planes (stage 6): a field of POINT values for the colors and the isolines.
+// Spec, "Планы Г-0,0 и Г-0,8": isolines by marching squares on an auxiliary grid with a step of
+// 0.1 m; numbers at the points of the GOST grid. The field E(x) = E_dir(x) + E_ref(x) is built as:
+//   direct    — the exact point formula (direct.js) at every node of the auxiliary grid;
+//   reflected — exact point values Σ_j F(x → element j) · M_j at the VERTICES of the floor mesh,
+//               interpolated bilinearly to the nodes. The reflected light is smooth (it comes from
+//               large areas), while the exact sum at every node would cost N factors per node
+//               (1.3 s for 6 × 4 m, 4.6 s for 10 × 10 m). At the vertices the factors depend only on
+//               the offset to the element, so they are kept in tables like the kernel.
+// The auxiliary grid includes the boundary of the plane (nodes on the walls). A point exactly in
+// the plane of a wall would get F = 0 from that wall (not strictly in front of it), while the limit
+// from inside is the full factor; such points are therefore moved inside by EDGE_EPS.
 
+/** Auxiliary grid of the plan: the target step and the largest number of cells along a side. */
+export const AUX = Object.freeze({ step: 0.1, maxCells: 400 });
+const EDGE_EPS = 1e-9;
+
+/**
+ * Auxiliary grid of a plane: nodes (i·L/ax, j·W/ay), i = 0…ax, j = 0…ay, node (i, j) at i + j·(ax + 1).
+ * The step is 0.1 m, larger for big rooms so that no side has more than AUX.maxCells cells.
+ */
+export function auxGrid(L, W, opts = AUX) {
+  const s = Math.max(opts.step, Math.max(L, W) / opts.maxCells);
+  const ax = Math.max(1, Math.ceil(L / s - 1e-9)), ay = Math.max(1, Math.ceil(W / s - 1e-9));
+  return { ax, ay, dx: L / ax, dy: W / ay, L, W };
+}
+
+/** Mirrored offset: an element at offset o (o < 0 too) as seen from a vertex → table index ≥ 0. */
+const mir = (o) => (o >= 0 ? o : -o - 1);
+
+/**
+ * Point → element factor tables for the vertices of the floor mesh lifted to height z (normal up).
+ *   ceiling:       C[mi + mj·n_L]                         mi, mj — mirrored offsets to the element
+ *   walls y = 0/W: Y[(mi·(n_W + 1) + b)·n_H + r]          b — vertex distance from the wall, 0…n_W
+ *   walls x = 0/L: X[(mj·(n_L + 1) + a)·n_H + r]          a — vertex distance from the wall, 0…n_L
+ * Floor elements give nothing (in the plane or below it); wall rows below z are cut by the horizon.
+ */
+export function vertexTables(room, z) {
+  const { H } = room;
+  const nL = room.n.L, nW = room.n.W, nH = room.n.H, dL = room.d.L, dW = room.d.W, dH = room.d.H;
+  const up = [0, 0, 1], x = [0, 0, z];
+  const eps = EDGE_EPS * Math.max(room.L, room.W);
+  const C = new Float64Array(nL * nW);
+  if (H - z > 1e-12) {
+    x[0] = 0; x[1] = 0;
+    for (let mj = 0; mj < nW; mj++) for (let mi = 0; mi < nL; mi++) {
+      C[mi + mj * nL] = pointToRect(x, up, [mi * dL, mj * dW, H], [dL, 0, 0], [0, dW, 0], [0, 0, -1]);
+    }
+  }
+  const Y = new Float64Array(nL * (nW + 1) * nH);
+  for (let b = 0; b <= nW; b++) {
+    x[0] = 0; x[1] = Math.max(b * dW, eps);
+    for (let mi = 0; mi < nL; mi++) for (let r = 0; r < nH; r++) {
+      if ((r + 1) * dH <= z + 1e-12) continue;
+      Y[(mi * (nW + 1) + b) * nH + r] = pointToRect(x, up, [mi * dL, 0, r * dH], [dL, 0, 0], [0, 0, dH], [0, 1, 0]);
+    }
+  }
+  const X = new Float64Array(nW * (nL + 1) * nH);
+  for (let a = 0; a <= nL; a++) {
+    x[0] = Math.max(a * dL, eps); x[1] = 0;
+    for (let mj = 0; mj < nW; mj++) for (let r = 0; r < nH; r++) {
+      if ((r + 1) * dH <= z + 1e-12) continue;
+      X[(mj * (nL + 1) + a) * nH + r] = pointToRect(x, up, [0, mj * dW, r * dH], [0, dW, 0], [0, 0, dH], [1, 0, 0]);
+    }
+  }
+  return { z, C, Y, X, nL, nW, nH };
+}
+
+/**
+ * Exact reflected illuminance at the vertices of the floor mesh lifted to the plane.
+ * @returns {Float64Array} (n_L + 1)(n_W + 1), vertex (a, b) at a + b·(n_L + 1)
+ */
+export function vertexReflected(room, t, M) {
+  const { nL, nW, nH, C, Y, X } = t;
+  const f = room.faces;
+  const oC = f[1].offset, oY0 = f[2].offset, oYW = f[3].offset, oX0 = f[4].offset, oXL = f[5].offset;
+  const out = new Float64Array((nL + 1) * (nW + 1));
+  const mi = new Int32Array(nL), mj = new Int32Array(nW);
+  for (let b = 0; b <= nW; b++) {
+    for (let ej = 0; ej < nW; ej++) mj[ej] = mir(ej - b);
+    for (let a = 0; a <= nL; a++) {
+      for (let ei = 0; ei < nL; ei++) mi[ei] = mir(ei - a);
+      let s = 0;
+      for (let ej = 0; ej < nW; ej++) {
+        const row = mj[ej] * nL, m = oC + ej * nL;
+        for (let ei = 0; ei < nL; ei++) s += C[mi[ei] + row] * M[m + ei];
+      }
+      // walls y = 0 (distance b) and y = W (distance n_W − b): element (ei, r) at ei + r·n_L
+      for (let ei = 0; ei < nL; ei++) {
+        const base = mi[ei] * (nW + 1);
+        const p = (base + b) * nH, q = (base + nW - b) * nH;
+        for (let r = 0; r < nH; r++) s += Y[p + r] * M[oY0 + ei + r * nL] + Y[q + r] * M[oYW + ei + r * nL];
+      }
+      // walls x = 0 (distance a) and x = L (distance n_L − a): element (ej, r) at ej + r·n_W
+      for (let ej = 0; ej < nW; ej++) {
+        const base = mj[ej] * (nL + 1);
+        const p = (base + a) * nH, q = (base + nL - a) * nH;
+        for (let r = 0; r < nH; r++) s += X[p + r] * M[oX0 + ej + r * nW] + X[q + r] * M[oXL + ej + r * nW];
+      }
+      out[a + b * (nL + 1)] = s;
+    }
+  }
+  // Corners: the factor of a wall at its end depends on the direction of approach (from a point on
+  // the floor next to the corner, a wall covers 1/4 of the hemisphere along the other wall and 3/8
+  // along the diagonal). The tables give the first limit; the corners take the diagonal one, the
+  // same as the points moved inside by EDGE_EPS, by the direct sum over all elements.
+  const eps = EDGE_EPS * Math.max(room.L, room.W), F = new Float64Array(room.N);
+  for (const [a, b] of [[0, 0], [nL, 0], [0, nW], [nL, nW]]) {
+    const x = [a ? room.L - eps : eps, b ? room.W - eps : eps, t.z];
+    pointToElements(room, x, [0, 0, 1], F);
+    let s = 0;
+    for (let j = 0; j < room.N; j++) s += F[j] * M[j];
+    out[a + b * (nL + 1)] = s;
+  }
+  return out;
+}
+
+/**
+ * Bilinear interpolation of values at the nodes of a regular grid (nx × ny cells of size dx × dy,
+ * node (i, j) at i + j·(nx + 1)) at the point (x, y); outside the grid the nearest edge value.
+ */
+export function bilinear(V, nx, ny, dx, dy, x, y) {
+  let u = x / dx, v = y / dy;
+  u = u < 0 ? 0 : u > nx ? nx : u;
+  v = v < 0 ? 0 : v > ny ? ny : v;
+  let i = Math.floor(u), j = Math.floor(v);
+  if (i >= nx) i = nx - 1;
+  if (j >= ny) j = ny - 1;
+  const s = u - i, t = v - j, w = nx + 1, k = i + j * w;
+  return (1 - t) * ((1 - s) * V[k] + s * V[k + 1]) + t * ((1 - s) * V[k + w] + s * V[k + w + 1]);
+}
+
+/**
+ * Field of the plan of the plane at height z: values at the nodes of the auxiliary grid and exact
+ * values at the points of the GOST grid. Initial values E₀ (no maintenance factor).
+ * @param {object} cache — keeps the factor tables of this room and height between calls:
+ *        { vt?: vertexTables, gost?: { grid, F } }
+ * @returns {{ z, grid: auxGrid, E: Float64Array, Edir: Float64Array, Eref: Float64Array,
+ *             gost: { nx, ny, dx, dy, pts, E, Edir, Eref }, ms: { tables, reflected, direct, gost } }}
+ */
+export function planeField(room, z, lums, phot, M, cache = {}) {
+  const ms = { tables: 0, reflected: 0, direct: 0, gost: 0 };
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  let t = now();
+  if (!cache.vt) cache.vt = vertexTables(room, z);
+  ms.tables = now() - t;
+  t = now();
+  const Rv = vertexReflected(room, cache.vt, M);
+  ms.reflected = now() - t;
+
+  t = now();
+  const grid = auxGrid(room.L, room.W);
+  const nn = (grid.ax + 1) * (grid.ay + 1);
+  const Edir = new Float64Array(nn), Eref = new Float64Array(nn), E = new Float64Array(nn);
+  const nL = room.n.L, nW = room.n.W, dL = room.d.L, dW = room.d.W;
+  const eps = EDGE_EPS * Math.max(room.L, room.W);
+  const x = [0, 0, z], up = [0, 0, 1];
+  for (let j = 0; j <= grid.ay; j++) {
+    const y = j * grid.dy;
+    for (let i = 0; i <= grid.ax; i++) {
+      const k = i + j * (grid.ax + 1);
+      x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
+      x[1] = Math.min(Math.max(y, eps), room.W - eps);
+      Edir[k] = directAtPoint(x, up, lums, phot);
+      Eref[k] = bilinear(Rv, nL, nW, dL, dW, i * grid.dx, y);
+      E[k] = Edir[k] + Eref[k];
+    }
+  }
+  ms.direct = now() - t;
+
+  t = now();
+  if (!cache.gost) {
+    const g = workGrid(room.L, room.W, z);
+    cache.gost = { grid: g, F: gridFormFactors(room, g) };
+  }
+  const g = cache.gost.grid;
+  const pl = planeIlluminance(room, g, cache.gost.F, M, lums, phot);
+  ms.gost = now() - t;
+  return {
+    z, grid, E, Edir, Eref, vertices: { nx: nL, ny: nW, dx: dL, dy: dW, E: Rv },
+    gost: { nx: g.nx, ny: g.ny, dx: g.dx, dy: g.dy, pts: g.pts, ...pl }, ms,
+  };
+}

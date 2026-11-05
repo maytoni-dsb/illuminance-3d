@@ -15,7 +15,7 @@ import { elementDirect, emittedFlux } from './direct.js';
 import { stage3Checks } from './checks3.js';
 import { stage4Checks } from './checks4.js';
 import { stage5Checks } from './checks5.js';
-import { planeHeights, planeTables, planeReflected, planeDirect, cellStats } from './workplane.js';
+import { planeHeights, planeTables, planeReflected, planeDirect, cellStats, planeField } from './workplane.js';
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -38,6 +38,8 @@ export function createCalc() {
   let dir = null;   // { key, lums, phot, Edir }
   let sol = null;   // { key, Eind }
   let tables = new Map(); // plane height → cell → element factor tables of the current room
+  let planCache = new Map(); // plane height → { vt, gost }: point factor tables of the plans
+  let last = null;           // { room, lums, phot, M } of the last run, for the plans
 
   function run(p) {
     const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, planes: 0, checks: 0 };
@@ -53,7 +55,7 @@ export function createCalc() {
       coarseData(kernel);
       ms.coarse = now() - t;
       geo = { key: geoKey, room, kernel };
-      dir = null; sol = null; tables = new Map();
+      dir = null; sol = null; tables = new Map(); planCache = new Map();
       reused.kernel = false;
     }
     const { room, kernel } = geo;
@@ -103,6 +105,7 @@ export function createCalc() {
       return { z, normative, nx: room.n.L, ny: room.n.W, E, Edir: Float64Array.from(Ed), Eref: Er, stats: cellStats(E) };
     });
     ms.planes = now() - t0;
+    last = { room, lums, phot, M, key: `${sol.key}` };
 
     const out = {
       key: geoKey, N: room.N, h: room.h, rho: [...p.rho],
@@ -121,5 +124,17 @@ export function createCalc() {
     return out;
   }
 
-  return { run };
+  /**
+   * Field of the plan of the plane at height z for the last run (workplane.planeField): values at
+   * the nodes of the auxiliary grid and at the GOST points, E₀. Spec, "Планы Г-0,0 и Г-0,8".
+   */
+  function plan(z) {
+    if (!last) throw new Error('plan: no calculation yet');
+    const zk = z.toFixed(6);
+    if (!planCache.has(zk)) planCache.set(zk, {});
+    const f = planeField(last.room, z, last.lums, last.phot, last.M, planCache.get(zk));
+    return { ...f, key: last.key, roomKey: geo.key };
+  }
+
+  return { run, plan };
 }
