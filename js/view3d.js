@@ -89,6 +89,60 @@ function realisticMaterial() {
   });
 }
 
+/**
+ * False-color material of a work plane (stage 6): node values of the auxiliary grid in a float
+ * texture, the BILINEAR interpolant evaluated per fragment and mapped to the stepped scale. The
+ * isolines (isolines.js) are computed from the same interpolant, so on every cell edge they lie
+ * exactly on the borders of the colors. `vRoom` is the position in room metres (x, y).
+ */
+function planeMaterial() {
+  const n = LEVELS.length;
+  return new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    uniforms: {
+      levels: { value: LEVELS.slice() },
+      colors: { value: COLORS.map((c) => new THREE.Vector3(c[0], c[1], c[2])) },
+      field: { value: null },
+      cells: { value: new THREE.Vector2(1, 1) },   // ax, ay
+      cellSize: { value: new THREE.Vector2(1, 1) }, // dx, dy, m
+      opacity: { value: 1 },
+    },
+    vertexShader: `
+      out vec2 vRoom;
+      void main() {
+        vRoom = vec2(position.x, -position.z);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      precision highp float;
+      precision highp sampler2D;
+      uniform float levels[${n}];
+      uniform vec3 colors[${n}];
+      uniform sampler2D field;
+      uniform vec2 cells;
+      uniform vec2 cellSize;
+      uniform float opacity;
+      in vec2 vRoom;
+      out vec4 outColor;
+      void main() {
+        vec2 u = clamp(vRoom / cellSize, vec2(0.0), cells);
+        vec2 c = min(floor(u), cells - 1.0);
+        vec2 t = u - c;
+        ivec2 k = ivec2(c);
+        float v00 = texelFetch(field, k, 0).r, v10 = texelFetch(field, k + ivec2(1, 0), 0).r;
+        float v01 = texelFetch(field, k + ivec2(0, 1), 0).r, v11 = texelFetch(field, k + ivec2(1, 1), 0).r;
+        float v = mix(mix(v00, v10, t.x), mix(v01, v11, t.x), t.y);
+        int idx = 0;
+        for (int i = 1; i < ${n}; i++) if (v >= levels[i]) idx = i;
+        outColor = vec4(colors[idx], opacity);
+      }`,
+    side: THREE.DoubleSide,
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+  });
+}
+
 const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -282,6 +336,20 @@ export function createView(container, opts = {}) {
   let viewW = 1, viewH = 1;
   let viewTouched = false;  // true once the user has rotated, panned or zoomed since the last fit
 
+  // Work plane (stage 6): one plane with node values of the auxiliary grid, shown as the plan of
+  // the plane (opaque, from above, with the 2D overlay of isolines and numbers drawn by the page)
+  // or as a semi-transparent layer in 3D.
+  const plMaterial = planeMaterial();
+  let planeMesh = null;      // THREE.Mesh at height z, L × W
+  let planeTex = null;
+  let planeData = null;      // { z, ax, ay, L, W }
+  let planeDisplay = 'off';  // 'off' | 'layer' | 'plan'
+  let planeOutline = null;   // outline of the layer in 3D
+  const LAYER_OPACITY = 0.6;
+  const overlay = document.createElement('canvas');
+  overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+  container.appendChild(overlay);
+
   /**
    * Axis indicator (3ds Max-like): X, Y, Z arrows of unit length in their own scene, drawn in a
    * small square in the lower left corner of the view. It turns with the camera only (no pan, no zoom).
@@ -385,6 +453,7 @@ export function createView(container, opts = {}) {
     orbit = planToOrbit(plan, orbit.target, THREE.MathUtils.degToRad(camera.fov / 2), viewH,
       { minDistance: orbit.minDistance, maxDistance: Math.max(orbit.maxDistance, 40 * R) });
     plan = null;
+    if (planeDisplay === 'plan') { planeDisplay = 'off'; applyPlaneDisplay(); }
     opts.onPlanChange?.(false);
   }
 
@@ -423,6 +492,7 @@ export function createView(container, opts = {}) {
     scene.add(roomGroup);
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); lumGroup = null; }
     values = null; lum = null;
+    setPlane(null);
     applyMaterials();
     fitCamera(r, keepView); // first room: default view; later rooms keep the user's angles
     if (plan) plan = fitPlan(r, viewW, viewH, planInsets());
@@ -500,12 +570,105 @@ export function createView(container, opts = {}) {
     return { views: seen.length, values: seen, expected: want, same: seen.every((v) => v === want) };
   }
 
+  /**
+   * Values of a work plane at the nodes of its auxiliary grid (lx, already scaled for display),
+   * node (i, j) at i + j·(ax + 1); null removes the plane.
+   * @param {{ z:number, ax:number, ay:number, L:number, W:number, values: ArrayLike<number> } | null} d
+   */
+  function setPlane(d) {
+    if (!d) {
+      if (planeMesh) { scene.remove(planeMesh); planeMesh.geometry.dispose(); planeMesh = null; }
+      if (planeOutline) { scene.remove(planeOutline); disposeTree(planeOutline); planeOutline = null; }
+      planeTex?.dispose(); planeTex = null; planeData = null;
+      applyPlaneDisplay();
+      return;
+    }
+    const w = d.ax + 1, h = d.ay + 1;
+    const same = planeData && planeData.ax === d.ax && planeData.ay === d.ay;
+    if (!same) {
+      planeTex?.dispose();
+      planeTex = new THREE.DataTexture(new Float32Array(w * h), w, h, THREE.RedFormat, THREE.FloatType);
+      planeTex.minFilter = planeTex.magFilter = THREE.NearestFilter;
+      planeTex.generateMipmaps = false;
+      plMaterial.uniforms.field.value = planeTex;
+    }
+    planeTex.image.data.set(d.values);
+    planeTex.needsUpdate = true;
+    plMaterial.uniforms.cells.value.set(d.ax, d.ay);
+    plMaterial.uniforms.cellSize.value.set(d.L / d.ax, d.W / d.ay);
+    if (!planeMesh || !planeData || planeData.L !== d.L || planeData.W !== d.W || planeData.z !== d.z) {
+      if (planeMesh) { scene.remove(planeMesh); planeMesh.geometry.dispose(); }
+      const g = new THREE.PlaneGeometry(d.L, d.W);
+      g.rotateX(-Math.PI / 2);                     // in the x–z plane of Three.js, facing up
+      g.translate(d.L / 2, d.z, -d.W / 2);         // room (x, y, z) → Three.js (x, z, −y)
+      planeMesh = new THREE.Mesh(g, plMaterial);
+      planeMesh.renderOrder = 5;
+      scene.add(planeMesh);
+      if (planeOutline) { scene.remove(planeOutline); disposeTree(planeOutline); }
+      const corners = [[0, 0], [d.L, 0], [d.L, d.W], [0, d.W]].flatMap(([x, y]) => toThree([x, y, d.z]));
+      const og = new THREE.BufferGeometry();
+      og.setAttribute('position', new THREE.Float32BufferAttribute(corners, 3));
+      planeOutline = new THREE.LineLoop(og, new THREE.LineBasicMaterial({ color: cssColor('--view-edge', '#444444') }));
+      planeOutline.renderOrder = 6;
+      scene.add(planeOutline);
+    }
+    planeData = { z: d.z, ax: d.ax, ay: d.ay, L: d.L, W: d.W };
+    applyPlaneDisplay();
+  }
+
+  /**
+   * 'plan' — the plan of the plane: orthographic view from above, the room faces hidden, the plane
+   * opaque, the overlay drawn by opts.onPlanDraw; 'layer' — semi-transparent plane in the 3D view;
+   * 'off' — no plane.
+   */
+  function setPlaneDisplay(mode) {
+    planeDisplay = mode;
+    if (mode === 'plan' && !plan) showPlan();
+    applyPlaneDisplay();
+  }
+  function applyPlaneDisplay() {
+    const planMode = planeDisplay === 'plan';
+    if (planeMesh) planeMesh.visible = planeDisplay !== 'off';
+    plMaterial.uniforms.opacity.value = planMode ? 1 : LAYER_OPACITY;
+    if (roomGroup) roomGroup.visible = !planMode || !planeMesh;
+    // on the plan of a plane the luminaires are outlines only: their fill would hide the numbers
+    lumGroup?.traverse((o) => { if (o.isMesh) o.visible = !planMode; });
+    if (planeOutline) planeOutline.visible = planeDisplay === 'layer';
+    requestRender();
+  }
+
+  /** Room (x, y) → overlay CSS px for the current plan, or null outside the plan. */
+  function planTransform() {
+    if (!plan) return null;
+    const k = 2 * plan.half / Math.max(1, viewH);  // metres per px
+    return {
+      k,
+      x: (x) => (x - plan.cx) / k + viewW / 2,
+      y: (y) => (-y - plan.cz) / k + viewH / 2,
+      toRoom: (px, py) => [plan.cx + (px - viewW / 2) * k, -(plan.cz + (py - viewH / 2) * k)],
+    };
+  }
+
+  /** Redraws the 2D overlay: only for the plan of a plane. */
+  function drawOverlay() {
+    const dpr = renderer.getPixelRatio();
+    const W = Math.round(viewW * dpr), H = Math.round(viewH * dpr);
+    if (overlay.width !== W || overlay.height !== H) { overlay.width = W; overlay.height = H; }
+    // a CPU canvas: lines and text only, and the GPU one was seen to keep stale frames after a clear
+    const ctx = overlay.getContext('2d', { willReadFrequently: true });
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (planeDisplay !== 'plan' || !plan || !planeMesh) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    opts.onPlanDraw?.(ctx, planTransform(), { w: viewW, h: viewH });
+  }
+
   /** Luminaires (photometry.luminaireGrid) with an optional shape (photfile.luminaireShape). */
   function setLuminaires(lums, shape = null) {
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); }
     lumGroup = room ? buildLuminaires(room, lums, cssColor('--view-edge', '#444444'), shape) : null;
     if (lumGroup) scene.add(lumGroup);
-    requestRender();
+    applyPlaneDisplay();
   }
 
   /** Reads a color from a CSS custom property of the container (follows the page theme). */
@@ -551,6 +714,7 @@ export function createView(container, opts = {}) {
       renderer.setScissorTest(false);
       renderer.setViewport(0, 0, viewW, viewH);
       renderer.autoClear = true;
+      drawOverlay();
     });
   }
 
@@ -627,6 +791,11 @@ export function createView(container, opts = {}) {
     if (!room || !opts.onHover) return;
     const rect = el.getBoundingClientRect();
     ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    if (planeDisplay === 'plan' && plan && planeData) {
+      const [x, y] = planTransform().toRoom(e.clientX - rect.left, e.clientY - rect.top);
+      opts.onHover(x >= 0 && x <= planeData.L && y >= 0 && y <= planeData.W ? { plane: true, x, y, z: planeData.z } : null);
+      return;
+    }
     raycaster.setFromCamera(ndc, activeCamera());
     const hit = raycaster.intersectObjects(faceParts.map((p) => p.mesh), false)[0];
     if (!hit) { opts.onHover(null); return; }
@@ -731,11 +900,20 @@ export function createView(container, opts = {}) {
     setShowNormals(v) { showNormals = v; requestRender(); },
     resetView() {
       if (!room) return;
-      if (plan) { plan = null; opts.onPlanChange?.(false); }
+      if (plan) {
+        plan = null;
+        if (planeDisplay === 'plan') { planeDisplay = 'off'; applyPlaneDisplay(); }
+        opts.onPlanChange?.(false);
+      }
       fitCamera(room, false); requestRender();
     },
     /** Orthographic view from above, fitted to the floor; a rotation returns to the orbit. */
     showPlan,
+    setPlane,
+    setPlaneDisplay,
+    planeDisplay: () => planeDisplay,
+    /** Room (x, y) ↔ view CSS px of the current plan, or null (for tests and the overlay). */
+    planTransform,
     isPlan: () => !!plan,
     /** Redraws after overlays changed size (legend shown or hidden). */
     refresh() { requestRender(); },
@@ -754,7 +932,8 @@ export function createView(container, opts = {}) {
       for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial;
       if (roomGroup) disposeTree(roomGroup);
       if (lumGroup) disposeTree(lumGroup);
-      fcMaterial.dispose(); realMaterial.dispose(); neutralMaterial.dispose();
+      fcMaterial.dispose(); realMaterial.dispose(); neutralMaterial.dispose(); plMaterial.dispose();
+      setPlane(null); overlay.remove();
       disposeTree(axes.group);
       renderer.dispose(); el.remove();
     },

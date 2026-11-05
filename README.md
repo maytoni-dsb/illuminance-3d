@@ -204,3 +204,26 @@ Stage 5, revision 2 (5 Nov 2026):
   illuminance levels (100 → 150 → 200 …), h_р switches 0.0 ↔ 0.8, ψ steps 90°. Status marks of the
   normative plane: green tick (within the step), red cross (below E_n; U₀ < 0.3), yellow warning
   (above the step).
+
+Stage 6 — plans of the planes (5 Nov 2026):
+- the plan field (`planeField` in `js/workplane.js`, `calc.plan(z)`, worker message `plan`): point
+  values at the nodes of an auxiliary grid of 0.1 m (at most 400 cells along a side), nodes on the
+  walls included. Direct: the exact point formula at every node. Reflected: exact sums
+  Σ F(point → element) M at the vertices of the floor mesh from point → element tables kept by offset
+  (`vertexTables`, `vertexReflected`; the four corners by the direct sum, diagonal limit), bilinear
+  between the vertices. The GOST points get exact sums. Computed only for the plane on show;
+- isolines (`js/isolines.js`): marching squares on the node values, saddle cells by the value of the
+  bilinear interpolant at its saddle point, segments joined into polylines, label places along the
+  lines in screen pixels;
+- view (`js/view3d.js`): the plane as a mesh whose shader evaluates the same bilinear interpolant from
+  a float texture of the node values and maps it to the stepped scale, so isoline vertices lie exactly
+  on the color borders; the plan of a plane (orthographic, room faces hidden, luminaires as outlines)
+  or a semi-transparent layer in 3D. The 2D overlay (`js/planview.js`) draws the isolines with their
+  values, the numbers at the GOST points (thinned when they would overlap) and the outline;
+- page: a plan button in every plane row of the results, the plane switch and Ē / E_min / E_max / U₀ in
+  the upper left corner of the view, "Плоскость в 3D" for the layer; the plan follows the map switch
+  (total / direct / reflected) and MF without recalculation;
+- checks (`js/checks6.js`, panel "Критерии этапа 6", `tests/plan.test.mjs`): isoline vertices on the
+  level with different colors on both sides and segment midpoints within 0.05 cell of the border; Ē of
+  the plan against the cell average (0.5 %); the interpolated reflected light against the exact sums at
+  the GOST points (1 % of the total). Open: comparison with DIALux.
