@@ -14,8 +14,8 @@ const LABEL_SPACING = 240, LABEL_MIN = 70, LABEL_SPACING_3D = 1.6, LABEL_MIN_3D 
 
 /** Illuminance as written on the plan: whole lux from 10 lx, one decimal below. */
 export const fmtLux = (v) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10).toLocaleString('ru-RU');
-/** Length as written on the dimensions, m: at most two decimals. */
-export const fmtLen = (v) => v.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+/** Length as written on the dimensions: whole millimetres, as on drawings (accepted 5 Nov 2026). */
+export const fmtLen = (v) => String(Math.round(v * 1000));
 
 function halo(ctx, text, x, y, fill = '#111', glow = 'rgba(255,255,255,.85)') {
   ctx.lineWidth = 3; ctx.strokeStyle = glow; ctx.strokeText(text, x, y);

@@ -1,7 +1,7 @@
 // Form value validation tests (no DOM).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PARAMS, DEFAULTS, parseNumber, formatNumber, validateParams, faceRho } from '../js/ui.js';
+import { PARAMS, DEFAULTS, parseNumber, formatNumber, validateParams, faceRho, photometricHeight, ceilingDrop } from '../js/ui.js';
 
 test('parseNumber: comma, dot, spaces, garbage', () => {
   assert.equal(parseNumber('0,25'), 0.25);
@@ -25,14 +25,14 @@ test('validateParams: defaults are valid and match the spec table', () => {
   assert.equal(r.ok, true);
   assert.deepEqual(r.values, { ...DEFAULTS });
   assert.deepEqual(
-    { L: DEFAULTS.L, W: DEFAULTS.W, H: DEFAULTS.H, nx: DEFAULTS.nx, ny: DEFAULTS.ny, flux: DEFAULTS.flux, hc: DEFAULTS.hc, psi: DEFAULTS.psi, phot: DEFAULTS.phot, mf: DEFAULTS.mf },
-    { L: 6, W: 4, H: 3, nx: 3, ny: 2, flux: 4000, hc: 0, psi: 0, phot: 'cosine', mf: 0.75 },
+    { L: DEFAULTS.L, W: DEFAULTS.W, H: DEFAULTS.H, nx: DEFAULTS.nx, ny: DEFAULTS.ny, flux: DEFAULTS.flux, hm: DEFAULTS.hm, psi: DEFAULTS.psi, phot: DEFAULTS.phot, mf: DEFAULTS.mf },
+    { L: 6, W: 4, H: 3, nx: 3, ny: 2, flux: 4000, hm: 3, psi: 0, phot: 'cosine', mf: 0.75 },
   );
   assert.ok(!PARAMS.some((p) => p.key === 'h')); // the step is automatic, not a form field
 });
 
 test('validateParams: room bounds are inclusive', () => {
-  assert.ok(validateParams(raw({ L: '50', W: '1', H: '2' })).ok);
+  assert.ok(validateParams(raw({ L: '50', W: '1', H: '2', hm: '2' })).ok);
   const r = validateParams(raw({ L: '51', W: 'abc', H: '1,9' }));
   assert.equal(r.ok, false);
   assert.deepEqual(Object.keys(r.errors).sort(), ['H', 'L', 'W']);
@@ -47,12 +47,16 @@ test('validateParams: luminaire counts are integers 1…30, flux > 0', () => {
   assert.ok(validateParams(raw({ flux: '0,5' })).ok);
 });
 
-test('validateParams: suspension is limited by H − 0.9', () => {
-  assert.ok(validateParams(raw({ H: '3', hc: '2,1' })).ok);
-  const r = validateParams(raw({ H: '3', hc: '2,2' }));
-  assert.match(r.errors.hc, /2,1/);
-  assert.ok(validateParams(raw({ H: '20', hc: '19,1' })).ok);
-  assert.ok(validateParams(raw({ hc: '-0,1' })).errors.hc);
+test('validateParams: mounting height 0.9 m … H; photometric centre below the housing top', () => {
+  assert.ok(validateParams(raw({ H: '3', hm: '3' })).ok);
+  assert.ok(validateParams(raw({ H: '3', hm: '0,9' })).ok);
+  const r = validateParams(raw({ H: '3', hm: '3,1' }));
+  assert.match(r.errors.hm, /3/);
+  assert.ok(validateParams(raw({ hm: '0,8' })).errors.hm);
+  assert.ok(validateParams(raw({ H: '20', hm: '20' })).ok);
+  assert.equal(photometricHeight(3, 0.125), 2.875);
+  assert.ok(Math.abs(ceilingDrop(3, 3, 0.125) - 0.125) < 1e-15);
+  assert.equal(ceilingDrop(3, 2.5), 0.5);
 });
 
 test('validateParams: rotation 0…180°, MF 0.1…1', () => {
@@ -104,8 +108,8 @@ test('stepValue: steps without float noise, within the bounds', async () => {
   assert.equal(stepValue(P.psi, 90, 1), 180);
   assert.equal(stepValue(P.psi, 180, 1), 180);
   assert.equal(stepValue(P.nx, 3, 1), 4);
-  assert.equal(stepValue(P.hc, 2, 1, { H: 3 }), 2.1);
-  assert.equal(stepValue(P.hc, 2.1, 1, { H: 3 }), 2.1);
+  assert.equal(stepValue(P.hm, 2.9, 1, { H: 3 }), 3);
+  assert.equal(stepValue(P.hm, 3, 1, { H: 3 }), 3);
   assert.equal(stepValue(P.L, NaN, 1), 6.1); // invalid text starts from the default
 });
 

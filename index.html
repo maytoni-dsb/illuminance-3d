@@ -30,11 +30,11 @@
       "./js/photfile.js": "./js/photfile.js?v=a8a26e0c",
       "./js/photometry.js": "./js/photometry.js?v=bd36e3b8",
       "./js/photui.js": "./js/photui.js?v=8fe44dbd",
-      "./js/planview.js": "./js/planview.js?v=1a9eafb6",
+      "./js/planview.js": "./js/planview.js?v=54dee309",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=cc9d33b9",
-      "./js/view3d.js": "./js/view3d.js?v=a7a79b68",
+      "./js/ui.js": "./js/ui.js?v=87fc7013",
+      "./js/view3d.js": "./js/view3d.js?v=0b4e2741",
       "./js/worker.js": "./js/worker.js?v=bf308824",
       "./js/workplane.js": "./js/workplane.js?v=5d6a8569"
     }
@@ -188,11 +188,23 @@
     #view canvas{display:block;width:100%;height:100%;cursor:grab}
     #view canvas:active{cursor:grabbing}
     .vbottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-    .vrow{display:flex;align-items:flex-end;gap:12px;min-height:32px;padding-left:84px}
+    /* status pill: top centre, level with the view buttons */
+    .vtop{position:absolute;top:12px;left:0;right:0;height:34px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+    @container view (max-width:760px){ .vtop{top:54px} }
     .vstatus{background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:6px 12px;font-size:12px;
       font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .vstatus:empty{display:none}
-    .vstatus:not(:empty) + .vhint{visibility:hidden}
+    .vtools .vmenuw{position:relative}
+    .vmenu{position:absolute;top:calc(100% + 6px);right:0;z-index:20;min-width:200px;background:var(--card);border:1px solid var(--rule);
+      border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:6px;display:flex;flex-direction:column}
+    .vmenu .vmh{font-size:11.5px;color:var(--ink3);padding:4px 8px 6px}
+    .vmenu button{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border:0;border-radius:6px;background:none;
+      font-size:12.5px;color:var(--ink);cursor:pointer;text-align:left;white-space:nowrap}
+    .vmenu button:hover{background:var(--soft)}
+    .vmenu button:disabled{color:var(--muted);cursor:default;background:none}
+    .vmenu button i{width:14px;flex:none;font-style:normal;color:var(--accent);font-weight:700}
+    .vmenu button small{margin-left:auto;padding-left:12px;color:var(--ink3);font-size:11.5px}
+    .vbtn .caret{position:absolute;right:3px;bottom:5px}
     .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
     .vhint b{font-weight:600;color:var(--ink3)}
     /* photometric file: drop zone, luminaire description, compact polar diagram */
@@ -204,7 +216,7 @@
     .pfdrop .pft span{font-size:11.5px;color:var(--ink3)}
     .pfclear{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;cursor:pointer;flex:none}
     .pfclear:hover{color:var(--err)}
-    #estnote.warn{color:var(--err)}
+    #estnote.warn,#hmnote.warn{color:var(--err)}
     .pferr{font-size:12px;color:var(--err);line-height:1.4;margin-top:6px}
     .pfcard{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
     .pfdesc{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12.5px;line-height:1.35}
@@ -359,6 +371,7 @@
           <div class="fsub">Размещение <button type="button" class="help" data-help="grid" aria-label="Справка: размещение светильников" aria-expanded="false">?</button>
             <button type="button" class="gschipb sm" id="suggest" title="Оценить количество светильников по коэффициенту использования и разместить их сеткой">Предложить</button></div>
           <div class="fgrid" data-group="grid" style="--cols:2"></div>
+          <div class="gshint" id="hmnote"></div>
           <div class="gshint" id="estnote" hidden></div>
         </div>
       </form>
@@ -369,6 +382,12 @@
       <div id="view"></div>
       <div class="vbusy" id="busy" hidden>Расчёт…</div>
       <div class="vtools">
+        <div class="vmenuw">
+          <button type="button" class="vbtn" id="planebtn" aria-pressed="false" aria-haspopup="menu" aria-expanded="false" aria-label="Расчётная поверхность" data-tip="Расчётная поверхность">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 12.5 8 8.5h9.5L12 12.5z"/><path d="M5 11c2-1.2 4-1.2 6 0M8.5 9.6c1.4-.7 2.8-.7 4.2 0" stroke-width="1.1"/></svg>
+            <svg class="caret" viewBox="0 0 8 5" width="7" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
+          <div class="vmenu" id="planemenu" role="menu" hidden></div>
+        </div>
         <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="3.5" height="12" rx="1" fill="#0042ff"/><rect x="6.5" y="4" width="3.5" height="12" fill="#00ff00"/><rect x="10" y="4" width="3.5" height="12" fill="#ffff00"/><rect x="13.5" y="4" width="3.5" height="12" rx="1" fill="#ff0000"/></svg></button>
         <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="План" data-tip="План">
@@ -379,10 +398,8 @@
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
         <button type="button" class="vbtn help" data-help="view" aria-label="Справка: управление видом" aria-expanded="false">?</button>
       </div>
+      <div class="vtop"><div class="vstatus" id="hover"></div></div>
       <div class="vbottom">
-        <div class="vrow">
-          <div class="vstatus" id="hover"></div>
-        </div>
         <div class="legend" id="legend" aria-label="Шкала освещённости"><span class="lt">E, лк</span><ol></ol></div>
       </div>
     </section>
@@ -466,7 +483,7 @@
 
 <script type="module">
   import { createRoom, autoStep } from './js/geometry.js';
-  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES } from './js/ui.js';
+  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES, photometricHeight, ceilingDrop } from './js/ui.js';
   import { stage2Checks } from './js/checks2.js';
   import { faceAverages } from './js/direct.js';
   import { luminance, exposure } from './js/tonemap.js';
@@ -499,7 +516,7 @@
         is2D = on;
         $('#plan').setAttribute('aria-pressed', String(on));
         $('#view3d').setAttribute('aria-pressed', String(!on));
-        applyPlane();
+        applyColorMode(); // also applies the plane
       },
       onOverlay(ctx, info, size) {
         if (!room || !current) return;
@@ -513,21 +530,16 @@
         } else if (planDraw) drawPlane3D(ctx, info.project, size, planDraw);
       },
       onHover(info) {
-        if (!info) { $('#hover').textContent = ''; return; }
+        // only the values: illuminance, and the luminance of a face (a plane has none)
+        const pill = $('#hover');
+        if (!info) { pill.textContent = ''; return; }
         if (info.plane) {
           const d = planDraw;
-          if (!d) { $('#hover').textContent = ''; return; }
-          const E = d ? bilinear(d.values, d.ax, d.ay, d.L / d.ax, d.W / d.ay, info.x, info.y) : null;
-          $('#hover').textContent = [planeName(info.z), `x ${formatNumber(info.x, 2)} м`, `y ${formatNumber(info.y, 2)} м`,
-            ...(E != null ? [`E = ${formatNumber(E, 0)} лк`] : [])].join(' · ');
+          pill.textContent = d ? `E = ${formatNumber(bilinear(d.values, d.ax, d.ay, d.L / d.ax, d.W / d.ay, info.x, info.y), 0)} лк` : '';
           return;
         }
-        const E = info.value != null && shown ? shown.E[info.g] : null;
-        const parts = [info.name];
-        if (E != null) parts.push(`E = ${formatNumber(E, 0)} лк`);
-        if (info.mode === 'real' && shown) parts.push(`L = ${formatNumber(shown.L[info.g], 1)} кд/м²`);
-        parts.push(`элемент i ${info.i}, j ${info.j}`);
-        $('#hover').textContent = parts.join(' · ');
+        if (info.value == null || !shown) { pill.textContent = ''; return; }
+        pill.textContent = `E = ${formatNumber(shown.E[info.g], 0)} лк · L = ${formatNumber(shown.L[info.g], 1)} кд/м²`;
       },
     });
   } catch (e) {
@@ -625,10 +637,23 @@
   const paramsKey = (p) => JSON.stringify({ ...p, table: undefined, checks: undefined });
 
   let photFile = null;  // { table, phot, shape, key, name, set, values } of the loaded IES / LDT file
+  /** Housing height of the loaded file, m (0 without a file): the photometric centre is that much below h_м. */
+  const housingOf = (v) => (v.phot === 'file' && photFile ? photFile.table.luminaire?.height || 0 : 0);
+  /** Distance from the ceiling to the photometric centre for the calculation. */
+  const hcOf = (v) => ceilingDrop(v.H, v.hm, housingOf(v));
+  /** The note under the grid: where the photometric centre is. */
+  function showCentre(v) {
+    const hh = housingOf(v), z = photometricHeight(v.hm, hh), el = $('#hmnote');
+    const mm = (x) => String(Math.round(x * 1000));
+    el.innerHTML = `Фотометрический центр — на высоте ${formatNumber(z, 3)} м` +
+      (hh > 0 ? ` (на ${mm(hh)} мм ниже точки установки: высота корпуса из файла).` : ' (совпадает с точкой установки).') +
+      (z <= v.hwp + 1e-9 ? ' Светильник не выше рабочей поверхности.' : '');
+    el.classList.toggle('warn', z <= v.hwp + 1e-9);
+  }
   function calcParams(v) {
     const file = v.phot === 'file' && photFile;
     const p = {
-      L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: v.hc, psi: v.psi * DEG,
+      L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: hcOf(v), psi: v.psi * DEG,
       phot: file ? 'file' : 'cosine', rho: faceRho(v), hwp: v.hwp,
       checks: $('#dev').open, // the stage checks cost as much as the calculation: only when shown
     };
@@ -638,6 +663,7 @@
 
   function update(values) {
     current = values;
+    showCentre(values);
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
       const h = autoStep(values.L, values.W, values.H); // the subdivision step is automatic
@@ -667,7 +693,7 @@
     // luminaires follow the form at once, with or without a result
     if (view) {
       try {
-        const lums = luminaireGrid({ L: values.L, W: values.W, H: values.H, nx: values.nx, ny: values.ny, hc: values.hc, psi: values.psi * DEG });
+        const lums = luminaireGrid({ L: values.L, W: values.W, H: values.H, nx: values.nx, ny: values.ny, hc: hcOf(values), psi: values.psi * DEG });
         view.setLuminaires(lums, values.phot === 'file' && photFile ? photFile.shape : null);
       } catch (e) { /* inconsistent values while typing */ }
     }
@@ -704,6 +730,7 @@
     $('#planenote').textContent = 'Параметры изменились. Нажмите «Рассчитать».';
     $('#results tbody').innerHTML = ''; $('#mfnote').textContent = '';
     $('#checks6').hidden = $('#checks6h').hidden = true;
+    renderPlaneMenu();
   }
 
   function onResult(id, r) {
@@ -833,9 +860,25 @@
 
   /** The plane button of a results row: shows the plane, a second press hides it. */
   function togglePlane(z) {
-    planeZ = planeZ != null && zKey(planeZ) === zKey(z) ? null : z;
-    renderPlanes(current.mf);
+    setPlaneZ(planeZ != null && zKey(planeZ) === zKey(z) ? null : z);
+  }
+  /** Shows the plane at z (null: none); the results rows and the view menu follow. */
+  function setPlaneZ(z) {
+    planeZ = z;
+    if (result) renderPlanes(current.mf);
+    renderPlaneMenu();
     applyPlane();
+  }
+  /** The menu of the view button "Расчётная поверхность": the same choice as the results rows. */
+  function renderPlaneMenu() {
+    $('#planebtn').setAttribute('aria-pressed', String(planeZ != null));
+    const item = (z, label, note, on, dis = false) =>
+      `<button type="button" role="menuitemradio" aria-checked="${on}" data-z="${z}"${dis ? ' disabled' : ''}><i>${on ? '✓' : ''}</i>${label}${note ? `<small>${note}</small>` : ''}</button>`;
+    const planes = result ? result.planes : [];
+    $('#planemenu').innerHTML = '<div class="vmh">Расчётная поверхность</div>' + item('', 'Не показывать', '', planeZ == null) +
+      (planes.length ? planes.map((pl) => item(pl.z, planeName(pl.z), pl.normative ? 'нормируемая' : 'для справки',
+        planeZ != null && zKey(planeZ) === zKey(pl.z))).join('')
+        : item('-', 'Нет результата расчёта', '', false, true));
   }
 
   /**
@@ -849,7 +892,7 @@
     const phot = photFile && v.phot === 'file' ? photFile.phot : createPhotometry({ type: 'cosine', flux: 1000 });
     let e;
     try {
-      e = estimate(meanCurve(phot), { L: v.L, W: v.W, H: v.H, hu: v.H - v.hc, hr: v.hwp, rp: v.rhoC, rc: v.rhoW, rr: v.rhoF, E: v.En, Ke: v.mf }, v.flux);
+      e = estimate(meanCurve(phot), { L: v.L, W: v.W, H: v.H, hu: v.H - hcOf(v), hr: v.hwp, rp: v.rhoC, rc: v.rhoW, rr: v.rhoF, E: v.En, Ke: v.mf }, v.flux);
     } catch (err) {
       note.textContent = 'Оценка невозможна: светильники должны быть выше рабочей поверхности.';
       note.hidden = false; return;
@@ -892,6 +935,7 @@
       (result.lost > 1e-6 * result.balance.emitted ? ` Поток вверх ${formatNumber(mf * result.lost, 0)} лм не учтён: светильник у потолка (свес 0).` : '');
 
     renderPlanes(mf);
+    renderPlaneMenu();
     applyPlane();
 
     if (view) {
@@ -917,6 +961,21 @@
     togglePlane(Number(b.dataset.z));
   });
   $('#calc').addEventListener('click', calculate);
+  const menu = $('#planemenu'), mbtn = $('#planebtn');
+  const closeMenu = () => { menu.hidden = true; mbtn.setAttribute('aria-expanded', 'false'); };
+  mbtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!menu.hidden) { closeMenu(); return; }
+    renderPlaneMenu(); menu.hidden = false; mbtn.setAttribute('aria-expanded', 'true');
+  });
+  menu.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-z]');
+    if (!b || b.disabled) return;
+    setPlaneZ(b.dataset.z === '' ? null : Number(b.dataset.z));
+    closeMenu();
+  });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
   $('#auto').addEventListener('change', (e) => {
     autoCalc = e.target.checked;
     try { localStorage.setItem('autoCalc', autoCalc ? '1' : '0'); } catch (err) {}
@@ -939,7 +998,8 @@
   // Display mode: false colors (button in the view) or the realistic grey view; the developer toggle
   // shows placeholder colors by face number.
   function applyColorMode() {
-    const mode = faceColors ? 'faces' : falseOn ? 'false' : 'real';
+    // on the plan: no luminance map, a plain fill unless false colours are on
+    const mode = faceColors ? 'faces' : falseOn ? 'false' : is2D ? 'plain' : 'real';
     view?.setColorMode(mode);
     applyPlane(); // on the plan the button colours the plane
     view?.refresh();

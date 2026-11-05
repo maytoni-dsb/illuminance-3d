@@ -12,8 +12,17 @@ export const MAX_LUMINAIRES = 500;
 
 import { ILLUMINANCE_SCALE } from './workplane.js';
 
-/** Clearance between the luminaire and the 0.8 m work plane: h_c ≤ H − 0.9 m (spec, "Входные параметры"). */
-export const HC_CLEARANCE = 0.9;
+/** Lowest mounting height, m: above the 0.8 m work plane (spec, "Входные параметры"). */
+export const HM_MIN = 0.9;
+
+/**
+ * Height of the photometric centre above the floor for a mounting height h_m (accepted 5 Nov 2026,
+ * as in DIALux): the luminaire is mounted by the centre of the top of its housing, so the centre is
+ * the housing height lower. Without a file the housing height is 0.
+ */
+export const photometricHeight = (hm, housing = 0) => hm - housing;
+/** Distance from the ceiling to the photometric centre, h_c of the calculation modules. */
+export const ceilingDrop = (H, hm, housing = 0) => H - photometricHeight(hm, housing);
 
 /**
  * Parameters entered by the user. Ranges follow the spec table "Входные параметры" (input parameters).
@@ -42,9 +51,11 @@ export const PARAMS = Object.freeze([
   { key: 'mf', group: 'norm', label: 'Коэф.', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
   { key: 'nx', group: 'grid', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true, step: 1 },
   { key: 'ny', group: 'grid', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true, step: 1 },
+  // mounting height: the centre of the top of the housing (as in DIALux); it follows H while it is
+  // at the ceiling (initForm)
   {
-    key: 'hc', group: 'grid', label: 'Свес', sym: 'h<sub>c</sub>', unit: 'м', def: 0, min: 0, step: 0.1,
-    max: (v) => Math.max(0, (v.H ?? 20) - HC_CLEARANCE), maxNote: 'H − 0,9',
+    key: 'hm', group: 'grid', label: 'Высота установки', sym: 'h<sub>м</sub>', unit: 'м', def: 3, min: HM_MIN, step: 0.1,
+    max: (v) => v.H ?? 20, maxNote: 'не выше H',
   },
   { key: 'psi', group: 'grid', label: 'Поворот', sym: 'ψ', unit: '°', def: 0, min: 0, max: 180, step: 90 },
   // photometry: 'cosine' without a file, 'file' with one (set by the page, no field)
@@ -189,6 +200,9 @@ export function initForm(root, onChange) {
     for (const p of PARAMS) if (p.when && flds[p.key]) flds[p.key].hidden = !p.when(v);
   }
   function check() {
+    // the mounting height at the ceiling follows the room height
+    const h = parseNumber(inputs.H.value), m = parseNumber(inputs.hm.value);
+    if (Number.isFinite(h) && h !== last.H && Number.isFinite(m) && Math.abs(m - last.H) < 1e-9) inputs.hm.value = formatNumber(h, 6);
     const raw = readRaw();
     const r = validateParams(raw);
     showWhen({ ...last, ...r.values, ...choice });

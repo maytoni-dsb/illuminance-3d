@@ -246,3 +246,16 @@ Stage 6, revision (5 Nov 2026):
   with 3D isolines and projected numbers (the colour button acts on the faces there);
 - "Рассчитать" and the "Автоматически" switch above the results (`localStorage` key `autoCalc`):
   without the automatic update a change of the inputs drops the result until the button is pressed.
+
+Stage 6, revision 2 (5 Nov 2026):
+- the suspension field is replaced by the mounting height h_м (`hm`, 0.9 m … H, default H and
+  following H while equal to it): the mounting point is the centre of the top of the housing, as in
+  DIALux, so the photometric centre is the housing height of the file lower (`photometricHeight`,
+  `ceilingDrop` in `js/ui.js`; h_c = H − z_s goes to the calculation). The page shows the height of
+  the photometric centre under the grid fields. The DIALux reference room now matches at h_м = 3 m;
+- plan: dimensions in whole millimetres; without false colours the floor is one plain fill (no
+  luminance map);
+- the hover pill sits at the top centre of the view, level with the buttons, and shows only the
+  values (E, and L on a face);
+- the first view button "Расчётная поверхность" opens a list of the planes; it and the plane buttons
+  of the results rows set the same state.

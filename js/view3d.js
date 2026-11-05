@@ -330,6 +330,10 @@ export function createView(container, opts = {}) {
   let colorMode = 'false';
   const fcMaterial = falseColorMaterial();
   const realMaterial = realisticMaterial();
+  // the plan without false colours: one plain fill, the same as under a plane's isolines
+  const plainMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(0.95, 0.945, 0.93), side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
   const neutralMaterial = new THREE.MeshLambertMaterial({
     color: 0xe6e3dd, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
@@ -517,6 +521,7 @@ export function createView(container, opts = {}) {
   function applyMaterials() {
     for (const p of faceParts) {
       p.mesh.material = colorMode === 'faces' ? p.mesh.userData.plainMaterial
+        : colorMode === 'plain' ? plainMaterial
         : colorMode === 'false' && values ? fcMaterial
           : colorMode === 'real' && lum ? realMaterial : neutralMaterial;
     }
@@ -982,7 +987,7 @@ export function createView(container, opts = {}) {
       for (const p of faceParts) p.mesh.material = p.mesh.userData.plainMaterial;
       if (roomGroup) disposeTree(roomGroup);
       if (lumGroup) disposeTree(lumGroup);
-      fcMaterial.dispose(); realMaterial.dispose(); neutralMaterial.dispose(); plMaterial.dispose();
+      fcMaterial.dispose(); realMaterial.dispose(); neutralMaterial.dispose(); plainMaterial.dispose(); plMaterial.dispose();
       setPlane(null); overlay.remove();
       disposeTree(axes.group);
       renderer.dispose(); el.remove();
