@@ -102,10 +102,20 @@ export function createCalc() {
       const Er = planeReflected(room, tables.get(zk), M);
       const E = new Float64Array(Ed.length);
       for (let k = 0; k < E.length; k++) E[k] = Ed[k] + Er[k];
-      return { z, normative, nx: room.n.L, ny: room.n.W, E, Edir: Float64Array.from(Ed), Eref: Er, stats: cellStats(E) };
+      // the field of the plan (point values): its extremes are E_min and E_max of the plane
+      if (!planCache.has(zk)) planCache.set(zk, {});
+      const field = planeField(room, z, lums, phot, M, planCache.get(zk), dirKey);
+      const cells = cellStats(E);
+      const ex = field.extremes;
+      const stats = {
+        avg: cells.avg, min: ex.min, max: ex.max, u0: cells.avg > 0 ? ex.min / cells.avg : 0,
+        minMax: ex.max > 0 ? ex.min / ex.max : 0, minAt: ex.minAt, maxAt: ex.maxAt,
+        cellMin: cells.min, cellMax: cells.max,
+      };
+      return { z, normative, nx: room.n.L, ny: room.n.W, E, Edir: Float64Array.from(Ed), Eref: Er, stats, field };
     });
     ms.planes = now() - t0;
-    last = { room, lums, phot, M, key: `${sol.key}` };
+    last = { room, lums, phot, M, key: `${sol.key}`, dirKey };
 
     const out = {
       key: geoKey, N: room.N, h: room.h, rho: [...p.rho],
@@ -132,7 +142,7 @@ export function createCalc() {
     if (!last) throw new Error('plan: no calculation yet');
     const zk = z.toFixed(6);
     if (!planCache.has(zk)) planCache.set(zk, {});
-    const f = planeField(last.room, z, last.lums, last.phot, last.M, planCache.get(zk));
+    const f = planeField(last.room, z, last.lums, last.phot, last.M, planCache.get(zk), last.dirKey);
     return { ...f, key: last.key, roomKey: geo.key };
   }
 

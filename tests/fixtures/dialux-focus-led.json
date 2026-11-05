@@ -1,0 +1,24 @@
+{
+  "source": "DIALux evo report (Project, Строение 1 · Этаж 1 · Помещение 1), received 5 Nov 2026",
+  "file": "photometry/Focus-LED-TR032-2-12W3K-S-B.ldt",
+  "room": { "L": 6, "W": 4, "H": 3, "rho": { "ceiling": 0.7, "walls": 0.5, "floor": 0.2 }, "mf": 0.75 },
+  "luminaires": { "nx": 4, "ny": 2, "mountingHeight": 3.0, "luminaireHeight": 0.125, "psi": 0,
+    "note": "DIALux hangs the luminaire by the top of its housing at the mounting height; the photometric centre is 125 mm (the LDT height) lower" },
+  "results": {
+    "workplane": { "z": 0.8, "avg": 216, "min": 26.8, "max": 646, "u0": 0.12 },
+    "floor": { "avg": 206, "min": 42.7, "max": 364 },
+    "ceiling": { "avg": 23.4 },
+    "walls": { "y": [29.6, 29.4], "x": [32.5, 32.6] }
+  },
+  "workplaneGrid": {
+    "note": "values at the points of the GOST grid 9 × 6 (cell centres), lx with MF; rows from y = 0.333 up; null — label unreadable in the report",
+    "rows": [
+      [92.5, 132, 76.9, 156, 68.9, 156, 76.8, 129, 91.5],
+      [376, 538, 255, 635, 200, 635, 254, 538, 376],
+      [97.3, 137, null, 163, 76.5, 163, 83.9, 138, 97.6],
+      [99.2, 138, 83.5, 164, 75.0, 164, 82.3, 137, 97.9],
+      [375, 538, 254, 634, 200, 634, 254, 538, 376],
+      [92.6, 134, 76.2, 157, 68.9, 155, 77.5, 132, 92.6]
+    ]
+  }
+}

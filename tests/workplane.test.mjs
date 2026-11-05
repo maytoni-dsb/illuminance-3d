@@ -53,8 +53,10 @@ test('the plane at the floor IS the floor: cell averages equal the floor element
     const fl = room.faces[0];
     const Ef = Array.from({ length: fl.count }, (_, k) => r.Edir[k] + r.Eind[k]);
     assert.ok(Math.abs(p0.stats.avg / faceAverages(room, r.Edir.map((v, g) => v + r.Eind[g]))[0] - 1) < 1e-5);
-    assert.ok(Math.abs(p0.stats.min / Math.min(...Ef) - 1) < 1e-5);
-    assert.ok(Math.abs(p0.stats.max / Math.max(...Ef) - 1) < 1e-5);
+    // cell extremes are the floor's; E_min / E_max of the results are point extremes (stage 6)
+    assert.ok(Math.abs(p0.stats.cellMin / Math.min(...Ef) - 1) < 1e-5);
+    assert.ok(Math.abs(p0.stats.cellMax / Math.max(...Ef) - 1) < 1e-5);
+    assert.ok(p0.stats.min <= p0.stats.cellMin && p0.stats.max >= p0.stats.cellMax);
     assert.ok(Math.abs(p0.stats.u0 - p0.stats.min / p0.stats.avg) < 1e-15);
     assert.ok(Math.abs(p0.stats.minMax - p0.stats.min / p0.stats.max) < 1e-15);
   }

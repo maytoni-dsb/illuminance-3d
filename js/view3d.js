@@ -106,6 +106,8 @@ function planeMaterial() {
       cells: { value: new THREE.Vector2(1, 1) },   // ax, ay
       cellSize: { value: new THREE.Vector2(1, 1) }, // dx, dy, m
       opacity: { value: 1 },
+      plain: { value: 0 },                          // 1: one neutral colour instead of the scale
+      plainColor: { value: new THREE.Vector3(0.95, 0.945, 0.93) },
     },
     vertexShader: `
       out vec2 vRoom;
@@ -122,6 +124,8 @@ function planeMaterial() {
       uniform vec2 cells;
       uniform vec2 cellSize;
       uniform float opacity;
+      uniform float plain;
+      uniform vec3 plainColor;
       in vec2 vRoom;
       out vec4 outColor;
       void main() {
@@ -134,7 +138,7 @@ function planeMaterial() {
         float v = mix(mix(v00, v10, t.x), mix(v01, v11, t.x), t.y);
         int idx = 0;
         for (int i = 1; i < ${n}; i++) if (v >= levels[i]) idx = i;
-        outColor = vec4(colors[idx], opacity);
+        outColor = vec4(plain > 0.5 ? plainColor : colors[idx], opacity);
       }`,
     side: THREE.DoubleSide,
     transparent: true,
@@ -343,9 +347,12 @@ export function createView(container, opts = {}) {
   let planeMesh = null;      // THREE.Mesh at height z, L × W
   let planeTex = null;
   let planeData = null;      // { z, ax, ay, L, W }
-  let planeDisplay = 'off';  // 'off' | 'layer' | 'plan'
+  // 'off'; 'plan-color' / 'plan-plain' — on the plan, opaque, in false colours or neutral;
+  // 'layer' — in 3D, semi-transparent and neutral, with the isolines as 3D lines
+  let planeDisplay = 'off';
   let planeOutline = null;   // outline of the layer in 3D
-  const LAYER_OPACITY = 0.6;
+  let planeLines = null;     // isolines of the layer in 3D
+  const LAYER_OPACITY = 0.5;
   const overlay = document.createElement('canvas');
   overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
   container.appendChild(overlay);
@@ -421,7 +428,7 @@ export function createView(container, opts = {}) {
   /** Overlay sizes from the page (buttons on top, status and legend below), CSS px. */
   const insets = () => ({ top: 56, bottom: 24, side: 24, ...(opts.insets?.() ?? {}) });
   /** Plan fit keeps clear of the status row and the axis indicator as well. */
-  const planInsets = () => { const i = insets(); return { ...i, bottom: i.planBottom ?? i.bottom + 40 }; };
+  const planInsets = () => { const i = insets(); return { ...i, bottom: i.planBottom ?? i.bottom + 40, side: i.planSide ?? i.side }; };
 
   /** Copies the plan state to the orthographic camera: looking down, room +Y up on screen. */
   function applyPlan() {
@@ -443,18 +450,23 @@ export function createView(container, opts = {}) {
     plan = fitPlan(room, viewW, viewH, planInsets());
     viewTouched = true;
     opts.onPlanChange?.(true);
-    requestRender();
+    applyPlaneDisplay();
   }
 
-  /** Leaves the plan for the orbit from straight above, keeping the image in place. */
-  function leavePlan() {
+  /** Back to the 3D view as it was before the plan. */
+  function show3D() {
     if (!plan) return;
-    const R = 0.5 * Math.hypot(room.L, room.W, room.H);
-    orbit = planToOrbit(plan, orbit.target, THREE.MathUtils.degToRad(camera.fov / 2), viewH,
-      { minDistance: orbit.minDistance, maxDistance: Math.max(orbit.maxDistance, 40 * R) });
     plan = null;
-    if (planeDisplay === 'plan') { planeDisplay = 'off'; applyPlaneDisplay(); }
     opts.onPlanChange?.(false);
+    applyPlaneDisplay();
+  }
+
+  /** Fits the current view into the window: the plan to the floor, in 3D the room at the current angles. */
+  function fitView() {
+    if (!room) return;
+    if (plan) plan = fitPlan(room, viewW, viewH, planInsets());
+    else fitCamera(room, true);
+    requestRender();
   }
 
   /** Copies the orbit state to the Three.js camera; withShift applies the pan as a view offset. */
@@ -579,6 +591,7 @@ export function createView(container, opts = {}) {
     if (!d) {
       if (planeMesh) { scene.remove(planeMesh); planeMesh.geometry.dispose(); planeMesh = null; }
       if (planeOutline) { scene.remove(planeOutline); disposeTree(planeOutline); planeOutline = null; }
+      if (planeLines) { scene.remove(planeLines); disposeTree(planeLines); planeLines = null; }
       planeTex?.dispose(); planeTex = null; planeData = null;
       applyPlaneDisplay();
       return;
@@ -616,25 +629,46 @@ export function createView(container, opts = {}) {
     applyPlaneDisplay();
   }
 
-  /**
-   * 'plan' — the plan of the plane: orthographic view from above, the room faces hidden, the plane
-   * opaque, the overlay drawn by opts.onPlanDraw; 'layer' — semi-transparent plane in the 3D view;
-   * 'off' — no plane.
-   */
+  /** How the plane is shown: 'off' | 'plan-color' | 'plan-plain' | 'layer' (see planeDisplay). */
   function setPlaneDisplay(mode) {
     planeDisplay = mode;
-    if (mode === 'plan' && !plan) showPlan();
     applyPlaneDisplay();
   }
   function applyPlaneDisplay() {
-    const planMode = planeDisplay === 'plan';
-    if (planeMesh) planeMesh.visible = planeDisplay !== 'off';
-    plMaterial.uniforms.opacity.value = planMode ? 1 : LAYER_OPACITY;
-    if (roomGroup) roomGroup.visible = !planMode || !planeMesh;
-    // on the plan of a plane the luminaires are outlines only: their fill would hide the numbers
-    lumGroup?.traverse((o) => { if (o.isMesh) o.visible = !planMode; });
-    if (planeOutline) planeOutline.visible = planeDisplay === 'layer';
+    const onPlan = planeDisplay === 'plan-color' || planeDisplay === 'plan-plain';
+    const shown = planeMesh && (planeDisplay === 'layer' || (onPlan && plan));
+    if (planeMesh) planeMesh.visible = !!shown;
+    plMaterial.uniforms.opacity.value = planeDisplay === 'layer' ? LAYER_OPACITY : 1;
+    plMaterial.uniforms.plain.value = planeDisplay === 'plan-color' ? 0 : 1;
+    if (roomGroup) roomGroup.visible = !(shown && onPlan);
+    // on the plan the luminaires are outlines only: their fill would hide the plan
+    lumGroup?.traverse((o) => { if (o.isMesh) o.visible = !plan; });
+    if (planeOutline) planeOutline.visible = !!shown && planeDisplay === 'layer';
+    if (planeLines) planeLines.visible = !!shown && planeDisplay === 'layer';
     requestRender();
+  }
+
+  /** Isolines of the plane for the layer in 3D: polylines in room metres at the plane's height. */
+  function setPlaneLines(sets) {
+    if (planeLines) { scene.remove(planeLines); disposeTree(planeLines); planeLines = null; }
+    if (!sets || !planeData) { applyPlaneDisplay(); return; }
+    const pos = [];
+    const z = planeData.z + 0.002 * (room ? room.H : 1);
+    for (const { lines } of sets) {
+      for (const { pts, closed } of lines) {
+        const n = pts.length / 2, seg = closed ? n : n - 1;
+        for (let k = 0; k < seg; k++) {
+          const k1 = (k + 1) % n;
+          pos.push(...toThree([pts[2 * k], pts[2 * k + 1], z]), ...toThree([pts[2 * k1], pts[2 * k1 + 1], z]));
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    planeLines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x1e1e1e, transparent: true, opacity: 0.75 }));
+    planeLines.renderOrder = 7;
+    scene.add(planeLines);
+    applyPlaneDisplay();
   }
 
   /** Room (x, y) → overlay CSS px for the current plan, or null outside the plan. */
@@ -649,7 +683,16 @@ export function createView(container, opts = {}) {
     };
   }
 
-  /** Redraws the 2D overlay: only for the plan of a plane. */
+  /** Room point → view CSS px in the 3D view, or null behind the camera. */
+  const projV = new THREE.Vector3();
+  function project(x, y, z) {
+    const t = toThree([x, y, z]);
+    projV.set(t[0], t[1], t[2]).project(camera);
+    if (!(projV.z > -1 && projV.z < 1)) return null;
+    return [(projV.x + 1) / 2 * viewW, (1 - projV.y) / 2 * viewH];
+  }
+
+  /** Redraws the 2D overlay: the page draws on it (opts.onOverlay) on the plan and in 3D. */
   function drawOverlay() {
     const dpr = renderer.getPixelRatio();
     const W = Math.round(viewW * dpr), H = Math.round(viewH * dpr);
@@ -658,9 +701,9 @@ export function createView(container, opts = {}) {
     const ctx = overlay.getContext('2d', { willReadFrequently: true });
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    if (planeDisplay !== 'plan' || !plan || !planeMesh) return;
+    if (!room || !opts.onOverlay) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    opts.onPlanDraw?.(ctx, planTransform(), { w: viewW, h: viewH });
+    opts.onOverlay(ctx, plan ? { mode: '2d', T: planTransform() } : { mode: '3d', project }, { w: viewW, h: viewH });
   }
 
   /** Luminaires (photometry.luminaireGrid) with an optional shape (photfile.luminaireShape). */
@@ -724,6 +767,7 @@ export function createView(container, opts = {}) {
   const pointers = new Map(); // pointerId → { x, y }
   let dragMode = null;        // 'rotate' | 'pan' | null
   let pinch = null;           // { d, mx, my } for two-finger touch
+  let lastMiddle = 0;         // time of the last wheel-button press, for the double click
 
   el.addEventListener('contextmenu', (e) => e.preventDefault());
   el.addEventListener('pointerdown', (e) => {
@@ -735,12 +779,18 @@ export function createView(container, opts = {}) {
       pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
       dragMode = null;
     } else if (pointers.size === 1) {
-      dragMode = e.button === 0 ? 'rotate' : 'pan';
+      // on the plan the left button does nothing (touch: one finger pans)
+      dragMode = e.button === 0 ? (plan ? (e.pointerType === 'touch' ? 'pan' : null) : 'rotate') : 'pan';
+    }
+    if (e.button === 1) { // double click of the wheel: fit the current view
+      const t = performance.now();
+      if (t - lastMiddle < 400) { fitView(); lastMiddle = 0; } else lastMiddle = t;
     }
     opts.onHover?.(null);
     viewTouched = true;
     e.preventDefault();
   });
+  el.addEventListener('auxclick', (e) => e.preventDefault());
   el.addEventListener('pointermove', (e) => {
     const p = pointers.get(e.pointerId);
     if (!p) { hover(e); return; }
@@ -758,7 +808,6 @@ export function createView(container, opts = {}) {
       }
       pinch = { d, mx, my };
     } else if (dragMode === 'rotate') {
-      if (plan) leavePlan(); // the first rotation leaves the plan, starting from straight above
       rotate(orbit, dx, dy, viewH);
     } else if (dragMode === 'pan') {
       if (plan) panPlan(plan, dx, dy, viewH); else pan(orbit, dx, dy);
@@ -791,7 +840,7 @@ export function createView(container, opts = {}) {
     if (!room || !opts.onHover) return;
     const rect = el.getBoundingClientRect();
     ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
-    if (planeDisplay === 'plan' && plan && planeData) {
+    if (plan && planeData && planeMesh?.visible) {
       const [x, y] = planTransform().toRoom(e.clientX - rect.left, e.clientY - rect.top);
       opts.onHover(x >= 0 && x <= planeData.L && y >= 0 && y <= planeData.W ? { plane: true, x, y, z: planeData.z } : null);
       return;
@@ -898,15 +947,16 @@ export function createView(container, opts = {}) {
     setColorMode(m) { colorMode = m; applyMaterials(); requestRender(); },
     setShowGrid(v) { showGrid = v; requestRender(); },
     setShowNormals(v) { showNormals = v; requestRender(); },
+    /** Initial view: the plan refitted on the plan, the default 3D view in 3D. */
     resetView() {
       if (!room) return;
-      if (plan) {
-        plan = null;
-        if (planeDisplay === 'plan') { planeDisplay = 'off'; applyPlaneDisplay(); }
-        opts.onPlanChange?.(false);
-      }
-      fitCamera(room, false); requestRender();
+      if (plan) plan = fitPlan(room, viewW, viewH, planInsets());
+      else fitCamera(room, false);
+      requestRender();
     },
+    fitView,
+    show3D,
+    setPlaneLines,
     /** Orthographic view from above, fitted to the floor; a rotation returns to the orbit. */
     showPlan,
     setPlane,

@@ -12,7 +12,7 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=0d948dda",
+      "./js/calc.js": "./js/calc.js?v=bea2a608",
       "./js/checks2.js": "./js/checks2.js?v=bec00f91",
       "./js/checks3.js": "./js/checks3.js?v=25f5d271",
       "./js/checks4.js": "./js/checks4.js?v=1b36670e",
@@ -23,20 +23,20 @@
       "./js/estimate.js": "./js/estimate.js?v=8262379e",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
-      "./js/help.js": "./js/help.js?v=7ed7c282",
+      "./js/help.js": "./js/help.js?v=4b3f2854",
       "./js/isolines.js": "./js/isolines.js?v=ea7b03a7",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
       "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
       "./js/photfile.js": "./js/photfile.js?v=a8a26e0c",
       "./js/photometry.js": "./js/photometry.js?v=bd36e3b8",
       "./js/photui.js": "./js/photui.js?v=8fe44dbd",
-      "./js/planview.js": "./js/planview.js?v=57b2cccc",
+      "./js/planview.js": "./js/planview.js?v=1a9eafb6",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
       "./js/ui.js": "./js/ui.js?v=cc9d33b9",
-      "./js/view3d.js": "./js/view3d.js?v=ea00377c",
+      "./js/view3d.js": "./js/view3d.js?v=a7a79b68",
       "./js/worker.js": "./js/worker.js?v=bf308824",
-      "./js/workplane.js": "./js/workplane.js?v=2774f417"
+      "./js/workplane.js": "./js/workplane.js?v=5d6a8569"
     }
   }
   </script>
@@ -233,15 +233,24 @@
       display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
     .pplan:hover{border-color:var(--ink);color:var(--ink)}
     .pplan[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
-    /* plan of a plane: plane switch and indices in the upper left corner of the view */
-    .vplan{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;background:var(--card);
-      border:1px solid var(--rule);border-radius:12px;padding:8px 10px;font-size:12px;max-width:calc(100% - 160px)}
-    .vplan .gschips{gap:4px}
-    .vplan .gschipb{height:24px;padding:0 9px;font-size:12px}
-    .vplan .vps{display:flex;flex-wrap:wrap;gap:2px 12px;font-variant-numeric:tabular-nums;color:var(--ink2)}
-    .vplan .vps i{font-style:normal;color:var(--ink3)}
-    .vplan .vpn{font-size:11.5px;color:var(--ink3)}
-    .vplan:not([hidden]) ~ .vbusy{top:auto;bottom:118px}
+    /* calculation: button and the automatic update switch above the results */
+    .calcbar{display:flex;align-items:center;gap:12px}
+    .gsbtn{height:34px;padding:0 16px;border-radius:999px;border:0;background:var(--accent);color:var(--on-accent);
+      font-size:13px;font-weight:600;cursor:pointer}
+    .gsbtn:hover{background:var(--accent-hov)}
+    .gsbtn:disabled{background:var(--soft);color:var(--muted);cursor:default}
+    .tgl{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink2);cursor:pointer;user-select:none}
+    .tgl input{appearance:none;-webkit-appearance:none;margin:0;width:32px;height:18px;border-radius:999px;background:var(--line);
+      position:relative;cursor:pointer;transition:background .12s;flex:none}
+    .tgl input::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;
+      box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .12s}
+    .tgl input:checked{background:var(--accent)}
+    .tgl input:checked::after{transform:translateX(14px)}
+    .stale{font-size:12px;color:var(--ink3)}
+    /* "?" among the view buttons */
+    .vbtn.help{width:34px;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink2);
+      font-size:14px;font-weight:600;line-height:1}
+    .vbtn.help:hover,.vbtn.help[aria-expanded="true"]{background:var(--card);border-color:var(--ink);color:var(--ink)}
     .st{display:inline-flex;width:14px;height:14px;flex:0 0 auto}
     .st svg{width:14px;height:14px;display:block}
     .st.low{color:var(--err)} .st.ok{color:var(--ok)} .st.high{color:#E0A100}
@@ -358,24 +367,21 @@
 
     <section class="gscard viewcard" aria-label="3D-вид комнаты">
       <div id="view"></div>
-      <div class="vplan" id="vplan" hidden aria-label="План плоскости">
-        <div class="gschips" role="radiogroup" aria-label="Плоскость" id="vplanpick"></div>
-        <div class="vps" id="vplanstats"></div>
-        <div class="vpn" id="vplannote"></div>
-      </div>
       <div class="vbusy" id="busy" hidden>Расчёт…</div>
       <div class="vtools">
         <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="3.5" height="12" rx="1" fill="#0042ff"/><rect x="6.5" y="4" width="3.5" height="12" fill="#00ff00"/><rect x="10" y="4" width="3.5" height="12" fill="#ffff00"/><rect x="13.5" y="4" width="3.5" height="12" rx="1" fill="#ff0000"/></svg></button>
-        <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="Вид сверху" data-tip="Вид сверху (план)">
+        <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="План" data-tip="План">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4.5" width="14" height="11" rx="1"/><g fill="currentColor" stroke="none"><rect x="5.6" y="7.2" width="2" height="2"/><rect x="9" y="7.2" width="2" height="2"/><rect x="12.4" y="7.2" width="2" height="2"/><rect x="5.6" y="10.8" width="2" height="2"/><rect x="9" y="10.8" width="2" height="2"/><rect x="12.4" y="10.8" width="2" height="2"/></g></svg></button>
+        <button type="button" class="vbtn" id="view3d" aria-pressed="true" aria-label="Вид 3D" data-tip="Вид 3D">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M10 2.8 16.5 6.4v7.2L10 17.2 3.5 13.6V6.4z"/><path d="M3.5 6.4 10 10l6.5-3.6M10 10v7.2"/></svg></button>
         <button type="button" class="vbtn" id="reset" aria-label="Исходный вид" data-tip="Исходный вид">
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
+        <button type="button" class="vbtn help" data-help="view" aria-label="Справка: управление видом" aria-expanded="false">?</button>
       </div>
       <div class="vbottom">
         <div class="vrow">
           <div class="vstatus" id="hover"></div>
-          <div class="vhint"><b>ЛКМ</b> — вращение вокруг центра пола · <b>ПКМ</b> — сдвиг · <b>колесо</b> — масштаб</div>
         </div>
         <div class="legend" id="legend" aria-label="Шкала освещённости"><span class="lt">E, лк</span><ol></ol></div>
       </div>
@@ -383,6 +389,10 @@
 
     <section class="gscard side results" aria-label="Результаты">
       <div class="fsec">
+        <div class="calcbar">
+          <button type="button" class="gsbtn" id="calc" disabled>Рассчитать</button>
+          <label class="tgl" title="Пересчитывать при каждом изменении параметров"><input type="checkbox" id="auto" role="switch" checked> Автоматически</label>
+        </div>
         <div class="shd">Результаты <button type="button" class="help" data-help="results" aria-label="Справка: результаты" aria-expanded="false">?</button></div>
         <div class="planes" id="planes"></div>
         <div class="gshint" id="planenote"></div>
@@ -402,9 +412,7 @@
           <button type="button" class="gschipb" role="radio" data-v="direct" aria-pressed="false" aria-checked="false">Прямая</button>
           <button type="button" class="gschipb" role="radio" data-v="indirect" aria-pressed="false" aria-checked="false">Отражённая</button>
         </div>
-        <div class="shd" style="font-size:13px;margin-top:4px">Плоскость в 3D</div>
-        <div class="gschips" role="radiogroup" aria-label="Плоскость в 3D" id="layerpick"></div>
-        <div class="gshint">Без фиктивных цветов (кнопка на 3D-виде) комната показывается в реалистичном виде: яркость L = ρE/π, экспозиция подбирается автоматически.</div>
+        <div class="gshint">Кнопка у строки плоскости показывает её изолинии и значения в точках сетки ГОСТ: на плане — на светлом фоне (с кнопкой «Фиктивные цвета» — в цвете), в 3D — полупрозрачным слоем. Без фиктивных цветов грани показываются в реалистичном виде: яркость L = ρE/π.</div>
       </div>
 
       <div class="fsec">
@@ -467,10 +475,10 @@
   import { initHelp } from './js/help.js';
   import { levelStatus, U0_MIN, bilinear, cellStats } from './js/workplane.js';
   import { isolineSet } from './js/isolines.js';
-  import { drawPlan } from './js/planview.js';
+  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D } from './js/planview.js';
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
-  import { createPhotometry } from './js/photometry.js';
+  import { createPhotometry, luminaireGrid } from './js/photometry.js';
 
   const $ = (s) => document.querySelector(s);
   const DEG = Math.PI / 180;
@@ -479,24 +487,36 @@
     const mod = await import('./js/view3d.js');
     FACE_COLORS = mod.FACE_COLORS;
     view = mod.createView($('#view'), {
-      // overlays: the axis indicator and the plan fit keep clear of the legend and the status row
+      // overlays: the axis indicator and the plan fit keep clear of the legend and the status row;
+      // on the plan the dimensions need room below and on the left
       insets() {
         const card = $('.viewcard').getBoundingClientRect();
         const lg = $('#legend');
-        const bottom = lg.hidden ? 12 : card.bottom - lg.getBoundingClientRect().top + 8;
-        const vp = $('#vplan');
-        const top = vp.hidden ? 56 : vp.getBoundingClientRect().bottom - card.top + 12;
-        return { top, bottom, planBottom: bottom + 40, side: 24 };
+        const bottom = card.bottom - lg.getBoundingClientRect().top + 8;
+        return { top: 56, bottom, planBottom: bottom + 96, side: 24, planSide: 76 };
       },
       onPlanChange(on) {
+        is2D = on;
         $('#plan').setAttribute('aria-pressed', String(on));
-        if (!on && planZ != null) { planZ = null; applyPlane(); } // a rotation or "Исходный вид" leaves the plan of a plane
+        $('#view3d').setAttribute('aria-pressed', String(!on));
+        applyPlane();
       },
-      onPlanDraw(ctx, T, size) { if (planDraw) drawPlan(ctx, T, size, planDraw); },
+      onOverlay(ctx, info, size) {
+        if (!room || !current) return;
+        if (info.mode === '2d') {
+          const v = current;
+          const xs = Array.from({ length: v.nx }, (_, i) => (i + 0.5) * v.L / v.nx);
+          const ys = Array.from({ length: v.ny }, (_, j) => (j + 0.5) * v.W / v.ny);
+          const css = getComputedStyle($('.viewcard'));
+          drawRoomPlan(ctx, info.T, size, { L: room.L, W: room.W, xs, ys, ink: css.getPropertyValue('--ink2').trim() || '#2e2e2e' });
+          if (planDraw) drawPlaneOnPlan(ctx, info.T, size, planDraw);
+        } else if (planDraw) drawPlane3D(ctx, info.project, size, planDraw);
+      },
       onHover(info) {
         if (!info) { $('#hover').textContent = ''; return; }
         if (info.plane) {
           const d = planDraw;
+          if (!d) { $('#hover').textContent = ''; return; }
           const E = d ? bilinear(d.values, d.ax, d.ay, d.L / d.ax, d.W / d.ay, info.x, info.y) : null;
           $('#hover').textContent = [planeName(info.z), `x ${formatNumber(info.x, 2)} м`, `y ${formatNumber(info.y, 2)} м`,
             ...(E != null ? [`E = ${formatNumber(E, 0)} лк`] : [])].join(' · ');
@@ -545,8 +565,6 @@
     worker.onmessage = (e) => {
       const m = e.data;
       if (m.type === 'result') onResult(m.id, m.result);
-      else if (m.type === 'plan') onPlan(m.plan);
-      else if (m.type === 'error' && m.plan) { console.error(m.message); planBusy = false; setBusy(`Ошибка расчёта плана: ${m.message.split('\n')[0]}`, true); }
       else if (m.type === 'error') {
         console.error(m.message);
         if (m.id == null) { useMainThread(m.message).then(() => { busy = false; flush(); }); return; }
@@ -569,11 +587,13 @@
     pending = params;
     flush();
   }
+  const jobKeys = new Map(); // job id → key of its parameters
   function flush() {
-    if (busy || !pending || (!worker && !mainCalc)) { flushPlan(); return; }
+    if (busy || !pending || (!worker && !mainCalc)) return;
     const params = pending; pending = null;
     busy = true;
     const id = ++jobId;
+    jobKeys.set(id, paramsKey(params));
     setBusy('Расчёт…');
     if (worker) worker.postMessage({ type: 'run', id, params });
     else setTimeout(() => {   // let the busy pill paint first
@@ -581,30 +601,11 @@
     }, 0);
   }
 
-  // ---- plans of the planes: fields from the worker, one request at a time, after the runs ----
-  let planZ = null;          // height of the plane whose plan is open, or null
-  let layerZ = null;         // height of the plane shown as a layer in 3D, or null
-  let planFields = new Map(); // z → plan field of the current result (workplane.planeField, E₀)
-  let planBusy = false;
-  let planDraw = null;       // what the overlay draws: { L, W, ax, ay, values, sets, gost }
+  // ---- planes on the view: the field of every plane comes with the result (workplane.planeField) ----
+  let planeZ = null;         // height of the plane shown (isolines and numbers), or null
+  let is2D = false;          // the view shows the plan
+  let planDraw = null;       // what the overlay draws: { z, L, W, ax, ay, values, sets, gost }
   const zKey = (z) => z.toFixed(6);
-
-  /** Requests the field of the next plane that is shown and not yet computed for this result. */
-  function flushPlan() {
-    if (planBusy || busy || pending || !result || (!worker && !mainCalc)) return;
-    const z = [planZ, layerZ].find((q) => q != null && !planFields.has(zKey(q)));
-    if (z == null) return;
-    planBusy = true;
-    setBusy('Расчёт плана…');
-    if (worker) worker.postMessage({ type: 'plan', id: jobId, z });
-    else setTimeout(() => { try { onPlan(mainCalc.plan(z)); } catch (e) { planBusy = false; setBusy(`Ошибка расчёта плана: ${e.message}`, true); } }, 0);
-  }
-  function onPlan(pl) {
-    planBusy = false;
-    if (!busy && !pending) setBusy('');
-    if (result && pl.roomKey === lastRoomKey) { planFields.set(zKey(pl.z), pl); applyPlane(); }
-    flushPlan();
-  }
 
   // ---- state ----
   let lastRoomKey = '', room = null;
@@ -612,7 +613,16 @@
   let result = null;    // last result that matches the current room: { ...CalcResult, rho }
   let shown = null;     // what is displayed: { E, L } per element (maintained values)
   let mapMode = 'total', falseOn = true, faceColors = false, stops = 0;
-  const sentKey = { v: '' };
+  // the "Фиктивные цвета" button: for the faces, and on the plan with a plane shown for that plane
+  // (the plane starts without them)
+  let planeColors = false;
+  const buttonOnPlane = () => is2D && planeZ != null;
+  const sentKey = { v: '' };  // parameters of the last calculation sent
+  let resultKey = '';         // parameters of the result shown
+  let autoCalc = true;        // recalculate on every change (switch above the results)
+  try { autoCalc = localStorage.getItem('autoCalc') !== '0'; } catch (e) {}
+  /** Key of the calculation inputs: MF, E_n and the developer checks are not part of it. */
+  const paramsKey = (p) => JSON.stringify({ ...p, table: undefined, checks: undefined });
 
   let photFile = null;  // { table, phot, shape, key, name, set, values } of the loaded IES / LDT file
   function calcParams(v) {
@@ -654,31 +664,67 @@
       lastRoomKey = roomKey;
     }
     if (!busy && !pending) setBusy('');
+    // luminaires follow the form at once, with or without a result
+    if (view) {
+      try {
+        const lums = luminaireGrid({ L: values.L, W: values.W, H: values.H, nx: values.nx, ny: values.ny, hc: values.hc, psi: values.psi * DEG });
+        view.setLuminaires(lums, values.phot === 'file' && photFile ? photFile.shape : null);
+      } catch (e) { /* inconsistent values while typing */ }
+    }
     // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
-    // The table itself is not part of the key: fileKey identifies it.
+    // The table itself is not part of the key: fileKey identifies it. Without the automatic update
+    // a change drops the result until "Рассчитать" is pressed.
     const p = calcParams(values);
-    const key = JSON.stringify({ ...p, table: undefined });
-    if (key !== sentKey.v) { sentKey.v = key; request(p); }
+    const key = paramsKey(p);
+    if (autoCalc) {
+      if (key !== sentKey.v) { sentKey.v = key; request(p); } else render();
+    } else if (key !== resultKey) clearResult();
     else render();
+    updateCalcButton();
+  }
+
+  function calculate() {
+    if (!current) return;
+    const p = calcParams(current);
+    sentKey.v = paramsKey(p);
+    request(p);
+    updateCalcButton();
+  }
+  function updateCalcButton() {
+    $('#calc').disabled = autoCalc;
+    $('#auto').checked = autoCalc;
+  }
+
+  /** No result for the current parameters (manual calculation): faces neutral, no figures. */
+  function clearResult() {
+    result = null; resultKey = ''; shown = null;
+    planDraw = null;
+    view?.setValues(null); view?.setLuminance(null, 0); view?.setPlane(null);
+    $('#planes').innerHTML = '';
+    $('#planenote').textContent = 'Параметры изменились. Нажмите «Рассчитать».';
+    $('#results tbody').innerHTML = ''; $('#mfnote').textContent = '';
+    $('#checks6').hidden = $('#checks6h').hidden = true;
   }
 
   function onResult(id, r) {
     busy = false;
     if (!pending) setBusy('');
     const rk = `${r.key}`;
-    if (rk === lastRoomKey && room && r.N === room.N) {
-      result = r;
-      planFields = new Map();
+    const key = jobKeys.get(id); jobKeys.delete(id);
+    // without the automatic update a result for parameters changed meanwhile is dropped
+    const fresh = autoCalc || (current && key === paramsKey(calcParams(current)));
+    if (rk === lastRoomKey && room && r.N === room.N && fresh) {
+      result = r; resultKey = key;
       // the plane at h disappears when h becomes 0 or 0.8 m: show the normative plane instead
       const zs = r.planes.map((q) => zKey(q.z)), norm = r.planes.find((q) => q.normative).z;
-      if (planZ != null && !zs.includes(zKey(planZ))) planZ = norm;
-      if (layerZ != null && !zs.includes(zKey(layerZ))) layerZ = norm;
+      if (planeZ != null && !zs.includes(zKey(planeZ))) planeZ = norm;
       render();
       $('#timing').innerHTML =
         row('Ядро', r.reused.kernel ? 'из кэша' : `${ms(r.ms.kernel)} + поправка ${ms(r.ms.coarse)}`) +
         row('Прямая составляющая', r.reused.direct ? 'из кэша' : `${ms(r.ms.direct)} · ${r.lums.length} св. × ${r.N.toLocaleString('ru-RU')} эл.` +
           (r.directStats ? ` · ${Math.round(r.directStats.evals / (r.lums.length * r.N))} выч./пару` : '')) +
         row('Решатель', `${ms(r.ms.solve)} · ${r.iterations} итер.`) +
+        row('Плоскости', ms(r.ms.planes)) +
         row('Проверки этапов 3–4', ms(r.ms.checks));
       $('#checks3').innerHTML = r.checks3 ? checkList(r.checks3) : '';
       const c4 = [...(r.checks4 ?? [])];
@@ -724,7 +770,7 @@
     host.innerHTML = result.planes.map((pl) => {
       const st = pl.stats, avg = mf * st.avg, min = mf * st.min, max = mf * st.max, u0 = st.u0;
       const name = planeName(pl.z);
-      const on = planZ != null && zKey(planZ) === zKey(pl.z);
+      const on = planeZ != null && zKey(planeZ) === zKey(pl.z);
       const level = pl.normative ? levelStatus(avg, current.En) : null;
       const uBad = pl.normative && u0 < U0_MIN;
       if (!pl.normative) ref = true;
@@ -732,7 +778,7 @@
         <summary><span class="pn">${name}${pl.normative ? '' : '*'}</span>
           <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` ${mark(level, `${LABEL[level]}: Eн = ${current.En} лк`)}` : ''}</span>
           <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ` ${mark('low', 'U₀ меньше 0,3')}` : ''}</span>
-          <button type="button" class="pplan" data-z="${pl.z}" aria-pressed="${on}" aria-label="План ${name}" title="План ${name}: фиктивные цвета, изолинии, значения в точках">${PLAN_ICON}</button></summary>
+          <button type="button" class="pplan" data-z="${pl.z}" aria-pressed="${on}" aria-label="Изолинии ${name}" title="${name}: изолинии и значения в точках сетки ГОСТ — на плане и в 3D">${PLAN_ICON}</button></summary>
         <div class="gstech">
           ${row('Средняя Ē', `${n0(avg)} лк`)}
           ${row('Минимальная E<sub>min</sub>', `${n0(min)} лк`)}
@@ -742,40 +788,23 @@
         </div></details>`;
     }).join('');
     $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учётом MF = ${formatNumber(mf, 2)}. U₀ = E<sub>min</sub> / Ē.`;
-    // plane chips: on the plan (switch) and for the layer in 3D
-    const chip = (z, on, label) => `<button type="button" class="gschipb" role="radio" data-z="${z}" aria-pressed="${on}" aria-checked="${on}">${label}</button>`;
-    $('#vplanpick').innerHTML = result.planes.map((pl) => chip(pl.z, planZ != null && zKey(planZ) === zKey(pl.z), planeName(pl.z) + (pl.normative ? '' : '*'))).join('');
-    $('#layerpick').innerHTML = chip('', layerZ == null, 'Нет') + result.planes.map((pl) => chip(pl.z, layerZ != null && zKey(layerZ) === zKey(pl.z), planeName(pl.z) + (pl.normative ? '' : '*'))).join('');
   }
 
   /**
    * The plane on the view: values of the shown map (total, direct or reflected) with MF at the nodes
    * of the auxiliary grid, isolines of exactly these values and the numbers at the GOST points.
-   * The plan takes the plane under planZ, the layer in 3D the one under layerZ.
+   * On the plan the plane is opaque, in false colours when they are on, else neutral; in 3D it is a
+   * neutral semi-transparent layer (false colours apply to the faces only).
    */
   function applyPlane() {
-    const z = planZ ?? layerZ;
-    const f = z != null && result ? planFields.get(zKey(z)) : null;
-    const wasHidden = $('#vplan').hidden;
-    $('#vplan').hidden = planZ == null;
-    if (wasHidden !== (planZ == null)) applyColorMode();
-    // indices of the shown map on the plane (cell averages, the same as in the results)
-    const plz = planZ != null && result ? result.planes.find((q) => zKey(q.z) === zKey(planZ)) : null;
-    if (plz) {
-      const mf = current.mf;
-      const st = cellStats(mapMode === 'direct' ? plz.Edir : mapMode === 'indirect' ? plz.Eref : plz.E);
-      const n0 = (x) => formatNumber(mf * x, 0);
-      $('#vplanstats').innerHTML = `<span><i>Ē</i> ${n0(st.avg)} лк</span><span><i>E<sub>min</sub></i> ${n0(st.min)} лк</span>` +
-        `<span><i>E<sub>max</sub></i> ${n0(st.max)} лк</span><span><i>U₀</i> ${formatNumber(st.u0, 2)}</span>`;
-      const what = { total: '', direct: 'Прямая составляющая · ', indirect: 'Отражённая составляющая · ' }[mapMode];
-      $('#vplannote').textContent = `${what}${plz.normative ? 'нормируемая плоскость' : 'для справки'} · MF = ${formatNumber(mf, 2)} · числа — в точках сетки ГОСТ, лк`;
-    }
+    $('#falsecolors').setAttribute('aria-pressed', String(buttonOnPlane() ? planeColors : falseOn));
+    const pl = planeZ != null && result ? result.planes.find((q) => zKey(q.z) === zKey(planeZ)) : null;
+    const f = pl?.field;
     if (!view) return;
     if (!f) {
       planDraw = null;
       view.setPlane(null);
-      view.setPlaneDisplay(planZ != null ? 'plan' : 'off');
-      if (z != null) flushPlan();
+      view.setPlaneDisplay('off');
       $('#checks6').hidden = $('#checks6h').hidden = true;
       return;
     }
@@ -784,29 +813,29 @@
     const values = Float64Array.from(pick(f), (v) => mf * v);
     const { ax, ay, dx, dy, L, W } = f.grid;
     const sets = isolineSet(values, ax, ay, dx, dy, LEVELS.slice(1));
-    planDraw = { L, W, ax, ay, values, sets, gost: { ...f.gost, values: Float64Array.from(pick(f.gost), (v) => mf * v) } };
+    planDraw = { z: f.z, L, W, ax, ay, values, sets, gost: { ...f.gost, values: Float64Array.from(pick(f.gost), (v) => mf * v) } };
     view.setPlane({ z: f.z, ax, ay, L, W, values });
-    view.setPlaneDisplay(planZ != null ? 'plan' : 'layer');
+    view.setPlaneLines(sets);
+    view.setPlaneDisplay(is2D ? (planeColors ? 'plan-color' : 'plan-plain') : 'layer');
 
-    const pl = result.planes.find((q) => zKey(q.z) === zKey(f.z));
     // stage 6 checks on the shown plane (total illuminance)
-    if ($('#dev').open && pl) {
+    if ($('#dev').open) {
       const tot = Float64Array.from(f.E, (v) => mf * v);
       const c6 = stage6Checks(f, mapMode === 'total' ? sets : isolineSet(tot, ax, ay, dx, dy, LEVELS.slice(1)), mf, pl.stats);
       c6.unshift({ name: `${planeName(f.z)}: поле плана`, ok: true,
         detail: `вспомогательная сетка ${ax} × ${ay} (шаг ${formatNumber(dx, 3)} м), точки ГОСТ ${f.gost.nx} × ${f.gost.ny}; ` +
-          `таблицы ${ms(f.ms.tables)}, отражённая ${ms(f.ms.reflected)}, прямая ${ms(f.ms.direct)}, ГОСТ ${ms(f.ms.gost)}` });
+          `отражённая ${ms(f.ms.reflected)}, прямая ${ms(f.ms.direct)}, ГОСТ ${ms(f.ms.gost)}` });
       $('#checks6').innerHTML = checkList(c6);
       $('#checks6').hidden = $('#checks6h').hidden = false;
       window.__stage6 = { plan: f, sets, checks: c6 };
     }
   }
 
-  function openPlan(z) {
-    if (planZ != null && zKey(planZ) === zKey(z)) { view?.resetView(); return; } // second press: back to 3D
-    planZ = z;
-    applyPlane(); // shows the plan box first, so the plan is fitted below it
+  /** The plane button of a results row: shows the plane, a second press hides it. */
+  function togglePlane(z) {
+    planeZ = planeZ != null && zKey(planeZ) === zKey(z) ? null : z;
     renderPlanes(current.mf);
+    applyPlane();
   }
 
   /**
@@ -866,7 +895,6 @@
     applyPlane();
 
     if (view) {
-      view.setLuminaires(result.lums, result.fileKey && photFile?.key === result.fileKey ? photFile.shape : null);
       view.setValues(mapMode === 'direct' ? Ed : mapMode === 'indirect' ? Ei : E);
       view.setLuminance(L, ex.m);
     }
@@ -886,19 +914,16 @@
     const b = e.target.closest('.pplan');
     if (!b) return;
     e.preventDefault(); // inside <summary>: do not toggle the row
-    openPlan(Number(b.dataset.z));
+    togglePlane(Number(b.dataset.z));
   });
-  $('#vplanpick').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-z]');
-    if (b) openPlan(Number(b.dataset.z));
+  $('#calc').addEventListener('click', calculate);
+  $('#auto').addEventListener('change', (e) => {
+    autoCalc = e.target.checked;
+    try { localStorage.setItem('autoCalc', autoCalc ? '1' : '0'); } catch (err) {}
+    if (autoCalc && current) update(current); else updateCalcButton();
   });
-  $('#layerpick').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-z]');
-    if (!b) return;
-    layerZ = b.dataset.z === '' ? null : Number(b.dataset.z);
-    if (result) { renderPlanes(current.mf); applyPlane(); }
-  });
-  $('#dev').addEventListener('toggle', () => { if ($('#dev').open && current) update(current); });
+  // the stage checks are computed only while the developer block is open
+  $('#dev').addEventListener('toggle', () => { if ($('#dev').open && current && autoCalc) calculate(); });
   initHelp(document);
   update(form.values());
 
@@ -916,10 +941,13 @@
   function applyColorMode() {
     const mode = faceColors ? 'faces' : falseOn ? 'false' : 'real';
     view?.setColorMode(mode);
-    $('#legend').hidden = mode !== 'false' && planZ == null; // the plan of a plane is always in false colors
+    applyPlane(); // on the plan the button colours the plane
     view?.refresh();
   }
-  toggle($('#falsecolors'), (on) => { falseOn = on; applyColorMode(); });
+  $('#falsecolors').addEventListener('click', () => {
+    if (buttonOnPlane()) { planeColors = !planeColors; applyPlane(); return; }
+    falseOn = !falseOn; applyColorMode();
+  });
   toggle($('#plain'), (on) => { faceColors = on; applyColorMode(); });
   $('#mapmode').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-v]');
@@ -929,7 +957,7 @@
       const on = x === b;
       x.setAttribute('aria-pressed', String(on)); x.setAttribute('aria-checked', String(on));
     }
-    if (!falseOn) { falseOn = true; $('#falsecolors').setAttribute('aria-pressed', 'true'); applyColorMode(); }
+    if (!falseOn) { falseOn = true; applyColorMode(); }
     render();
   });
   $('#stops').addEventListener('input', (e) => {
@@ -938,7 +966,8 @@
     view?.setExposureStops(stops);
   });
   $('#reset').addEventListener('click', () => view?.resetView());
-  $('#plan').addEventListener('click', () => { if (view?.isPlan()) view.resetView(); else view?.showPlan(); });
+  $('#plan').addEventListener('click', () => { if (!view?.isPlan()) view?.showPlan(); });
+  $('#view3d').addEventListener('click', () => view?.show3D());
 
   $('#themebtn').addEventListener('click', () => {
     const r = document.documentElement;

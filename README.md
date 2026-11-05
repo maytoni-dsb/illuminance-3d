@@ -227,3 +227,22 @@ Stage 6 — plans of the planes (5 Nov 2026):
   level with different colors on both sides and segment midpoints within 0.05 cell of the border; Ē of
   the plan against the cell average (0.5 %); the interpolated reflected light against the exact sums at
   the GOST points (1 % of the total). Open: comparison with DIALux.
+
+Stage 6, revision (5 Nov 2026):
+- E_min and E_max of a plane are the extremes of its point field (the auxiliary grid nodes, the GOST
+  points and the points under every luminaire), so no number on the plan lies outside them; Ē stays
+  the exact cell average. The plane fields are therefore computed in every run for all planes
+  (`planeField` caches the factor tables per height and the direct part per luminaire set) and come
+  with the result (`planes[i].field`); the worker `plan` message is no longer used by the page;
+- DIALux evo reference (`tests/dialux.test.mjs`, `tests/fixtures/dialux-focus-led.json`): 6 × 4 × 3 m,
+  4 × 2 Maytoni Focus LED; with the photometric centre 125 mm below the ceiling (DIALux hangs the
+  housing top at the mounting height) Ē of Г-0,8 is 215.9 lx against 216, the GOST points agree within
+  2.9 %;
+- view: "План" (2D: room outline, luminaires as outlines, grid axes, dimension chains; the left button
+  does nothing) and "Вид 3D" buttons, "?" with the controls help, a double click of the wheel fits the
+  current view; the legend is always shown;
+- the plane button of a results row shows that plane (one at a time): on the plan its isolines and GOST
+  numbers on a light background, coloured by "Фиктивные цвета"; in 3D a neutral semi-transparent layer
+  with 3D isolines and projected numbers (the colour button acts on the faces there);
+- "Рассчитать" and the "Автоматически" switch above the results (`localStorage` key `autoCalc`):
+  without the automatic update a change of the inputs drops the result until the button is pressed.

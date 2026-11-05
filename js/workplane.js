@@ -364,14 +364,22 @@ export function bilinear(V, nx, ny, dx, dy, x, y) {
 }
 
 /**
- * Field of the plan of the plane at height z: values at the nodes of the auxiliary grid and exact
- * values at the points of the GOST grid. Initial values E₀ (no maintenance factor).
- * @param {object} cache — keeps the factor tables of this room and height between calls:
- *        { vt?: vertexTables, gost?: { grid, F } }
- * @returns {{ z, grid: auxGrid, E: Float64Array, Edir: Float64Array, Eref: Float64Array,
- *             gost: { nx, ny, dx, dy, pts, E, Edir, Eref }, ms: { tables, reflected, direct, gost } }}
+ * Field of the plan of the plane at height z: values at the nodes of the auxiliary grid, exact
+ * values at the points of the GOST grid and the extremes of all point values. Initial values E₀.
+ * @param {object} cache — kept between calls for this room and height:
+ *        { vt?: vertexTables, gost?: { grid, F }, dir?: { key, Edir } (direct at the nodes) }
+ * @param {string} [dirKey] — identifies the luminaires and photometry: the direct part at the nodes
+ *        is reused while it stays the same
+ * @returns {{ z, grid: auxGrid, E, Edir, Eref: Float64Array (nodes), vertices,
+ *             gost: { nx, ny, dx, dy, pts, E, Edir, Eref }, extremes: { min, max, minAt, maxAt },
+ *             ms: { tables, reflected, direct, gost } }}
+ *
+ * Extremes (accepted 5 Nov 2026): E_min and E_max of a plane are the extremes of POINT values — the
+ * nodes of the auxiliary grid (walls and corners included), the GOST points and the points straight
+ * under every luminaire — so no number on the plan lies outside [E_min, E_max]. Ē stays the exact
+ * area mean of the cells.
  */
-export function planeField(room, z, lums, phot, M, cache = {}) {
+export function planeField(room, z, lums, phot, M, cache = {}, dirKey = null) {
   const ms = { tables: 0, reflected: 0, direct: 0, gost: 0 };
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   let t = now();
@@ -381,25 +389,32 @@ export function planeField(room, z, lums, phot, M, cache = {}) {
   const Rv = vertexReflected(room, cache.vt, M);
   ms.reflected = now() - t;
 
-  t = now();
   const grid = auxGrid(room.L, room.W);
   const nn = (grid.ax + 1) * (grid.ay + 1);
-  const Edir = new Float64Array(nn), Eref = new Float64Array(nn), E = new Float64Array(nn);
   const nL = room.n.L, nW = room.n.W, dL = room.d.L, dW = room.d.W;
   const eps = EDGE_EPS * Math.max(room.L, room.W);
   const x = [0, 0, z], up = [0, 0, 1];
+  t = now();
+  if (!cache.dir || dirKey === null || cache.dir.key !== dirKey) {
+    const Ed = new Float64Array(nn);
+    for (let j = 0; j <= grid.ay; j++) {
+      for (let i = 0; i <= grid.ax; i++) {
+        x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
+        x[1] = Math.min(Math.max(j * grid.dy, eps), room.W - eps);
+        Ed[i + j * (grid.ax + 1)] = directAtPoint(x, up, lums, phot);
+      }
+    }
+    cache.dir = { key: dirKey, Edir: Ed };
+  }
+  ms.direct = now() - t;
+  const Edir = Float64Array.from(cache.dir.Edir), Eref = new Float64Array(nn), E = new Float64Array(nn);
   for (let j = 0; j <= grid.ay; j++) {
-    const y = j * grid.dy;
     for (let i = 0; i <= grid.ax; i++) {
       const k = i + j * (grid.ax + 1);
-      x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
-      x[1] = Math.min(Math.max(y, eps), room.W - eps);
-      Edir[k] = directAtPoint(x, up, lums, phot);
-      Eref[k] = bilinear(Rv, nL, nW, dL, dW, i * grid.dx, y);
+      Eref[k] = bilinear(Rv, nL, nW, dL, dW, i * grid.dx, j * grid.dy);
       E[k] = Edir[k] + Eref[k];
     }
   }
-  ms.direct = now() - t;
 
   t = now();
   if (!cache.gost) {
@@ -409,8 +424,22 @@ export function planeField(room, z, lums, phot, M, cache = {}) {
   const g = cache.gost.grid;
   const pl = planeIlluminance(room, g, cache.gost.F, M, lums, phot);
   ms.gost = now() - t;
+
+  // extremes of the point values
+  const ext = { min: Infinity, max: -Infinity, minAt: null, maxAt: null };
+  const see = (v, px, py) => {
+    if (v < ext.min) { ext.min = v; ext.minAt = [px, py]; }
+    if (v > ext.max) { ext.max = v; ext.maxAt = [px, py]; }
+  };
+  for (let j = 0; j <= grid.ay; j++) for (let i = 0; i <= grid.ax; i++) see(E[i + j * (grid.ax + 1)], i * grid.dx, j * grid.dy);
+  for (let k = 0; k < pl.E.length; k++) see(pl.E[k], g.pts[3 * k], g.pts[3 * k + 1]);
+  for (const s of lums) {
+    if (s.pos[2] <= z) continue;
+    x[0] = s.pos[0]; x[1] = s.pos[1];
+    see(directAtPoint(x, up, lums, phot) + bilinear(Rv, nL, nW, dL, dW, x[0], x[1]), x[0], x[1]);
+  }
   return {
     z, grid, E, Edir, Eref, vertices: { nx: nL, ny: nW, dx: dL, dy: dW, E: Rv },
-    gost: { nx: g.nx, ny: g.ny, dx: g.dx, dy: g.dy, pts: g.pts, ...pl }, ms,
+    gost: { nx: g.nx, ny: g.ny, dx: g.dx, dy: g.dy, pts: g.pts, ...pl }, extremes: ext, ms,
   };
 }
