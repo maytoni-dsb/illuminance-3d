@@ -175,21 +175,6 @@ function buildFaceGrid(face) {
 }
 
 /**
- * The 12 edges of the room box (room coordinates) with the two faces meeting at each.
- * Faces: 0 floor, 1 ceiling, 2 y = 0, 3 y = W, 4 x = 0, 5 x = L.
- */
-export function roomEdgeList({ L, W, H }) {
-  const out = [];
-  for (const [f, z] of [[0, 0], [1, H]]) {
-    out.push({ a: [0, 0, z], b: [L, 0, z], faces: [f, 2] }, { a: [0, W, z], b: [L, W, z], faces: [f, 3] },
-      { a: [0, 0, z], b: [0, W, z], faces: [f, 4] }, { a: [L, 0, z], b: [L, W, z], faces: [f, 5] });
-  }
-  out.push({ a: [0, 0, 0], b: [0, 0, H], faces: [2, 4] }, { a: [L, 0, 0], b: [L, 0, H], faces: [2, 5] },
-    { a: [0, W, 0], b: [0, W, H], faces: [3, 4] }, { a: [L, W, 0], b: [L, W, H], faces: [3, 5] });
-  return out;
-}
-
-/**
  * Luminaires: the luminous surface (light, facing down) at the photometric centre, turned by ψ,
  * and for pendants the grey housing above it with a suspension line to the ceiling. Sizes come
  * from the photometric file (photfile.luminaireShape: `a` along C0, `b` along C90); without a
@@ -293,18 +278,7 @@ export function createView(container, opts = {}) {
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
   let showGrid = false, showNormals = false; // element grid and normals are developer aids, off by default
   let edgeMaterial = null;
-  let roomEdges = [];        // { line, faces: [f1, f2] } — the 12 edges of the room
 
-  /** Shows an edge when at least one of its two faces is culled (seen from behind). */
-  function updateEdges(cam) {
-    if (!room) return;
-    const c = [cam.position.x, -cam.position.z, cam.position.y]; // Three.js → room
-    const culled = room.faces.map((f) => {
-      const n = f.normal, o = f.origin;
-      return n[0] * (c[0] - o[0]) + n[1] * (c[1] - o[1]) + n[2] * (c[2] - o[2]) <= 0;
-    });
-    for (const e of roomEdges) e.line.visible = culled[e.faces[0]] || culled[e.faces[1]];
-  }
   let viewW = 1, viewH = 1;
   let viewTouched = false;  // true once the user has rotated, panned or zoomed since the last fit
 
@@ -445,16 +419,7 @@ export function createView(container, opts = {}) {
       roomGroup.add(mesh, grid, arrow);
       return { face, mesh, grid, arrow, center, normal };
     });
-    // room outline: only the edges of culled faces (those turned away from the camera, the
-    // "dollhouse" walls) are drawn; edges between two visible faces are not (updateEdges)
-    edgeMaterial = new THREE.LineBasicMaterial({ color: cssColor('--view-edge', '#444444') });
-    roomEdges = roomEdgeList(r).map(({ a, b, faces }) => {
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute([...toThree(a), ...toThree(b)], 3));
-      const line = new THREE.LineSegments(g, edgeMaterial);
-      roomGroup.add(line);
-      return { line, faces };
-    });
+    // no room outline: the faces alone show the room (spec, accepted 5 Nov 2026)
     scene.add(roomGroup);
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); lumGroup = null; }
     values = null; lum = null;
@@ -570,7 +535,6 @@ export function createView(container, opts = {}) {
       if (plan) applyPlan(); else applyCamera();
       updateVisibility();
       const cam = activeCamera();
-      updateEdges(cam);
       renderer.setViewport(0, 0, viewW, viewH);
       renderer.render(scene, cam);
       // axis indicator: same orientation as the view camera, its own square in the lower left corner

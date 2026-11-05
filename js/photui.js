@@ -91,22 +91,31 @@ function polarSvg(phot) {
 /**
  * Builds the photometry block: the drop zone in `zone`, the luminaire description in `card`.
  * @param {{ zone: HTMLElement, card: HTMLElement, sets: HTMLElement, dropTarget: HTMLElement }} el
- * @param {(f: null | { table, phot, shape, key, name, set, values }) => void} onChange
- *   called with the file (and the values of its lamp set for the form) or null when removed
+ * @param {(f: null | { table, phot, shape, key, name, set, values, reason }) => void} onChange
+ *   called with the file (and the values of its lamp set for the form) or null when removed;
+ *   reason: 'load' (a new file), 'restore' (the file kept in this browser), 'set' (another lamp set)
  */
 export function initPhotFile(el, onChange) {
   el.zone.innerHTML = `
-    <label class="pfdrop">
+    <div class="pfdrop" role="button" tabindex="0" aria-label="Выбрать файл IES или LDT">
       <input type="file" accept=".ies,.ldt,.IES,.LDT" hidden>
       <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5"/><path d="M4 12.5v3h12v-3"/></svg>
-      <span class="pftext">Перетащите файл IES или LDT сюда или <u>выберите</u></span>
-    </label>
-    <div class="pffile" hidden><span class="pfname"></span><button type="button" class="pfclear" aria-label="Убрать файл" title="Убрать файл">×</button></div>
+      <span class="pft"><b>Перетащите файл IES или LDT</b><span>или нажмите, чтобы выбрать</span></span>
+      <button type="button" class="pfclear" aria-label="Убрать файл" title="Убрать файл" hidden>×</button>
+    </div>
     <div class="pferr" role="alert" hidden></div>`;
   const input = el.zone.querySelector('input');
   const drop = el.zone.querySelector('.pfdrop');
-  const fileRow = el.zone.querySelector('.pffile');
+  const title = drop.querySelector('.pft b'), sub = drop.querySelector('.pft span');
+  const clearBtn = drop.querySelector('.pfclear');
   const err = el.zone.querySelector('.pferr');
+  const fileRow = { set hidden(h) {
+    title.textContent = h ? 'Перетащите файл IES или LDT' : current?.name ?? '';
+    sub.textContent = h ? 'или нажмите, чтобы выбрать' : 'перетащите другой файл или нажмите, чтобы заменить';
+    clearBtn.hidden = h;
+  } };
+  drop.addEventListener('click', (e) => { if (!e.target.closest('.pfclear')) input.click(); });
+  drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
   let current = null;
 
   function showCosine() {
@@ -125,18 +134,17 @@ export function initPhotFile(el, onChange) {
     el.sets.innerHTML = sets.length < 2 ? '' : `<label class="fl" for="lampset"><span class="t">Источник света</span></label>
       <select id="lampset">${sets.map((s, i) => `<option value="${i}"${i === f.set ? ' selected' : ''}>${esc(s.type || `Набор ${i + 1}`)} · ${s.flux} лм${s.cct ? ` · ${s.cct} К` : ''}${s.power ? ` · ${String(s.power).replace('.', ',')} Вт` : ''}</option>`).join('')}</select>`;
     el.sets.querySelector('select')?.addEventListener('change', (e) => {
-      current = { ...current, set: Number(e.target.value), values: setValues(t, current.phot.tableFlux, Number(e.target.value)) };
+      current = { ...current, set: Number(e.target.value), values: setValues(t, current.phot.tableFlux, Number(e.target.value)), reason: 'set' };
       onChange(current);
     });
-    fileRow.querySelector('.pfname').textContent = f.name;
     fileRow.hidden = false;
   }
 
-  function load(text, name, { store = true } = {}) {
+  function load(text, name, { store = true, reason = 'load' } = {}) {
     try {
       const table = parsePhotometryFile(text, name);
       const phot = createPhotometry({ type: 'file', table });
-      current = { table, phot, shape: luminaireShape(table), key: `${name}|${text.length}|${hash(text)}`, name, set: 0, values: setValues(table, phot.tableFlux, 0) };
+      current = { table, phot, shape: luminaireShape(table), key: `${name}|${text.length}|${hash(text)}`, name, set: 0, values: setValues(table, phot.tableFlux, 0), reason };
       err.hidden = true;
       show(current);
       if (store) { try { localStorage.setItem(STORE_KEY, JSON.stringify({ name, text })); } catch (e) { /* full or blocked */ } }
@@ -162,7 +170,7 @@ export function initPhotFile(el, onChange) {
     load(decodeBytes(await file.arrayBuffer()), file.name);
   }
   input.addEventListener('change', () => { readFile(input.files[0]); input.value = ''; });
-  fileRow.querySelector('.pfclear').addEventListener('click', clear);
+  clearBtn.addEventListener('click', (e) => { e.stopPropagation(); clear(); });
   for (const t of [drop, el.dropTarget]) {
     t.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); drop.classList.add('dropping'); } });
     t.addEventListener('dragleave', (e) => { if (!t.contains(e.relatedTarget)) drop.classList.remove('dropping'); });
@@ -177,7 +185,7 @@ export function initPhotFile(el, onChange) {
   // the last file of this browser (a convenience: works without it)
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (saved?.text) load(saved.text, saved.name, { store: false });
+    if (saved?.text) load(saved.text, saved.name, { store: false, reason: 'restore' });
   } catch (e) { /* storage unavailable */ }
 
   return { current: () => current, load, clear };

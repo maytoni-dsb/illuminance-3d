@@ -15,7 +15,7 @@ import { elementDirect, emittedFlux } from './direct.js';
 import { stage3Checks } from './checks3.js';
 import { stage4Checks } from './checks4.js';
 import { stage5Checks } from './checks5.js';
-import { workGrid, gridFormFactors, planeIlluminance, planeStats, planeHeights } from './workplane.js';
+import { planeHeights, planeTables, planeReflected, planeDirect, cellStats } from './workplane.js';
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -37,7 +37,7 @@ export function createCalc() {
   let geo = null;   // { key, room, kernel }
   let dir = null;   // { key, lums, phot, Edir }
   let sol = null;   // { key, Eind }
-  let grids = new Map(); // plane height → { grid, F } of the current room (form factors point → element)
+  let tables = new Map(); // plane height → cell → element factor tables of the current room
 
   function run(p) {
     const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, planes: 0, checks: 0 };
@@ -53,7 +53,7 @@ export function createCalc() {
       coarseData(kernel);
       ms.coarse = now() - t;
       geo = { key: geoKey, room, kernel };
-      dir = null; sol = null; grids = new Map();
+      dir = null; sol = null; tables = new Map();
       reused.kernel = false;
     }
     const { room, kernel } = geo;
@@ -89,12 +89,18 @@ export function createCalc() {
       const r = p.rho[face.id];
       for (let k = face.offset; k < face.offset + face.count; k++) M[k] = r * (Edir[k] + s.Eind[k]);
     }
+    // planes: cells of the floor mesh, cell averages (workplane.js); the direct part is kept per
+    // luminaire set and plane height together with the direct component of the faces
+    if (!dir.planes) dir.planes = new Map();
     const planes = planeHeights(p.hwp ?? 0.8).map(({ z, normative }) => {
       const zk = z.toFixed(6);
-      if (!grids.has(zk)) grids.set(zk, (() => { const grid = workGrid(p.L, p.W, z); return { grid, F: gridFormFactors(room, grid) }; })());
-      const { grid, F } = grids.get(zk);
-      const e = planeIlluminance(room, grid, F, M, lums, phot);
-      return { z, normative, nx: grid.nx, ny: grid.ny, dx: grid.dx, dy: grid.dy, E: e.E, Edir: e.Edir, Eref: e.Eref, stats: planeStats(e.E) };
+      if (!tables.has(zk)) tables.set(zk, planeTables(room, z));
+      if (!dir.planes.has(zk)) dir.planes.set(zk, planeDirect(room, z, lums, phot));
+      const Ed = dir.planes.get(zk);
+      const Er = planeReflected(room, tables.get(zk), M);
+      const E = new Float64Array(Ed.length);
+      for (let k = 0; k < E.length; k++) E[k] = Ed[k] + Er[k];
+      return { z, normative, nx: room.n.L, ny: room.n.W, E, Edir: Float64Array.from(Ed), Eref: Er, stats: cellStats(E) };
     });
     ms.planes = now() - t0;
 

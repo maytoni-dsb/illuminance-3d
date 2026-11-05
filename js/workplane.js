@@ -110,3 +110,124 @@ export function levelStatus(avg, required) {
 
 /** Minimum uniformity U₀ (spec): below it the result is flagged. */
 export const U0_MIN = 0.3;
+
+// ---------------------------------------------------------------------------------------------
+// Plane indices on the element mesh (accepted 5 Nov 2026).
+// The plane at height z is divided into cells exactly like the floor (n_L × n_W, the same Δ_L, Δ_W),
+// and every cell gets its AREA-AVERAGE illuminance, the same quantity as the face elements:
+//   direct    — the exact cosine-lobe formula or the adaptive cubature (direct.js), cell by cell;
+//   reflected — E_k = Σ_j F(cell k → element j) · M_j with exact rectangle → rectangle factors.
+// Hence Ē is the exact area mean, the plane at z = 0 is the floor itself (Ē, E_min, E_max equal the
+// floor elements' mean, minimum and maximum), and E_min / E_max are the extremes of the map that the
+// view shows. The cell → element factors depend only on relative positions (the same mesh), so,
+// like the kernel, they are kept in small tables:
+//   ceiling:       C[|Δi| + |Δj|·n_L]                              n_L · n_W values
+//   walls y = 0/W: Y[(|Δi|·n_W + d)·n_H + r]   d — cell row distance from the wall, r — wall row
+//   walls x = 0/L: X[(|Δj|·n_L + d)·n_H + r]   d — cell column distance from the wall
+// Wall rows are clipped at the plane: only the part above z lights the upper side of the plane;
+// floor elements are below or in it and give nothing.
+
+import { axisRect, rectToRect } from './formfactor.js';
+import { elementDirectAdaptive, elementDirectExact } from './direct.js';
+
+/** A face-like description of the plane at height z, on the floor mesh (for direct.js). */
+export function planeFace(room, z) {
+  const f = room.faces[0];
+  return {
+    id: 0, name: 'plane', normal: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0], origin: [0, 0, z],
+    nu: f.nu, nv: f.nv, du: f.du, dv: f.dv, sizeU: f.sizeU, sizeV: f.sizeV,
+    elementArea: f.elementArea, area: f.area, offset: 0, count: f.count,
+  };
+}
+
+/** Cell → element factor tables of the plane at height z (depend on the room and z only). */
+export function planeTables(room, z) {
+  const { L, W, H } = room;
+  const nL = room.n.L, nW = room.n.W, nH = room.n.H, dL = room.d.L, dW = room.d.W, dH = room.d.H;
+  const up = [0, 0, 1];
+  const cell = (i, j) => axisRect(up, [i * dL, j * dW, z], [(i + 1) * dL, (j + 1) * dW, z]);
+  const rowLo = (r) => Math.max(r * dH, z), rowHi = (r) => (r + 1) * dH;
+  // ceiling: cell (0, 0) to ceiling element (di, dj)
+  const C = new Float64Array(nL * nW);
+  if (H - z > 1e-12) {
+    const c0 = cell(0, 0);
+    for (let dj = 0; dj < nW; dj++) for (let di = 0; di < nL; di++) {
+      C[di + dj * nL] = rectToRect(c0, axisRect([0, 0, -1], [di * dL, dj * dW, H], [(di + 1) * dL, (dj + 1) * dW, H]));
+    }
+  }
+  // wall y = 0: cell (0, d) to wall element (di, r)
+  const Y = new Float64Array(nL * nW * nH);
+  for (let d = 0; d < nW; d++) {
+    const c = cell(0, d);
+    for (let di = 0; di < nL; di++) for (let r = 0; r < nH; r++) {
+      if (rowHi(r) - rowLo(r) <= 1e-12) continue;
+      Y[(di * nW + d) * nH + r] = rectToRect(c, axisRect([0, 1, 0], [di * dL, 0, rowLo(r)], [(di + 1) * dL, 0, rowHi(r)]));
+    }
+  }
+  // wall x = 0: cell (d, 0) to wall element (dj, r)
+  const X = new Float64Array(nW * nL * nH);
+  for (let d = 0; d < nL; d++) {
+    const c = cell(d, 0);
+    for (let dj = 0; dj < nW; dj++) for (let r = 0; r < nH; r++) {
+      if (rowHi(r) - rowLo(r) <= 1e-12) continue;
+      X[(dj * nL + d) * nH + r] = rectToRect(c, axisRect([1, 0, 0], [0, dj * dW, rowLo(r)], [0, (dj + 1) * dW, rowHi(r)]));
+    }
+  }
+  return { z, C, Y, X, nL, nW, nH, L, W };
+}
+
+/**
+ * Reflected illuminance of every cell: Σ_j F(cell → element j) · M_j.
+ * @param {Float64Array} M — exitance ρ (E_dir + E_ind) of the room elements, global order
+ * @returns {Float64Array} n_L · n_W, cell (i, j) at i + j·n_L
+ */
+export function planeReflected(room, t, M, out = new Float64Array(t.nL * t.nW)) {
+  const { nL, nW, nH, C, Y, X } = t;
+  const f = room.faces;
+  const oC = f[1].offset, oY0 = f[2].offset, oYW = f[3].offset, oX0 = f[4].offset, oXL = f[5].offset;
+  for (let j = 0; j < nW; j++) {
+    for (let i = 0; i < nL; i++) {
+      let s = 0;
+      // ceiling elements (ei, ej): face 1 index ei + ej·nL
+      for (let ej = 0; ej < nW; ej++) {
+        const row = Math.abs(ej - j) * nL, m = oC + ej * nL;
+        for (let ei = 0; ei < nL; ei++) s += C[Math.abs(ei - i) + row] * M[m + ei];
+      }
+      // walls y = 0 (distance j) and y = W (distance nW − 1 − j): element (ei, r) at ei + r·nL
+      const dy0 = j, dyW = nW - 1 - j;
+      for (let ei = 0; ei < nL; ei++) {
+        const base = Math.abs(ei - i) * nW;
+        const a = (base + dy0) * nH, b = (base + dyW) * nH;
+        for (let r = 0; r < nH; r++) s += Y[a + r] * M[oY0 + ei + r * nL] + Y[b + r] * M[oYW + ei + r * nL];
+      }
+      // walls x = 0 (distance i) and x = L (distance nL − 1 − i): element (ej, r) at ej + r·nW
+      const dx0 = i, dxL = nL - 1 - i;
+      for (let ej = 0; ej < nW; ej++) {
+        const base = Math.abs(ej - j) * nL;
+        const a = (base + dx0) * nH, b = (base + dxL) * nH;
+        for (let r = 0; r < nH; r++) s += X[a + r] * M[oX0 + ej + r * nW] + X[b + r] * M[oXL + ej + r * nW];
+      }
+      out[i + j * nL] = s;
+    }
+  }
+  return out;
+}
+
+/**
+ * Cell-average direct illuminance of the plane (exact for cosine lobes, adaptive cubature for a
+ * file; no flux balance check — the plane does not catch all the flux).
+ */
+export function planeDirect(room, z, lums, phot) {
+  const face = planeFace(room, z);
+  const pr = { L: room.L, W: room.W, H: room.H, N: face.count, faces: [face] };
+  if (phot.lobes) return elementDirectExact(pr, lums, phot);
+  return elementDirectAdaptive(pr, lums, phot, { balance: Infinity, maxRetries: 0 });
+}
+
+/** Ē, E_min, E_max, U₀ = E_min / Ē and E_min / E_max of equal cells. */
+export function cellStats(E) {
+  const s = planeStats(E);
+  return { ...s, minMax: s.max > 0 ? s.min / s.max : 0 };
+}
+
+

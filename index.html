@@ -12,27 +12,28 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=9ba8f3bc",
+      "./js/calc.js": "./js/calc.js?v=45dbeb5e",
       "./js/checks2.js": "./js/checks2.js?v=bec00f91",
       "./js/checks3.js": "./js/checks3.js?v=25f5d271",
       "./js/checks4.js": "./js/checks4.js?v=1b36670e",
       "./js/checks5.js": "./js/checks5.js?v=36b0397c",
       "./js/colorscale.js": "./js/colorscale.js?v=85c6fa84",
       "./js/direct.js": "./js/direct.js?v=4fff6c32",
+      "./js/estimate.js": "./js/estimate.js?v=78cc21af",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
-      "./js/help.js": "./js/help.js?v=040d65c9",
+      "./js/help.js": "./js/help.js?v=7ed7c282",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
       "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
       "./js/photfile.js": "./js/photfile.js?v=d103b822",
       "./js/photometry.js": "./js/photometry.js?v=bd36e3b8",
-      "./js/photui.js": "./js/photui.js?v=34b8da69",
+      "./js/photui.js": "./js/photui.js?v=3a08a16d",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=d37b9bdc",
-      "./js/view3d.js": "./js/view3d.js?v=9a9f3cbb",
+      "./js/ui.js": "./js/ui.js?v=1cdda212",
+      "./js/view3d.js": "./js/view3d.js?v=601695d7",
       "./js/worker.js": "./js/worker.js?v=ab03bae2",
-      "./js/workplane.js": "./js/workplane.js?v=3bc76d64"
+      "./js/workplane.js": "./js/workplane.js?v=a8ea1b64"
     }
   }
   </script>
@@ -109,16 +110,16 @@
     .gslink:hover{color:var(--accent-hov)}
 
     /* fields */
-    .fgrid{display:grid;gap:12px 14px;align-items:start;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr))}
+    .fgrid{display:grid;gap:8px 12px;align-items:start;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr))}
     .fld{display:flex;flex-direction:column;gap:3px;min-width:0}
-    .fld > .fl{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink3);height:17px;white-space:nowrap}
+    .fld > .fl{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink3);height:15px;white-space:nowrap}
     .fld > .fl i{color:var(--muted)}
     .fld > .fl .t{overflow:hidden;text-overflow:ellipsis}
     .fld .ibox{position:relative;display:flex;align-items:center}
-    .fld input{height:32px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 28px 0 22px;
-      font-size:13.5px;color:var(--ink);background:var(--card);font-variant-numeric:tabular-nums}
+    .fld input{height:26px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 26px 0 20px;
+      font-size:13px;color:var(--ink);background:var(--card);font-variant-numeric:tabular-nums}
     /* up / down arrows on the left of a field (as in InDesign) */
-    .fld .spin{position:absolute;left:1px;top:1px;bottom:1px;width:17px;display:flex;flex-direction:column;
+    .fld .spin{position:absolute;left:1px;top:1px;bottom:1px;width:15px;display:flex;flex-direction:column;
       border-right:1px solid var(--rule);border-radius:4px 0 0 4px;overflow:hidden;z-index:1}
     .fld .spin button{flex:1;display:flex;align-items:center;justify-content:center;border:0;padding:0;margin:0;
       background:var(--soft2);color:var(--ink3);cursor:pointer}
@@ -128,14 +129,16 @@
     .fld input:hover{border-color:var(--line)}
     .fld input:focus{outline:none;border-color:var(--accent)}
     .fld .unit{position:absolute;right:8px;font-size:11.5px;color:var(--muted);pointer-events:none}
-    .fld select{height:32px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 8px;
+    .fld select{height:26px;width:100%;min-width:0;border:1px solid var(--rule);border-radius:5px;padding:0 8px;
       font-size:13px;color:var(--ink);background:var(--card)}
     .fld select:focus{outline:none;border-color:var(--accent)}
     /* help */
-    .help{width:16px;height:16px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink3);
-      font-size:10.5px;font-weight:600;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;
+    .help{width:17px;height:17px;border-radius:50%;border:0;background:var(--soft);color:var(--ink3);
+      font-size:10.5px;font-weight:600;line-height:17px;padding:0;display:inline-flex;align-items:center;justify-content:center;
       cursor:pointer;flex:0 0 auto;font-family:var(--sans)}
-    .help:hover,.help[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+    .help:hover,.help[aria-expanded="true"]{background:var(--accent);color:#fff}
+    .gschipb.sm{height:22px;padding:0 9px;font-size:11.5px}
+    .fsub .gschipb.sm{margin-left:auto;font-weight:500}
     .fsub{display:flex;align-items:center;gap:6px}
     .helppop{position:absolute;z-index:50;max-width:280px;padding:12px 14px;border-radius:10px;background:var(--card);
       color:var(--ink);border:1px solid var(--rule);box-shadow:0 8px 28px rgba(0,0,0,.16);font-size:12.5px;line-height:1.45}
@@ -190,13 +193,13 @@
     .vhint{margin-left:auto;font-size:11.5px;color:var(--muted);text-align:right}
     .vhint b{font-weight:600;color:var(--ink3)}
     /* photometric file: drop zone, luminaire description, compact polar diagram */
-    .pfdrop{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:10px;
-      color:var(--ink3);font-size:12.5px;cursor:pointer;line-height:1.35}
+    .pfdrop{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border:1.5px dashed var(--line);border-radius:10px;
+      color:var(--ink3);font-size:12.5px;cursor:pointer;line-height:1.35;background:var(--soft2);min-height:52px}
     .pfdrop:hover,.pfdrop.dropping{border-color:var(--accent);color:var(--ink);background:var(--accent-soft)}
-    .pfdrop u{color:var(--accent);text-underline-offset:2px}
-    .pffile{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--ink3);min-width:0}
-    .pffile .pfname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .pfclear{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 2px;cursor:pointer}
+    .pfdrop .pft{display:flex;flex-direction:column;min-width:0;flex:1}
+    .pfdrop .pft b{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pfdrop .pft span{font-size:11.5px;color:var(--ink3)}
+    .pfclear{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;cursor:pointer;flex:none}
     .pfclear:hover{color:var(--err)}
     .pferr{font-size:12px;color:var(--err);line-height:1.4;margin-top:6px}
     .pfcard{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
@@ -320,14 +323,15 @@
           <div class="fgrid" data-group="norm" style="--cols:3"></div>
         </div>
         <div class="fsec">
-          <div class="shd">Светильники <button type="button" class="help" data-help="lum" aria-label="Справка: расположение светильников" aria-expanded="false">?</button></div>
-          <div class="fgrid" data-group="lum" style="--cols:2"></div>
-          <div class="fsub">Фотометрия <button type="button" class="help" data-help="file" aria-label="Справка: фотометрический файл" aria-expanded="false">?</button></div>
+          <div class="shd">Светильник <button type="button" class="help" data-help="file" aria-label="Справка: фотометрический файл" aria-expanded="false">?</button></div>
           <div id="photfile"></div>
           <div class="pfcard" id="lumcard"></div>
           <div class="fld wide" id="lampsets" hidden></div>
-          <div class="fsub">Параметры светильника <button type="button" class="help" data-help="lumdata" aria-label="Справка: параметры светильника" aria-expanded="false">?</button></div>
           <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
+          <div class="fsub">Размещение <button type="button" class="help" data-help="grid" aria-label="Справка: размещение светильников" aria-expanded="false">?</button>
+            <button type="button" class="gschipb sm" id="suggest" title="Оценить количество светильников по коэффициенту использования и разместить их сеткой">Предложить</button></div>
+          <div class="fgrid" data-group="grid" style="--cols:2"></div>
+          <div class="gshint" id="estnote" hidden></div>
         </div>
       </form>
 
@@ -434,6 +438,8 @@
   import { initPhotFile } from './js/photui.js';
   import { initHelp } from './js/help.js';
   import { levelStatus, U0_MIN } from './js/workplane.js';
+  import { meanCurve, estimate, gridFor } from './js/estimate.js';
+  import { createPhotometry } from './js/photometry.js';
 
   const $ = (s) => document.querySelector(s);
   const DEG = Math.PI / 180;
@@ -639,15 +645,40 @@
           <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` <span class="st ${level}" title="${LABEL[level]}: Eн = ${current.En} лк"></span>` : ''}</span>
           <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ' <span class="st low" title="U₀ меньше 0,3"></span>' : ''}</span></summary>
         <div class="gstech">
-          ${row('E<sub>min</sub> · E<sub>max</sub>, лк', `${n0(min)} · ${n0(max)}`)}
-          ${row('Прямая · отражённая Ē, лк', `${n0(mf * mean(pl.Edir))} · ${n0(mf * mean(pl.Eref))}`)}
-          ${pl.normative ? row('Норма', `${current.En} лк, ${LABEL[level]}`) : ''}
-          ${row('Сетка', `${pl.nx} × ${pl.ny}, шаг ${formatNumber(pl.dx, 2)} × ${formatNumber(pl.dy, 2)} м`)}
+          ${row('Средняя Ē', `${n0(avg)} лк`)}
+          ${row('Минимальная E<sub>min</sub>', `${n0(min)} лк`)}
+          ${row('Максимальная E<sub>max</sub>', `${n0(max)} лк`)}
+          ${row('E<sub>min</sub> / Ē', n2(u0))}
+          ${row('E<sub>min</sub> / E<sub>max</sub>', n2(st.minMax))}
         </div></details>`;
     }).join('');
-    $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учётом MF = ${formatNumber(mf, 2)}.`;
+    $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учётом MF = ${formatNumber(mf, 2)}. U₀ = E<sub>min</sub> / Ē.`;
   }
-  const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+
+  /**
+   * Preliminary estimate of the number of luminaires (js/estimate.js, the method of the page
+   * "Оценочный расчет освещения") and a grid with at least that many; the note says how many are
+   * enough when the grid holds more.
+   */
+  function suggestGrid() {
+    const v = form.values();
+    const note = $('#estnote');
+    const phot = photFile && v.phot === 'file' ? photFile.phot : createPhotometry({ type: 'cosine', flux: 1000 });
+    let e;
+    try {
+      e = estimate(meanCurve(phot), { L: v.L, W: v.W, H: v.H, hu: v.H - v.hc, hr: v.hwp, rp: v.rhoC, rc: v.rhoW, rr: v.rhoF, E: v.En, Ke: v.mf }, v.flux);
+    } catch (err) {
+      note.textContent = 'Оценка невозможна: светильники должны быть выше рабочей поверхности.';
+      note.hidden = false; return;
+    }
+    const g = gridFor(Math.min(e.N, 900), v.L, v.W);
+    const n = (k) => `${k} ${k % 10 === 1 && k % 100 !== 11 ? 'светильник' : k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 12 || k % 100 > 14) ? 'светильника' : 'светильников'}`;
+    note.innerHTML = `По предварительной оценке ${g.n > e.N ? 'достаточно' : 'нужно'} ${n(e.N)} (расчётное ${formatNumber(e.raw, 1)}, u = ${formatNumber(e.u, 2)})` +
+      (g.n > e.N ? `; размещено ${g.n} — сетка ${g.nx} × ${g.ny}, чтобы шаг по длине и ширине был близким.` : `; сетка ${g.nx} × ${g.ny}.`) +
+      (e.N > 900 ? ' Больше 30 × 30 разместить нельзя.' : '');
+    note.hidden = false;
+    form.set({ nx: g.nx, ny: g.ny });
+  }
 
   /** Applies MF, the map mode and the exposure to the last result (no recalculation). */
   function render() {
@@ -685,8 +716,11 @@
   initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('.form') }, (f) => {
     photFile = f;
     if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
-    else form.set({ phot: 'cosine', flux: 4000 });
+    else { form.set({ phot: 'cosine', flux: 4000 }); $('#estnote').hidden = true; }
+    // a new file: estimate the number of luminaires and place them; another lamp set does not move the grid
+    if (f && f.reason !== 'set') suggestGrid();
   });
+  $('#suggest').addEventListener('click', suggestGrid);
   initHelp(document);
   update(form.values());
 

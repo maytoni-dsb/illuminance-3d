@@ -180,3 +180,17 @@ Stage 5, revision 1 (user feedback, 4 Nov 2026):
   scale of levels, U₀ < 0.3 red; the others are "* Для справки";
 - 3D view: only the edges of culled faces are drawn; the wheel zooms toward the pointer (orbit and
   plan); the fitted room is centred in the free part of the view.
+
+Stage 5, revision 2 (5 Nov 2026):
+- plane indices on the element mesh (`js/workplane.js`): the plane at height z is divided into cells
+  like the floor and every cell gets its area-average illuminance — direct by the exact lobe formula
+  or the adaptive cubature, reflected Σ F(cell → element) M with exact rectangle factors kept in
+  small tables (ceiling by |Δi|, |Δj|; walls by the shift along the wall, the cell's distance from it
+  and the wall row, clipped at the plane). Ē is the exact area mean, Г-0,0 is the floor itself;
+  results show Ē, E_min, E_max, E_min / Ē (U₀) and E_min / E_max. The GOST grid (`workGrid`) stays for
+  the point values on the plans (stage 6);
+- `js/estimate.js`: the preliminary number of luminaires by the method of the estimate page
+  (formulas 1–16, Z = 1.15) and a grid with at least that many (`gridFor`: uneven spacing penalised);
+  run when a file is loaded and by the "Предложить" button, never on other changes;
+- the form: fields 26 px high; the luminaire section is the drop zone (file name inside it, a new file
+  can be dropped onto it), the luminaire description and parameters, then the grid; no edges in 3D.

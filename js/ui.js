@@ -28,13 +28,13 @@ export const PARAMS = Object.freeze([
     max: (v) => Math.max(0, (v.H ?? 20) - 0.1), maxNote: 'H − 0,1',
   },
   { key: 'mf', group: 'norm', label: 'Коэф.', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
-  { key: 'nx', group: 'lum', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true, step: 1 },
-  { key: 'ny', group: 'lum', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true, step: 1 },
+  { key: 'nx', group: 'grid', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true, step: 1 },
+  { key: 'ny', group: 'grid', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true, step: 1 },
   {
-    key: 'hc', group: 'lum', label: 'Свес', sym: 'h<sub>c</sub>', unit: 'м', def: 0, min: 0, step: 0.1,
+    key: 'hc', group: 'grid', label: 'Свес', sym: 'h<sub>c</sub>', unit: 'м', def: 0, min: 0, step: 0.1,
     max: (v) => Math.max(0, (v.H ?? 20) - HC_CLEARANCE), maxNote: 'H − 0,9',
   },
-  { key: 'psi', group: 'lum', label: 'Поворот', sym: 'ψ', unit: '°', def: 0, min: 0, max: 180, step: 5 },
+  { key: 'psi', group: 'grid', label: 'Поворот', sym: 'ψ', unit: '°', def: 0, min: 0, max: 180, step: 5 },
   // photometry: 'cosine' without a file, 'file' with one (set by the page, no field)
   { key: 'phot', group: 'lumdata', kind: 'choice', def: 'cosine', options: [{ value: 'cosine' }, { value: 'file' }] },
   { key: 'flux', group: 'lumdata', label: 'Поток', sym: 'Φ', unit: 'лм', def: 4000, gt: 0, max: 1e6, step: 100 },
