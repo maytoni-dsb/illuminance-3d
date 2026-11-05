@@ -130,7 +130,8 @@ solves (I − F R) E_ind = F R E_dir directly; its `stage4_reference.txt` is in 
 2.4e-15 and E_ind within 1.0e-13 relative. Timing for 10 × 10 × 3 m (4176 elements, headless Chromium): kernel 0.3 s once per
 geometry, direct component 10 ms, solver 0.3 s (6 sweeps).
 
-Stage 5 — photometric files (IES LM-63 and EULUMDAT):
+Stage 5 — photometric files (IES LM-63 and EULUMDAT); accepted 5 Nov 2026 (`npm test` on Windows: 121 of 121;
+the C direction and the luminaire length orientation agree with DIALux):
 - `js/photfile.js`: parsers reducing both formats to one table (stored C planes × γ angles, cd) with
   the symmetry (`rot`, `quad`, `half0`, `half90` — LDT Isym 3 starts at C270 —, `none`), sizes and the
   rated flux (LDT: Φ_lamps of the first lamp set · LORL; IES states no luminaire flux). Quirks met in
@@ -199,3 +200,7 @@ Stage 5, revision 2 (5 Nov 2026):
   warns when the two differ by more than 1 %). At most 500 luminaires (`MAX_LUMINAIRES`); an estimate
   above it leaves the grid as it is and asks to check the flux. The stage checks run only while the
   "Для разработчика" block is open (they cost as much as the calculation).
+- (5 Nov 2026, acceptance) Defaults: E_n = 200 lx, h_р = 0 (Г-0,0). Arrows: E_n walks the scale of
+  illuminance levels (100 → 150 → 200 …), h_р switches 0.0 ↔ 0.8, ψ steps 90°. Status marks of the
+  normative plane: green tick (within the step), red cross (below E_n; U₀ < 0.3), yellow warning
+  (above the step).

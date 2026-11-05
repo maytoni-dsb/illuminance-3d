@@ -73,7 +73,7 @@ test('validateParams: CCT and power only with a file; photometry is cosine or fi
 });
 
 test('validateParams: required illuminance, work plane height (≤ H − 0.1) and MF', () => {
-  assert.deepEqual([DEFAULTS.En, DEFAULTS.hwp, DEFAULTS.mf], [300, 0.8, 0.75]);
+  assert.deepEqual([DEFAULTS.En, DEFAULTS.hwp, DEFAULTS.mf], [200, 0, 0.75]);
   assert.ok(validateParams(raw({ En: '500', hwp: '0' })).ok);
   assert.ok(validateParams(raw({ H: '3', hwp: '2,9' })).ok);
   assert.match(validateParams(raw({ H: '3', hwp: '2,95' })).errors.hwp, /2,9/);
@@ -89,7 +89,20 @@ test('stepValue: steps without float noise, within the bounds', async () => {
   assert.equal(stepValue(P.rhoC, 0.9, 1), 0.9);
   assert.equal(stepValue(P.flux, 4000, 1), 4100);
   assert.equal(stepValue(P.power, 6.51, 1), 6.61);
-  assert.equal(stepValue(P.En, 300, -1), 290);
+  assert.equal(stepValue(P.En, 200, 1), 300);
+  assert.equal(stepValue(P.En, 150, -1), 100);
+  assert.equal(stepValue(P.En, 100, 1), 150);
+  assert.equal(stepValue(P.En, 450, 1), 500);   // off the scale: to the neighbouring level
+  assert.equal(stepValue(P.En, 450, -1), 400);
+  assert.equal(stepValue(P.En, 5000, 1), 5000);
+  assert.equal(stepValue(P.En, 1, -1), 1);
+  assert.equal(stepValue(P.hwp, 0, 1, { H: 3 }), 0.8);
+  assert.equal(stepValue(P.hwp, 0.8, 1, { H: 3 }), 0.8);
+  assert.equal(stepValue(P.hwp, 0.8, -1, { H: 3 }), 0);
+  assert.equal(stepValue(P.hwp, 1.2, -1, { H: 3 }), 0.8);
+  assert.equal(stepValue(P.psi, 0, 1), 90);
+  assert.equal(stepValue(P.psi, 90, 1), 180);
+  assert.equal(stepValue(P.psi, 180, 1), 180);
   assert.equal(stepValue(P.nx, 3, 1), 4);
   assert.equal(stepValue(P.hc, 2, 1, { H: 3 }), 2.1);
   assert.equal(stepValue(P.hc, 2.1, 1, { H: 3 }), 2.1);

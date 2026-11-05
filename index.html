@@ -30,7 +30,7 @@
       "./js/photui.js": "./js/photui.js?v=8fe44dbd",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=d05b20d5",
+      "./js/ui.js": "./js/ui.js?v=cc9d33b9",
       "./js/view3d.js": "./js/view3d.js?v=601695d7",
       "./js/worker.js": "./js/worker.js?v=ab03bae2",
       "./js/workplane.js": "./js/workplane.js?v=a8ea1b64"
@@ -225,8 +225,9 @@
     .prow .pv{display:flex;align-items:center;gap:5px;white-space:nowrap}
     .prow .pv i{font-style:normal;color:var(--ink3)}
     .prow .gstech{padding:0 0 10px 20px}
-    .st{display:inline-block;width:9px;height:9px;border-radius:50%;flex:0 0 auto}
-    .st.low{background:var(--err)} .st.ok{background:var(--ok)} .st.high{background:#F29100}
+    .st{display:inline-flex;width:14px;height:14px;flex:0 0 auto}
+    .st svg{width:14px;height:14px;display:block}
+    .st.low{color:var(--err)} .st.ok{color:var(--ok)} .st.high{color:#E0A100}
     .form.dropping{outline:2px dashed var(--accent);outline-offset:-6px}
     .fatal{padding:24px;color:var(--err)}
     /* calculation in progress: a pill in the upper left corner of the view */
@@ -635,6 +636,13 @@
     const open = new Set([...host.querySelectorAll('details[open]')].map((d) => d.dataset.z));
     const n0 = (x) => formatNumber(x, 0), n2 = (x) => formatNumber(x, 2);
     const LABEL = { low: 'ниже нормы', ok: 'в пределах ступени шкалы', high: 'выше ступени шкалы' };
+    // status marks: green tick, red cross, yellow warning (the final icons may change)
+    const ICON = {
+      ok: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.4 5.6 10.4 11.5 3.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      low: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 3.5 10.5 10.5M10.5 3.5 3.5 10.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+      high: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.6 13 12.2H1z" fill="currentColor"/><path d="M7 5.4v3.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10.4" r=".85" fill="#fff"/></svg>',
+    };
+    const mark = (kind, title) => `<span class="st ${kind}" role="img" aria-label="${title}" title="${title}">${ICON[kind]}</span>`;
     let ref = false;
     host.innerHTML = result.planes.map((pl) => {
       const st = pl.stats, avg = mf * st.avg, min = mf * st.min, max = mf * st.max, u0 = st.u0;
@@ -644,8 +652,8 @@
       if (!pl.normative) ref = true;
       return `<details class="prow" data-z="${pl.z}"${open.has(String(pl.z)) ? ' open' : ''}>
         <summary><span class="pn">${name}${pl.normative ? '' : '*'}</span>
-          <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` <span class="st ${level}" title="${LABEL[level]}: Eн = ${current.En} лк"></span>` : ''}</span>
-          <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ' <span class="st low" title="U₀ меньше 0,3"></span>' : ''}</span></summary>
+          <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` ${mark(level, `${LABEL[level]}: Eн = ${current.En} лк`)}` : ''}</span>
+          <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ` ${mark('low', 'U₀ меньше 0,3')}` : ''}</span></summary>
         <div class="gstech">
           ${row('Средняя Ē', `${n0(avg)} лк`)}
           ${row('Минимальная E<sub>min</sub>', `${n0(min)} лк`)}

@@ -10,6 +10,8 @@
  */
 export const MAX_LUMINAIRES = 500;
 
+import { ILLUMINANCE_SCALE } from './workplane.js';
+
 /** Clearance between the luminaire and the 0.8 m work plane: h_c ≤ H − 0.9 m (spec, "Входные параметры"). */
 export const HC_CLEARANCE = 0.9;
 
@@ -18,7 +20,8 @@ export const HC_CLEARANCE = 0.9;
  * The subdivision step is not a user parameter: it is chosen by autoStep() in geometry.js.
  * Angles are in degrees here (UI only); the calculation modules take radians.
  *   group — form section (data-group in the page); int — integer only; gt — strict lower bound;
- *   step — change by the arrows and the ↑ / ↓ keys (0.1 unless stated otherwise);
+ *   step — change by the arrows and the ↑ / ↓ keys (0.1 unless stated otherwise); ladder — the arrows
+ *   go to the next value of this list instead;
  *   max may depend on other values; when(values) — the field is shown and checked only if true;
  *   kind: 'choice' — a value set by the page (no field of its own).
  */
@@ -29,9 +32,11 @@ export const PARAMS = Object.freeze([
   { key: 'rhoC', group: 'refl', label: 'Потолок', sym: 'ρ<sub>1</sub>', unit: '', def: 0.7, min: 0, max: 0.9, step: 0.1 },
   { key: 'rhoW', group: 'refl', label: 'Стены', sym: 'ρ<sub>2…5</sub>', unit: '', def: 0.5, min: 0, max: 0.9, step: 0.1 },
   { key: 'rhoF', group: 'refl', label: 'Пол', sym: 'ρ<sub>0</sub>', unit: '', def: 0.2, min: 0, max: 0.9, step: 0.1 },
-  { key: 'En', group: 'norm', label: 'Норма', sym: 'E<sub>н</sub>', unit: 'лк', def: 300, min: 1, max: 5000, step: 10 },
+  // the arrows of E_n walk the scale of illuminance levels (100 → 150 → 200 …), those of h_р switch
+  // between the two standard planes 0.0 and 0.8 m; any other value can still be typed
+  { key: 'En', group: 'norm', label: 'Норма', sym: 'E<sub>н</sub>', unit: 'лк', def: 200, min: 1, max: 5000, ladder: ILLUMINANCE_SCALE },
   {
-    key: 'hwp', group: 'norm', label: 'Раб. пов.', sym: 'h<sub>р</sub>', unit: 'м', def: 0.8, min: 0, step: 0.1,
+    key: 'hwp', group: 'norm', label: 'Раб. пов.', sym: 'h<sub>р</sub>', unit: 'м', def: 0, min: 0, ladder: [0, 0.8],
     max: (v) => Math.max(0, (v.H ?? 20) - 0.1), maxNote: 'H − 0,1',
   },
   { key: 'mf', group: 'norm', label: 'Коэф.', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
@@ -41,7 +46,7 @@ export const PARAMS = Object.freeze([
     key: 'hc', group: 'grid', label: 'Свес', sym: 'h<sub>c</sub>', unit: 'м', def: 0, min: 0, step: 0.1,
     max: (v) => Math.max(0, (v.H ?? 20) - HC_CLEARANCE), maxNote: 'H − 0,9',
   },
-  { key: 'psi', group: 'grid', label: 'Поворот', sym: 'ψ', unit: '°', def: 0, min: 0, max: 180, step: 5 },
+  { key: 'psi', group: 'grid', label: 'Поворот', sym: 'ψ', unit: '°', def: 0, min: 0, max: 180, step: 90 },
   // photometry: 'cosine' without a file, 'file' with one (set by the page, no field)
   { key: 'phot', group: 'lumdata', kind: 'choice', def: 'cosine', options: [{ value: 'cosine' }, { value: 'file' }] },
   { key: 'flux', group: 'lumdata', label: 'Поток', sym: 'Φ', unit: 'лм', def: 4000, gt: 0, max: 1e6, step: 100 },
@@ -75,8 +80,15 @@ export const DEFAULTS = Object.freeze(Object.fromEntries(PARAMS.map((p) => [p.ke
  * @param {object} p — a PARAMS entry; @param {number} x; @param {1|-1} dir; @param {object} values — for max(values)
  */
 export function stepValue(p, x, dir, values = {}) {
-  const step = p.step ?? 0.1;
   const start = Number.isFinite(x) ? x : p.def;
+  if (p.ladder) {
+    // the next value of the ladder above (below) x; none → x stays, within the bounds
+    const max = typeof p.max === 'function' ? p.max(values) : p.max ?? Infinity;
+    const ok = p.ladder.filter((v) => v >= (p.min ?? -Infinity) - 1e-12 && v <= max + 1e-12);
+    const next = dir > 0 ? ok.find((v) => v > start + 1e-9) : [...ok].reverse().find((v) => v < start - 1e-9);
+    return next ?? start;
+  }
+  const step = p.step ?? 0.1;
   let y = Number((start + dir * step).toFixed(10));
   const max = typeof p.max === 'function' ? p.max(values) : p.max;
   const min = p.min ?? (p.gt !== undefined ? p.gt + step : -Infinity);
