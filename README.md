@@ -259,3 +259,7 @@ Stage 6, revision 2 (5 Nov 2026):
   values (E, and L on a face);
 - the first view button "Расчётная поверхность" opens a list of the planes; it and the plane buttons
   of the results rows set the same state.
+
+Stage 6 accepted on 5 Nov 2026 (`npm test` on Windows: 132 of 132). Moved to stage 7: help texts for
+the "?" icons of the form; a faster direct component on the plane fields (it grows as luminaires ×
+nodes and runs with every calculation).
