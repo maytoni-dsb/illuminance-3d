@@ -43,14 +43,14 @@ export const PARAMS = Object.freeze([
   { key: 'rhoF', group: 'refl', label: 'Пол', sym: 'ρ<sub>0</sub>', unit: '', def: 0.2, min: 0, max: 0.9, step: 0.1 },
   // the arrows of E_n walk the scale of illuminance levels (100 → 150 → 200 …), those of h_р switch
   // between the two standard planes 0.0 and 0.8 m; any other value can still be typed
-  { key: 'En', group: 'norm', label: 'Норма', sym: 'E<sub>н</sub>', unit: 'лк', def: 200, min: 1, max: 5000, ladder: ILLUMINANCE_SCALE },
+  { key: 'En', group: 'norm', label: 'Освещенность Ē', sym: 'E<sub>н</sub>', unit: 'лк', def: 200, min: 1, max: 5000, ladder: ILLUMINANCE_SCALE },
   {
-    key: 'hwp', group: 'norm', label: 'Поверхность', sym: 'h<sub>р</sub>', unit: 'м', def: 0, min: 0, ladder: [0, 0.8],
+    key: 'hwp', group: 'norm', label: 'Рабочая поверхность', sym: 'h<sub>р</sub>', unit: '', prefix: 'Г-', def: 0, min: 0, ladder: [0, 0.8],
     max: (v) => Math.max(0, (v.H ?? 20) - 0.1), maxNote: 'H − 0,1',
   },
   // uniformity required by the norm, U₀ = Emin / Ē; empty — not set (stage 7)
-  { key: 'U0n', group: 'norm', label: 'Равномерность', sym: 'U<sub>0</sub>', unit: '', def: 0.4, min: 0.1, max: 1, step: 0.05, optional: true, placeholder: '—' },
-  { key: 'mf', group: 'norm', label: 'Коэф.', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
+  { key: 'U0n', group: 'norm', label: 'Равномерность U₀', sym: 'U<sub>0</sub>', unit: '', def: null, min: 0.1, max: 1, step: 0.05, optional: true },
+  { key: 'mf', group: 'norm', label: 'Коэффициент эксплуатации MF', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
   { key: 'nx', group: 'grid', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true, step: 1 },
   { key: 'ny', group: 'grid', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true, step: 1 },
   // mounting height: the centre of the top of the housing (as in DIALux); it follows H while it is
@@ -70,10 +70,16 @@ export const PARAMS = Object.freeze([
 /** Parses a number from a string; accepts a decimal comma and spaces. */
 export function parseNumber(s) {
   if (typeof s === 'number') return s;
-  const t = String(s).trim().replace(/\s+/g, '').replace(',', '.');
+  const t = String(s).trim().replace(/^[ГгG]\s*-\s*/, '').replace(/\s+/g, '').replace(',', '.');
   if (!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(t)) return NaN;
   return Number(t);
 }
+
+/** A value as its field shows it: decimal comma, the prefix of the field (Г- of the work plane). */
+export const shown = (p, x) => {
+  const t = formatNumber(x, 6);
+  return p?.prefix ? `${p.prefix}${t.includes(',') ? t : `${t},0`}` : t; // Г-0,0 as the planes are named
+};
 
 /** A typed value with every decimal point turned into a comma (fields always show a comma). */
 export const toComma = (s) => String(s).replace(/\./g, ',');
@@ -177,18 +183,20 @@ export function initForm(root, onChange) {
     fld.id = `w-${p.key}`;
     fld.innerHTML = `<label class="fl" for="in-${p.key}"><span class="t">${p.label}</span></label>
       <div class="ibox"><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="Больше">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="Меньше">${DOWN}</button></span><input id="in-${p.key}" name="${p.key}" inputmode="decimal" autocomplete="off" spellcheck="false"
-        value="${formatNumber(p.def)}"${p.placeholder ? ` placeholder="${p.placeholder}"` : ''} aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
+        value="${p.def == null ? '' : shown(p, p.def)}"${p.placeholder ? ` placeholder="${p.placeholder}"` : ''} aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
       <span class="ferr" id="err-${p.key}" role="alert" hidden></span>`;
     const input = fld.querySelector('input');
     inputs[p.key] = input;
     errs[p.key] = fld.querySelector('.ferr');
     const bump = (dir) => {
-      input.value = formatNumber(stepValue(p, parseNumber(input.value), dir, last), 6);
+      input.value = shown(p, stepValue(p, parseNumber(input.value), dir, last));
       clearTimeout(timer);
       check();
     };
     fld.querySelectorAll('.spin button').forEach((b) => b.addEventListener('click', () => bump(Number(b.dataset.d))));
     // the decimal separator is always shown as a comma, whatever is typed (stage 7)
+    // a field with a prefix shows it again after editing (Г-0,8)
+    if (p.prefix) input.addEventListener('change', () => { const x = parseNumber(input.value); if (Number.isFinite(x)) input.value = shown(p, x); });
     input.addEventListener('input', () => {
       if (!input.value.includes('.')) return;
       const at = input.selectionStart;
@@ -237,7 +245,7 @@ export function initForm(root, onChange) {
   function set(v, { exact = false } = {}) {
     for (const [k, x] of Object.entries(v)) {
       if (k in choice) choice[k] = x;
-      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? formatNumber(x, 6) : toComma(x);
+      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? shown(PARAMS.find((q) => q.key === k), x) : toComma(x);
     }
     clearTimeout(timer);
     check(!exact);

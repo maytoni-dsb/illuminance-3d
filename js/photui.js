@@ -129,9 +129,11 @@ export function initPhotFile(el, onChange, opts = {}) {
   }
   function show(f) {
     const t = f.table;
-    const lines = [t.manufacturer, t.name, t.catalog].filter((x) => x && x.trim());
-    el.card.innerHTML = `<div class="pfdesc">${lines.map((x, i) => `<div class="pfl${Math.min(i + 1, 3)}">${esc(x)}</div>`).join('')}
-      ${sizeText(t) ? `<div class="pfl3">${sizeText(t)}</div>` : ''}
+    // manufacturer at the top, name and article together, sizes at the bottom: as high as the polar diagram
+    const mid = [t.name, t.catalog].filter((x) => x && x.trim());
+    el.card.innerHTML = `<div class="pfdesc"><div class="pfl1">${esc(t.manufacturer?.trim() || ' ')}</div>
+      <div class="pfmid">${mid.map((x, i) => `<div class="pfl${i ? 3 : 2}">${esc(x)}</div>`).join('')}</div>
+      <div class="pfl3">${sizeText(t) || ' '}</div>
       ${t.warnings.length ? `<ul class="pfwarn">${t.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}</div>${polarSvg(f.phot)}`;
     const sets = t.lampSets ?? [];
     el.sets.hidden = sets.length < 2;

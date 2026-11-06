@@ -52,12 +52,15 @@ test('search: words in any order, ё = е, numbers', () => {
 test('a chosen row fills the form and names its source; editing makes it the user\'s', () => {
   const row = all(sp).find((r) => r.ref === '1');
   const n = normFromRow(sp, row);
-  assert.equal(n.source, 'СП 52.13330.2016 табл. Л.1: № 1');
-  assert.equal(normSource(normFromRow(en, all(en).find((r) => r.ref === '12.1'))), 'EN 12464-1:2021 ref. no. 12.1');
+  // no-break spaces keep «СП 52…», «табл. Л.1», «№ 1» together
+  assert.equal(n.source, 'СП\u00a052.13330.2016, табл.\u00a0Л.1, №\u00a01');
+  assert.equal(normSource(n), `Установлено по СП\u00a052.13330.2016, табл.\u00a0Л.1, №\u00a01: ${row.name}`);
+  const e = normFromRow(en, all(en).find((r) => r.ref === '12.1'));
+  assert.ok(normSource(e).startsWith('Установлено по EN\u00a012464-1:2021, ref.\u00a0no.\u00a012.1: '));
   const v = validateParams({ ...DEFAULTS, En: n.En, hwp: n.hwp, U0n: n.U0n }).values;
   assert.ok(normMatches(n, v));
   assert.ok(!normMatches(n, { ...v, En: 400 }));
-  assert.equal(normSource(null), 'задано пользователем');
+  assert.equal(normSource(null), 'Задано пользователем');
   const free = all(sp).find((r) => r.U0 == null && applicable(r));
   const v2 = validateParams({ ...DEFAULTS, En: free.E, hwp: free.z, U0n: '' });
   assert.ok(v2.ok && v2.values.U0n === null && normMatches(normFromRow(sp, free), v2.values));

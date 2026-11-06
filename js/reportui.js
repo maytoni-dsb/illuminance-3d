@@ -11,6 +11,11 @@ import { isolineSet } from './isolines.js';
 import { LEVELS } from './colorscale.js';
 import { levelStatus } from './workplane.js';
 import { normSource } from './norms.js';
+import { lidcCurves } from './photui.js';
+import { polarSvg } from './reportsvg.js';
+import { createPhotometry } from './photometry.js';
+
+const POLAR_R = 52;
 import { formatNumber } from './ui.js';
 
 const NB = ' ';
@@ -24,26 +29,25 @@ const zKey = (z) => z.toFixed(3);
  * Rows of the summary tables of a room.
  * @param {object} v — form values; @param {object|null} file — the parsed photometric file
  */
-export function summaryRows(v, file, norm = null) {
+export function summaryRows(v, file, norm = null, zc = null) {
   const t = file?.table ?? null;
   const roomRows = [
-    ['Длина L', `${n2(v.L)}${NB}м`],
-    ['Ширина W', `${n2(v.W)}${NB}м`],
-    ['Высота H', `${n2(v.H)}${NB}м`],
+    ['Длина', `${n2(v.L)}${NB}м`],
+    ['Ширина', `${n2(v.W)}${NB}м`],
+    ['Высота', `${n2(v.H)}${NB}м`],
     ['Площадь пола', `${formatNumber(v.L * v.W, 2)}${NB}м²`],
     ['Отражение: потолок / стены / пол', `${formatNumber(v.rhoC, 2)} / ${formatNumber(v.rhoW, 2)} / ${formatNumber(v.rhoF, 2)}`],
     ['Норма', esc(normSource(norm))],
-    ['Целевая освещенность E<sub>н</sub>', `${formatNumber(v.En, 0)}${NB}лк`],
-    ['Равномерность U<sub>0</sub>, не менее', v.U0n != null ? formatNumber(v.U0n, 2) : 'не нормируется'],
-    ['Рабочая поверхность', `${planeName(v.hwp)}${v.hwp > 0 ? `, h<sub>р</sub>${NB}=${NB}${n2(v.hwp)}${NB}м` : ' (пол)'}`],
+    ['Освещенность Ē', `${formatNumber(v.En, 0)}${NB}лк ${planeName(v.hwp).replace('-', '\u2011')}`],
+    ['Равномерность U<sub>0</sub>', v.U0n != null ? `≥${NB}${formatNumber(v.U0n, 2)}` : 'не нормируется'],
     ['Коэффициент эксплуатации MF', formatNumber(v.mf, 2)],
   ];
   const dash = '—';
   const mm = (x) => String(Math.round(x * 1000));
   let size = dash;
   if (t?.luminaire?.length > 0) {
-    const s = t.luminaire;
-    size = (s.round ? `⌀${mm(s.length)}` : `${mm(s.length)}${NB}×${NB}${mm(s.width)}`) + (s.height > 0 ? `${NB}×${NB}${mm(s.height)}` : '') + `${NB}мм`;
+    const q = t.luminaire;
+    size = (q.round ? `⌀${mm(q.length)}` : `${mm(q.length)}${NB}×${NB}${mm(q.width)}`) + (q.height > 0 ? `${NB}×${NB}${mm(q.height)}` : '') + `${NB}мм`;
   }
   const set = t?.lampSets?.[file?.set ?? 0];
   const cri = set?.cri ?? t?.cri ?? null;
@@ -52,13 +56,14 @@ export function summaryRows(v, file, norm = null) {
     ['Производитель', t?.manufacturer?.trim() ? esc(t.manufacturer.trim()) : dash],
     ['Артикул', t ? esc((t.catalog || t.name || '').trim()) || dash : 'косинусная КСС, без файла'],
     ['Размеры', size],
-    ['Световой поток Φ', `${formatNumber(v.flux, 0)}${NB}лм`],
+    ['Световой поток', `${formatNumber(v.flux, 0)}${NB}лм`],
     ['Цветовая температура', t && v.cct ? `${formatNumber(v.cct, 0)}${NB}K` : dash],
     ['Мощность', t && v.power ? `${formatNumber(v.power, 1)}${NB}Вт` : dash],
     ['CRI', cri ? formatNumber(cri, 0) : dash],
     ['Количество', `${v.nx}${NB}×${NB}${v.ny}${NB}=${NB}${n}${NB}шт.`],
-    ['Высота установки h<sub>м</sub>', `${n2(v.hm)}${NB}м`],
-    ['Поворот ψ', `${formatNumber(v.psi, 1)}°`],
+    ['Высота установки', `${n2(v.hm)}${NB}м`],
+    ['Фотометрический центр', zc != null ? `на высоте ${n2(zc)}${NB}м` : dash],
+    ['Поворот', `${formatNumber(v.psi, 1)}°`],
   ];
   return { roomRows, lumRows };
 }
@@ -94,7 +99,8 @@ export function prepareRoom(rd) {
   });
   return {
     id: rd.id, name: rd.name?.trim() || 'Без названия', key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys,
-    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm), images: null,
+    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm, v.H - rd.params.hc), images: null,
+    polar: polarSvg(lidcCurves(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux }), POLAR_R), POLAR_R),
   };
 }
 
@@ -179,7 +185,7 @@ export function initReport(o) {
     o.pdf.disabled = false;
   }
 
-  const pageOf = (node) => built?.pages.find((p) => p.node === node || p.pnode === node)?.n ?? null;
+  const pageOf = (node) => built?.pages.find((p) => p.node === node || p.pnodes?.includes(node))?.n ?? null;
   const tocPage = (node) => built?.toc.find((t) => t.node === node)?.page ?? null;
 
   function renderTree() {

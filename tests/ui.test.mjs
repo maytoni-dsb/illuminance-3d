@@ -18,7 +18,7 @@ test('formatNumber: decimal comma, no trailing zeros', () => {
   assert.equal(formatNumber(0.2428571, 4), '0,2429');
 });
 
-const raw = (over = {}) => ({ ...Object.fromEntries(Object.entries(DEFAULTS).map(([k, v]) => [k, String(v)])), ...over });
+const raw = (over = {}) => ({ ...Object.fromEntries(Object.entries(DEFAULTS).map(([k, v]) => [k, v == null ? '' : String(v)])), ...over });
 
 test('validateParams: defaults are valid and match the spec table', () => {
   const r = validateParams(DEFAULTS);

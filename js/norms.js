@@ -8,12 +8,13 @@ import { SP52, EN12464 } from './norms-data.js';
 export const NORM_SETS = Object.freeze([
   {
     id: 'sp52', title: 'СП 52.13330.2016', table: 'таблица Л.1', sections: SP52, refLabel: '№',
-    source: (ref) => `СП 52.13330.2016 табл. Л.1: № ${ref}`,
+    // no-break spaces: «СП 52…», «табл. Л.1», «№ 4» never split between lines
+    source: (ref) => `СП\u00a052.13330.2016, табл.\u00a0Л.1, №\u00a0${ref}`,
     note: '',
   },
   {
     id: 'en12464', title: 'EN 12464-1:2021', table: 'tables 9–61', sections: EN12464, refLabel: 'Ref. no.',
-    source: (ref) => `EN 12464-1:2021 ref. no. ${ref}`,
+    source: (ref) => `EN\u00a012464-1:2021, ref.\u00a0no.\u00a0${ref}`,
     note: 'Ē — Ēm «required»; U₀ — Uo. Плоскость: Г-0,0, где норма относится к полу и для путей движения; ' +
       'вертикальная, где так указано; иначе — рабочая зона на 0,8 м.',
   },
@@ -49,7 +50,7 @@ export function searchNorms(set, query = '') {
 
 /** What a chosen row puts into the room: the source text and the form values. */
 export function normFromRow(set, row) {
-  return { source: set.source(row.ref), set: set.id, ref: row.ref, En: row.E, hwp: row.z, U0n: row.U0 };
+  return { source: set.source(row.ref), name: row.name, set: set.id, ref: row.ref, En: row.E, hwp: row.z, U0n: row.U0 };
 }
 
 /** True while the form still holds the values of the chosen norm. */
@@ -59,5 +60,5 @@ export function normMatches(norm, v) {
   return eq(norm.En, v.En) && eq(norm.hwp, v.hwp) && eq(norm.U0n, v.U0n);
 }
 
-/** Source line under the norms: the reference, or «задано пользователем». */
-export const normSource = (norm) => norm?.source ?? 'задано пользователем';
+/** Source line under the norms: «Установлено по СП 52.13330.2016, табл. Л.1, № 4: Читальные залы» or «Задано пользователем». */
+export const normSource = (norm) => (norm ? `Установлено по ${norm.source}${norm.name ? `: ${norm.name}` : ''}` : 'Задано пользователем');

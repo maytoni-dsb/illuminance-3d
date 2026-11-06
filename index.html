@@ -28,20 +28,20 @@
       "./js/isolines.js": "./js/isolines.js?v=ea7b03a7",
       "./js/kernel.js": "./js/kernel.js?v=aed0ec7d",
       "./js/norms-data.js": "./js/norms-data.js?v=3d3548ce",
-      "./js/norms.js": "./js/norms.js?v=3a7281c8",
+      "./js/norms.js": "./js/norms.js?v=0a40315e",
       "./js/normui.js": "./js/normui.js?v=00298582",
       "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
       "./js/photfile.js": "./js/photfile.js?v=129f4189",
       "./js/photometry.js": "./js/photometry.js?v=e2442d68",
-      "./js/photui.js": "./js/photui.js?v=b0f6c406",
+      "./js/photui.js": "./js/photui.js?v=aa6da0c9",
       "./js/planview.js": "./js/planview.js?v=54dee309",
-      "./js/project.js": "./js/project.js?v=9578610e",
-      "./js/report.js": "./js/report.js?v=4635031c",
-      "./js/reportsvg.js": "./js/reportsvg.js?v=61138a52",
-      "./js/reportui.js": "./js/reportui.js?v=2763d806",
+      "./js/project.js": "./js/project.js?v=3cd1a0fd",
+      "./js/report.js": "./js/report.js?v=35c3ad23",
+      "./js/reportsvg.js": "./js/reportsvg.js?v=385389a3",
+      "./js/reportui.js": "./js/reportui.js?v=989b5b3d",
       "./js/solver.js": "./js/solver.js?v=99673fc0",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=a41a3ed8",
+      "./js/ui.js": "./js/ui.js?v=61be1c16",
       "./js/view3d.js": "./js/view3d.js?v=67dfcc65",
       "./js/worker.js": "./js/worker.js?v=bf308824",
       "./js/workplane.js": "./js/workplane.js?v=6db5b51d"
@@ -226,8 +226,9 @@
     .pfclear:hover{color:var(--err)}
     #estnote.warn,#hmnote.warn{color:var(--err)}
     .pferr{font-size:12px;color:var(--err);line-height:1.4;margin-top:6px}
-    .pfcard{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
-    .pfdesc{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12.5px;line-height:1.35}
+    .pfcard{display:flex;gap:12px;align-items:stretch;justify-content:space-between}
+    .pfdesc{display:flex;flex-direction:column;justify-content:space-between;gap:6px;min-width:0;min-height:112px;padding:4px 0;font-size:12.5px;line-height:1.35}
+    .pfmid{display:flex;flex-direction:column;gap:2px}
     .pfl1{color:var(--ink3)}
     .pfl2{font-weight:600;font-size:13.5px}
     .pfl3{color:var(--ink2);font-variant-numeric:tabular-nums}
@@ -346,6 +347,8 @@
     /* norms: «Выбрать», source line, codifier dialog */
     .fsub .gslink{margin-left:auto;font-weight:500}
     .normsrc{font-size:11.5px;color:var(--ink3);margin-top:-2px;line-height:1.35}
+    .fgrid[data-group="norm"]{align-items:end}
+    .fgrid[data-group="norm"] .fl{white-space:normal;height:auto;line-height:1.25}
     .normsrc b{font-weight:600;color:var(--ink2)}
     .ndlg{width:min(1000px,94vw);height:min(86vh,940px);max-width:none;max-height:none;padding:0;border:1px solid var(--rule);border-radius:12px;
       background:var(--card);color:var(--ink);box-shadow:0 24px 80px -20px rgba(0,0,0,.45)}
@@ -459,7 +462,10 @@
     .vsplit .vsl{padding:0 9px 0 11px;border-radius:999px 0 0 999px}
     .vsplit .vsr{padding:0 11px 0 9px;gap:7px;border-radius:0 999px 999px 0;border-left:1px solid var(--rule)}
     .vsplit button:hover{color:var(--ink);background:var(--soft)}
-    .vsplit .vsl[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);font-weight:600}
+    .vsplit.on{background:var(--sel);border-color:var(--sel)}
+    .vsplit.on button{color:var(--on-sel);font-weight:600}
+    .vsplit.on button:hover{background:color-mix(in srgb,var(--on-sel) 12%,transparent);color:var(--on-sel)}
+    .vsplit.on .vsr{border-left-color:color-mix(in srgb,var(--on-sel) 30%,transparent)}
     .vsplit .vsl:disabled{color:var(--muted);cursor:default;background:none}
     .vsplit:hover{border-color:var(--ink)}
 
@@ -629,23 +635,14 @@
         <div class="shd">Результаты <button type="button" class="help" data-help="results" aria-label="Справка: результаты" aria-expanded="false">?</button></div>
         <div class="planes" id="planes"></div>
         <div class="gshint" id="planenote"></div>
-        <details class="dev" id="facesbox">
-          <summary>Освещенность граней</summary>
-          <div class="devbody">
-            <table class="htable" id="results">
-              <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Прямая</th><th>Отраж.</th></tr></thead>
-              <tbody></tbody>
-            </table>
-            <div class="gshint" id="mfnote"></div>
-          </div>
-        </details>
-        <div class="shd" style="font-size:13px;margin-top:4px">Карта на гранях</div>
-        <div class="gschips" role="radiogroup" aria-label="Карта на гранях" id="mapmode">
-          <button type="button" class="gschipb" role="radio" data-v="total" aria-pressed="true" aria-checked="true">Полная</button>
-          <button type="button" class="gschipb" role="radio" data-v="direct" aria-pressed="false" aria-checked="false">Прямая</button>
-          <button type="button" class="gschipb" role="radio" data-v="indirect" aria-pressed="false" aria-checked="false">Отраженная</button>
+        <div class="shd" style="font-size:13px;margin-top:4px">Освещенность граней</div>
+        <div id="facesbox">
+          <table class="htable" id="results">
+            <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Прямая</th><th>Отраж.</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="gshint" id="mfnote"></div>
         </div>
-        <div class="gshint">Кнопка у строки плоскости показывает ее изолинии и значения в точках сетки ГОСТ: на плане — на светлом фоне (с кнопкой «Фиктивные цвета» — в цвете), в 3D — полупрозрачным слоем. Без фиктивных цветов грани показываются в реалистичном виде: яркость L = ρE/π.</div>
       </div>
 
       <div class="fsec">
@@ -655,6 +652,13 @@
             <label class="range" for="stops"><span>Поправка экспозиции</span>
               <input type="range" id="stops" min="-2" max="2" step="0.5" value="0"><output id="stopsout">0 ст.</output></label>
             <div class="gshint">Для реалистичного вида: ±2 ступени от автоматической экспозиции.</div>
+            <div class="shd" style="font-size:13px;margin-top:6px">Карта на гранях</div>
+            <div class="gschips" role="radiogroup" aria-label="Карта на гранях" id="mapmode">
+              <button type="button" class="gschipb" role="radio" data-v="total" aria-pressed="true" aria-checked="true">Полная</button>
+              <button type="button" class="gschipb" role="radio" data-v="direct" aria-pressed="false" aria-checked="false">Прямая</button>
+              <button type="button" class="gschipb" role="radio" data-v="indirect" aria-pressed="false" aria-checked="false">Отраженная</button>
+            </div>
+            <div class="gshint">Кнопка у строки плоскости показывает ее изолинии и значения в точках сетки ГОСТ: на плане — на светлом фоне (с кнопкой «Фиктивные цвета» — в цвете), в 3D — полупрозрачным слоем. Без фиктивных цветов грани показываются в реалистичном виде: яркость L = ρE/π.</div>
           </div>
         </details>
       </div>
@@ -1104,7 +1108,7 @@
           ${row('U<sub>d</sub> = E<sub>min</sub> / E<sub>max</sub>', n2(st.minMax))}
         </div></details>`;
     }).join('');
-    $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учетом MF = ${formatNumber(mf, 2)}.`;
+    $('#planenote').innerHTML = ref ? '* Для справки.' : '';
   }
 
   /**
@@ -1175,6 +1179,7 @@
   function renderPlaneMenu() {
     const show = $('#planeshow'), zc = planeChoice();
     show.setAttribute('aria-pressed', String(planeZ != null));
+    show.closest('.vsplit').classList.toggle('on', planeZ != null);
     show.disabled = !result;
     $('#planelabel').textContent = zc != null ? planeName(zc) : 'Г-…';
     show.dataset.tip = planeZ != null ? `Скрыть ${planeName(planeZ)}` : zc != null ? `Показать ${planeName(zc)}` : 'Расчетная поверхность';
@@ -1237,7 +1242,7 @@
     const n0 = (x) => formatNumber(x, 0);
     $('#results tbody').innerHTML = room.faces.map((fc) =>
       `<tr><td>${fc.name}</td><td><b>${n0(avg[fc.id])}</b></td><td>${n0(avgD[fc.id])}</td><td>${n0(avgI[fc.id])}</td></tr>`).join('');
-    $('#mfnote').innerHTML = `Средние по граням с учетом MF = ${formatNumber(mf, 2)}. Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.` +
+    $('#mfnote').innerHTML = `Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.` +
       (result.lost > 1e-6 * result.balance.emitted ? ` Поток вверх ${formatNumber(mf * result.lost, 0)} лм не учтен: светильник у потолка (свес 0).` : '');
 
     renderPlanes(mf);
@@ -1510,7 +1515,7 @@
   // ---- norms: source line and the codifier ----
   function renderNormSrc() {
     const n = activeRoom()?.norm;
-    $('#normsrc').innerHTML = n ? `Норма: <b>${esc(n.source)}</b>` : 'Норма: задано пользователем';
+    $('#normsrc').textContent = normSource(n);
   }
   const normDlg = initNormDialog({
     dialog: $('#normdlg'), set: $('#normset'), query: $('#normq'), body: $('#normbody'), count: $('#normcount'),

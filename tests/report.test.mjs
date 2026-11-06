@@ -26,14 +26,15 @@ rooms.forEach((r) => { r.images = { real: 'data:,', falseColor: 'data:,' }; });
 test('pages, contents and page numbers', () => {
   const b = buildReport({ info: { name: 'Проект' }, rooms });
   // title, contents, then per room: summary, one page per plane, illustrations
-  const per = rooms.map((r) => 1 + r.planes.length + 1);
+  const per = rooms.map((r) => 1 + Math.ceil(r.planes.length / 2) + 1); // two planes a page
   // title, contents, list of luminaires, then the rooms
   assert.equal(b.pages.length, 3 + per[0] + per[1]);
   assert.equal(b.toc[0].title, 'Перечень светильников');
   assert.equal(b.toc[0].page, 3);
   assert.equal(b.toc[1].page, 4);
   assert.equal(b.toc[2].page, 4 + per[0]);
-  assert.deepEqual(b.toc[1].secs.map((s) => s.page), [4, 5, 4 + rooms[0].planes.length + 1]);
+  assert.deepEqual(b.toc[1].secs.map((s) => s.page), [4, 5, 5 + Math.ceil(rooms[0].planes.length / 2)]);
+  assert.ok(!/roomsub|hyphens:auto|Suisse/.test(b.html));
   assert.ok(!/ё/i.test(b.html)); // «е» throughout
   assert.equal((b.html.match(/class="rhl"/g) ?? []).length, b.pages.length - 1); // the logo on every page after the title
   for (let n = 1; n <= b.pages.length; n++) assert.ok(b.html.includes(`id="pg-${n}"`));
@@ -43,7 +44,7 @@ test('pages, contents and page numbers', () => {
 test('switched-off nodes leave the report and the numbers follow', () => {
   const off = new Set([nodeId.toc, nodeId.lumlist, nodeId.summary('a'), nodeId.room('b'), nodeId.plane('a', rooms[0].planes[0].key)]);
   const b = buildReport({ info: {}, rooms, include: (id) => !off.has(id) });
-  assert.equal(b.pages.length, 1 + (rooms[0].planes.length - 1) + 1);
+  assert.equal(b.pages.length, 1 + Math.ceil((rooms[0].planes.length - 1) / 2) + 1);
   assert.ok(!b.html.includes('Холл'));
   assert.ok(b.html.includes('Светотехнический расчет'));
   assert.ok(b.html.includes('class="roomhead"')); // the room heading moves to its first page
@@ -85,8 +86,9 @@ test('plans: drafting scale that fits, valid SVG in millimetres', () => {
 
 test('summary tables', () => {
   const { roomRows, lumRows } = summaryRows({ ...v1 }, file);
-  assert.equal(roomRows.length, 10);
-  assert.equal(Object.fromEntries(roomRows)['Норма'], 'задано пользователем');
+  assert.equal(roomRows.length, 9);
+  assert.equal(Object.fromEntries(roomRows)['Норма'], 'Задано пользователем');
+  assert.match(Object.fromEntries(roomRows)['Освещенность Ē'], /^200\u00a0лк Г\u20110,8$/);
   const lum = Object.fromEntries(lumRows);
   assert.match(lum['Производитель'], /MAYTONI/);
   assert.match(lum['Размеры'], /мм$/);

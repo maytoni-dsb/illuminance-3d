@@ -90,13 +90,17 @@ export function buildReport(d) {
     let first = true;
     for (const s of secs) {
       if (s.kind === 'results') {
-        s.planes.forEach((p, k) => plan.push({ kind: 'plane', node: k ? nodeId.plane(r.id, p.key) : s.node, plane: p, r, head: first, sec: k === 0 ? s : null, pnode: nodeId.plane(r.id, p.key) }));
+        for (let k = 0; k < s.planes.length; k += 2) {
+          const two = s.planes.slice(k, k + 2);
+          plan.push({ kind: 'planes', node: k ? nodeId.plane(r.id, two[0].key) : s.node, planes: two, r, head: first && k === 0, sec: k === 0 ? s : null,
+            pnodes: two.map((x) => nodeId.plane(r.id, x.key)) });
+        }
       } else plan.push({ kind: s.kind, node: s.node, r, head: first, sec: s });
       first = false;
     }
   }
   plan.forEach((p, k) => { p.n = k + 1; });
-  const pageOf = (node) => plan.find((p) => p.node === node || p.pnode === node)?.n ?? null;
+  const pageOf = (node) => plan.find((p) => p.node === node || p.pnodes?.includes(node))?.n ?? null;
   const toc = roomsIn.map(({ r, secs }) => ({ node: nodeId.room(r.id), title: r.name, page: pageOf(secs[0].node), secs: secs.map((s) => ({ node: s.node, title: s.title, page: pageOf(s.node) })) }));
   if (lumPages) toc.unshift({ node: nodeId.lumlist, title: 'Перечень светильников', page: pageOf(nodeId.lumlist), secs: [] });
 
@@ -104,8 +108,7 @@ export function buildReport(d) {
   const date = (d.date ?? new Date()).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
   const head = (mid) => `<div class="rh"><span class="rhp">${typo(project)}</span><span class="rhm">${typo(mid)}</span><span class="rhl">${MAYTONI}</span></div>`;
   const foot = (n) => `<div class="folio">${n}</div>`;
-  const roomHead = (r) => `<div class="roomhead"><div class="kick">Помещение</div><h1>${typo(r.name)}</h1>
-    <div class="roomsub">${num(r.L, 2)}${NB}×${NB}${num(r.W, 2)}${NB}×${NB}${num(r.H, 2)}${NB}м · ${r.xs.length * r.ys.length}${NB}${plural(r.xs.length * r.ys.length, 'светильник', 'светильника', 'светильников')}</div></div>`;
+  const roomHead = (r) => `<div class="roomhead"><div class="kick">Помещение</div><h1>${typo(r.name)}</h1></div>`;
   const kv = (rows) => `<table class="kv"><tbody>${rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</tbody></table>`;
 
   const pages = plan.map((p) => {
@@ -122,7 +125,7 @@ export function buildReport(d) {
           <h1 class="pname">${typo(d.info.name?.trim() || 'Проект без названия')}</h1>
           ${d.info.description?.trim() ? `<p class="pdesc">${typo(d.info.description).replace(/\n+/g, '<br>')}</p>` : ''}</div>
         <dl class="tmeta">${meta.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
-        <div class="tfoot">Расчёт методом излучательности: прямая составляющая — по кривым силы света, отражённая — с учётом многократных отражений. Значения — с${NB}учётом коэффициента эксплуатации.</div>
+        <div class="tfoot">Расчет выполнен в${NB}несертифицированном программном обеспечении и${NB}носит демонстрационный характер. MAYTONI не${NB}несет ответственности за${NB}расхождения между результатами этого расчета, фактической освещенностью и${NB}результатами расчетов в${NB}сертифицированном программном обеспечении.</div>
       </section>`;
     }
     if (p.kind === 'toc') {
@@ -135,7 +138,7 @@ export function buildReport(d) {
         const take = rows.filter(() => { const k = line++; return k >= lo && k < hi; });
         if (take.length) body += `<ol class="toc">${take.join('')}</ol>`;
       }
-      return `<section class="page" id="${id}" data-node="${p.node}">${head('Содержание')}<div class="frame">
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Содержание' : '')}<div class="frame">
         ${p.part === 0 ? '<h2 class="toch">Содержание</h2>' : ''}${body}</div>${foot(p.n)}</section>`;
     }
     if (p.kind === 'lumlist') {
@@ -145,7 +148,7 @@ export function buildReport(d) {
         <td class="n">${t.flux ? num(t.flux) : '—'}</td><td class="n">${t.power ? num(t.power, 1) : '—'}</td><td class="n">${t.cct ? num(t.cct) : '—'}</td>
         <td>${t.rooms.map((x) => `${typo(x.name)}${NB}— ${x.count}`).join('<br>')}</td><td class="n"><b>${t.count}</b></td></tr>`).join('');
       const last = p.part === lumPages - 1;
-      return `<section class="page" id="${id}" data-node="${p.node}">${head('Перечень светильников')}<div class="frame">
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Перечень светильников' : '')}<div class="frame">
         ${p.part === 0 ? '<h2 class="toch">Перечень светильников</h2>' : ''}
         <table class="lum"><thead><tr><th class="c">Поз.</th><th>Светильник</th><th class="n">Φ, лм</th><th class="n">P, Вт</th><th class="n">T<sub>ц</sub>, K</th><th>Помещения</th><th class="n">Кол-во, шт.</th></tr></thead>
         <tbody>${rows}</tbody>${last ? `<tfoot><tr><td></td><td colspan="5">Всего${totalP ? `; установленная мощность ${num(totalP, totalP < 100 ? 1 : 0)}${NB}Вт` : ''}</td><td class="n"><b>${totalN}</b></td></tr></tfoot>` : ''}</table>
@@ -154,36 +157,39 @@ export function buildReport(d) {
     const r = p.r;
     const top = p.head ? roomHead(r) : '';
     const h2 = (s) => (s ? `<h2>${s.title}</h2>` : '');
+    const mid = p.head ? '' : r.name;
     if (p.kind === 'summary') {
-      const maxH = 100;
-      const n = planScale(r.L, r.W, FRAME.w - 17, maxH - 17);
-      return `<section class="page" id="${id}" data-node="${p.node}">${head(r.name)}<div class="frame">${top}${h2(p.sec)}
-        <figure class="fig plan">${roomPlanSvg({ ...r, n })}<figcaption>План помещения со светильниками. Размеры в${NB}миллиметрах. Масштаб${NB}1:${n}.</figcaption></figure>
-        <div class="cols"><div><h3>Помещение</h3>${kv(r.roomRows)}</div><div><h3>Светильник</h3>${kv(r.lumRows)}</div></div>
+      const n = planScale(r.L, r.W, FRAME.w - 17, 82 - 17);
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
+        <figure class="fig plan">${roomPlanSvg({ ...r, n })}<figcaption>План помещения со${NB}светильниками, размеры в${NB}миллиметрах</figcaption></figure>
+        <div class="cols"><div><h3>Помещение</h3>${kv(r.roomRows)}
+            ${r.polar ? `<figure class="fig polarfig">${r.polar}<figcaption>КСС, кд/клм: C0–C180 — сплошная, C90–C270 — пунктир</figcaption></figure>` : ''}</div>
+          <div><h3>Светильник</h3>${kv(r.lumRows)}</div></div>
       </div>${foot(p.n)}</section>`;
     }
-    if (p.kind === 'plane') {
-      const pl = p.plane;
-      const used = (p.head ? 34 : 0) + (p.sec ? 13 : 0) + 12 + 12 + 30 + 14;
-      const n = planScale(r.L, r.W, FRAME.w - 11, Math.min(170, FRAME.h - used) - 11);
-      const st = pl.stats;
-      const verdict = pl.norm ? normText(pl.norm, st) : '';
-      return `<section class="page" id="${id}" data-node="${p.pnode}">${head(r.name)}<div class="frame">${top}${h2(p.sec)}
-        <h3 class="plh">${pl.name}<span>${pl.normative ? 'нормируемая поверхность' : 'для справки'}${pl.z > 0 ? `, высота ${num(pl.z, 2)}${NB}м` : ', пол'}</span></h3>
-        <figure class="fig plan">${isolinePlanSvg({ ...r, n, sets: pl.sets, gost: pl.gost }, `p${p.n}`)}
-          <figcaption>Изолинии и значения освещённости в точках расчётной сетки (ГОСТ${NB}Р${NB}55710), лк, с${NB}учётом MF${NB}=${NB}${num(pl.mf, 2)}. Масштаб${NB}1:${n}.</figcaption></figure>
-        <table class="res"><thead><tr><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
-          <tbody><tr><td>${lux(st.avg)}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td><td>${num(st.u0, 2)}</td><td>${num(st.minMax, 2)}</td></tr></tbody></table>
-        ${verdict ? `<p class="verdict ${pl.norm.status === 'low' || pl.norm.u0Low ? 'bad' : 'good'}">${verdict}</p>` : ''}
-      </div>${foot(p.n)}</section>`;
+    if (p.kind === 'planes') {
+      // two planes a page: each gets half of the frame below the headings
+      const avail = FRAME.h - (p.head ? 22 : 0) - (p.sec ? 14 : 0);
+      const block = avail / 2;
+      const blocks = p.planes.map((pl, k) => {
+        const n = planScale(r.L, r.W, FRAME.w - 11, block - 9 - 24 - 10 - 11);
+        const st = pl.stats;
+        return `<div class="plblock" data-node="${p.pnodes[k]}">
+          <h3 class="plh">${pl.name}<span>${pl.normative ? 'нормируемая поверхность' : 'для справки'}${pl.z > 0 ? `, высота ${num(pl.z, 2)}${NB}м` : ', пол'}</span></h3>
+          <figure class="fig plan">${isolinePlanSvg({ ...r, n, sets: pl.sets, gost: pl.gost }, `p${p.n}-${k}`)}</figure>
+          <table class="res"><thead><tr><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
+            <tbody><tr><td>${lux(st.avg)}${pl.norm ? `${MARK[pl.norm.status]}${NB}(${num(pl.norm.En)})` : ''}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td>
+              <td>${num(st.u0, 2)}${u0Mark(pl)}</td><td>${num(st.minMax, 2)}</td></tr></tbody></table></div>`;
+      }).join('');
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}${blocks}</div>${foot(p.n)}</section>`;
     }
     // illustrations
     const small = p.head;
-    const w = small ? 150 : ILL.w, h = w * ILL.h / ILL.w;
-    return `<section class="page" id="${id}" data-node="${p.node}">${head(r.name)}<div class="frame">${top}${h2(p.sec)}
-      <figure class="fig ill"><img src="${r.images.real}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Яркость поверхностей, исходный вид.</figcaption></figure>
-      <figure class="fig ill"><img src="${r.images.falseColor}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Освещённость поверхностей в${NB}фиктивных цветах, лк, с${NB}учётом MF.</figcaption></figure>
-      <figure class="fig scale">${colorScaleSvg(w)}<figcaption>Шкала фиктивных цветов: освещённость, лк; у${NB}каждого цвета — нижняя граница его ступени.</figcaption></figure>
+    const w = small ? 146 : ILL.w, h = w * ILL.h / ILL.w;
+    return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
+      <figure class="fig ill"><img src="${r.images.real}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Визуализация светораспределения</figcaption></figure>
+      <figure class="fig ill"><img src="${r.images.falseColor}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Распределение освещенности в${NB}фиктивных цветах</figcaption></figure>
+      <figure class="fig scale">${colorScaleSvg(w)}<figcaption>Шкала фиктивных цветов, лк: у${NB}каждой отметки — нижняя граница ступени</figcaption></figure>
     </div>${foot(p.n)}</section>`;
   });
 
@@ -192,7 +198,7 @@ export function buildReport(d) {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap">
 <style>${CSS}</style></head><body>${pages.join('\n')}
 <script>${FIT}</script></body></html>`.replace(/ё/g, 'е').replace(/Ё/g, 'Е'); // «е» throughout the report
-  return { html, pages: plan.map((p) => ({ node: p.node, pnode: p.pnode ?? null, n: p.n })), toc };
+  return { html, pages: plan.map((p) => ({ node: p.node, pnodes: p.pnodes ?? [], n: p.n })), toc };
 }
 
 /**
@@ -211,6 +217,20 @@ export function lumTypes(rooms) {
     t.rooms.push({ name: r.name, count: l.count });
   }
   return [...map.values()];
+}
+
+/** Status marks of the results table: within the norm, below it, above the next step / no norm. */
+const MARK = {
+  ok: `${NB}<svg class="mk" viewBox="0 0 14 14"><path d="M2.5 7.4 5.6 10.4 11.5 3.8" fill="none" stroke="#1d874d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  low: `${NB}<svg class="mk" viewBox="0 0 14 14"><path d="M3.5 3.5 10.5 10.5M10.5 3.5 3.5 10.5" fill="none" stroke="#eb3d00" stroke-width="2" stroke-linecap="round"/></svg>`,
+  high: `${NB}<svg class="mk" viewBox="0 0 14 14"><path d="M7 1.6 13 12.2H1z" fill="#e8a400"/><path d="M7 5.4v3.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10.4" r=".85" fill="#fff"/></svg>`,
+};
+/** U₀ of a normative plane: against the norm when it is set, else a warning below 0,3. */
+function u0Mark(pl) {
+  if (!pl.norm) return '';
+  const u = pl.stats.u0, U = pl.norm.U0n;
+  if (U != null) return `${MARK[u < U - 1e-9 ? 'low' : 'ok']}${NB}(${num(U, 2)})`;
+  return u < 0.3 - 1e-9 ? MARK.high : '';
 }
 
 function plural(n, one, few, many) {
@@ -233,32 +253,27 @@ function normText(norm, st) {
 const FIT = `(function(){var W=210*96/25.4;function fit(){var z=Math.min(1,Math.max(.3,(innerWidth-48)/W));document.body.style.zoom=z;}addEventListener('resize',fit);fit();})();`;
 
 const CSS = `
-@font-face{font-family:"Report Sans";font-weight:400;src:local("Suisse Intl"),local("Suisse Int'l"),local("SuisseIntl-Regular"),local("Suisse Int'l Regular"),url("fonts/SuisseIntl-Regular.woff2") format("woff2")}
-@font-face{font-family:"Report Sans";font-weight:500;src:local("Suisse Intl Medium"),local("Suisse Int'l Medium"),local("SuisseIntl-Medium"),url("fonts/SuisseIntl-Medium.woff2") format("woff2")}
-@font-face{font-family:"Report Sans";font-weight:600;src:local("Suisse Intl SemiBold"),local("Suisse Int'l SemiBold"),local("SuisseIntl-SemiBold"),url("fonts/SuisseIntl-SemiBold.woff2") format("woff2")}
 @page{size:A4;margin:0}
 *{box-sizing:border-box}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;color:#141414;font-family:"Report Sans","Suisse Intl","Suisse Int'l",Jost,"Helvetica Neue",Arial,sans-serif;
-  font-size:9.5pt;line-height:1.45;font-kerning:normal;font-feature-settings:"kern","liga";hyphens:auto;-webkit-hyphens:auto;
-  hyphenate-limit-chars:6 3 3;text-rendering:optimizeLegibility}
+body{margin:0;color:#141414;font-family:Jost,"Helvetica Neue",Arial,sans-serif;
+  font-size:9.5pt;line-height:1.45;font-kerning:normal;font-feature-settings:"kern","liga";hyphens:manual;-webkit-hyphens:manual;overflow-wrap:normal;text-rendering:optimizeLegibility}
 .page{position:relative;width:210mm;height:297mm;overflow:hidden;background:#fff;break-after:page;page-break-after:always}
 .page:last-child{break-after:auto;page-break-after:auto}
 @media screen{body{background:#dcdcdc;padding:24px 0}.page{margin:0 auto 24px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 28px rgba(0,0,0,.10)}}
 @media print{body{zoom:1!important;background:none;padding:0}.page{margin:0;box-shadow:none}}
 .frame{position:absolute;left:${PAGE.left}mm;right:${PAGE.right}mm;top:${PAGE.top}mm;bottom:${PAGE.bottom}mm}
-.rh{position:absolute;left:${PAGE.left}mm;right:${PAGE.right}mm;top:9mm;height:9mm;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6mm;align-items:center;
+.rh{position:absolute;left:${PAGE.left}mm;right:${PAGE.right}mm;top:8mm;height:10mm;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6mm;align-items:end;
   font-size:7pt;letter-spacing:.06em;text-transform:uppercase;color:#7a7a7a;font-weight:500}
 .rh .rhp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;line-height:1.3;max-width:62mm}
 .rh .rhm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62mm;text-align:center;color:#141414}
-.rh .rhl{justify-self:end;width:22mm;color:#141414;display:block}
+.rh .rhl{justify-self:end;width:22mm;color:#141414;display:block;line-height:0;padding-bottom:.35mm}
 .rh .rhl svg{display:block;width:100%;height:auto}
 .folio{position:absolute;right:${PAGE.right}mm;bottom:11mm;font-size:8pt;color:#141414;font-variant-numeric:tabular-nums;font-weight:500}
 .kick{font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#7a7a7a;font-weight:500}
 h1,h2,h3{font-weight:600;margin:0;hyphens:manual;-webkit-hyphens:manual}
 .roomhead{margin:0 0 9mm}
 .roomhead h1{font-size:22pt;line-height:1.12;letter-spacing:-.01em;margin:2.2mm 0 1.6mm}
-.roomsub{font-size:9pt;color:#555;font-variant-numeric:tabular-nums}
 h2{font-size:13pt;line-height:1.2;margin:0 0 6mm;padding-bottom:2.2mm;border-bottom:.5pt solid #141414}
 h3{font-size:9.5pt;line-height:1.3;margin:0 0 2.5mm}
 h3.plh{font-size:11pt;margin:0 0 4mm;display:flex;align-items:baseline;gap:3mm}
@@ -266,7 +281,13 @@ h3.plh span{font-size:8.5pt;font-weight:400;color:#6b6b6b}
 .fig{margin:0 0 6mm;display:flex;flex-direction:column;align-items:center}
 .fig svg,.fig img{display:block}
 .fig figcaption{font-size:7.5pt;line-height:1.4;color:#6b6b6b;margin-top:2.2mm;max-width:135mm;text-align:center}
-.fig.ill{margin-bottom:5mm}
+.fig.ill{margin-bottom:9mm}
+.fig.polarfig{margin:5mm 0 0}
+.fig.polarfig figcaption{max-width:70mm}
+.plblock{margin-bottom:7mm}
+.plblock .fig{margin-bottom:3mm}
+.res{table-layout:fixed}
+.res .mk{width:2.6mm;height:2.6mm;vertical-align:-.2mm}
 .fig.ill img{object-fit:cover;background:#fff}
 .fig.scale{margin:2mm 0 0}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:9mm;margin-top:2mm}
@@ -276,9 +297,8 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .kv th{font-weight:400;color:#555;padding-right:3mm;width:52%}
 .kv td{font-weight:500}
 .res{margin-top:1mm}
-.res th{font-size:7.5pt;font-weight:500;color:#555;text-align:right;padding:0 0 1.6mm 4mm;border-bottom:.5pt solid #141414}
-.res td{font-size:11pt;font-weight:500;text-align:right;padding:2mm 0 2mm 4mm;border-bottom:.35pt solid #cfcfcf}
-.res th:first-child,.res td:first-child{text-align:left;padding-left:0}
+.res th{font-size:7.5pt;font-weight:500;color:#555;text-align:center;padding:0 1mm 1.6mm;border-bottom:.5pt solid #141414}
+.res td{font-size:9pt;font-weight:500;text-align:center;padding:1.8mm 1mm;border-bottom:.35pt solid #cfcfcf;white-space:nowrap}
 .verdict{font-size:8.5pt;margin:3mm 0 0;padding-left:3.2mm;border-left:1.2pt solid #1d874d;max-width:140mm}
 .verdict.bad{border-left-color:#eb3d00}
 sub{font-size:.72em;line-height:0;vertical-align:-.25em}

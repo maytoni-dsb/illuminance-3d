@@ -80,6 +80,9 @@ function dimensions(T, L, W, chains, font = 2.3) {
   return `<g fill="none" stroke="#141414" stroke-width="0.18">${g}</g><g fill="#141414" font-size="${font}" style="font-variant-numeric:tabular-nums">${t}</g>`;
 }
 
+/** «М 1:n» in the lower left corner of the drawing (on its field, not a caption). */
+const scaleMark = (box, n) => `<text x="0.3" y="${r2(box.h - 0.6)}" font-size="${r2(7 * PT)}" fill="#141414">М\u00a01:${n}</text>`;
+
 /** Shortened chain of a long grid (as on the view): first three and last two axes. */
 const chain = (vals) => (vals.length <= 9 ? vals : [vals[0], vals[1], vals[2], vals[vals.length - 2], vals[vals.length - 1]]);
 
@@ -101,12 +104,11 @@ export function roomPlanSvg(d) {
   for (const x of d.xs) axes += `<path d="M${r2(T.x(x))} ${r2(y1 - 2)}V${r2(y0 + 2)}"/>`;
   for (const y of d.ys) axes += `<path d="M${r2(x0 - 2)} ${r2(T.y(y))}H${r2(x1 + 2)}"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" class="plan" width="${r2(box.w)}mm" height="${r2(box.h)}mm" viewBox="0 0 ${r2(box.w)} ${r2(box.h)}">` +
-    `<rect x="${r2(x0)}" y="${r2(y1)}" width="${r2(x1 - x0)}" height="${r2(y0 - y1)}" fill="#f7f7f5"/>` +
     `<g fill="none" stroke="#8a8a8a" stroke-width="0.13" stroke-dasharray="4 0.8 0.5 0.8">${axes}</g>` +
     luminaires(T, d, { fill: 'none', glow: 'none' }) +
     `<rect x="${r2(x0)}" y="${r2(y1)}" width="${r2(x1 - x0)}" height="${r2(y0 - y1)}" fill="none" stroke="#141414" stroke-width="0.5"/>` +
     dimensions(T, d.L, d.W, [chain([0, ...d.xs, d.L]), chain([0, ...d.ys, d.W])]) +
-    '</svg>';
+    scaleMark(box, d.n) + '</svg>';
 }
 
 /**
@@ -171,19 +173,39 @@ export function isolinePlanSvg(d, id = 'p') {
     `<g fill="#141414" font-size="${r2(fs)}" font-weight="600" text-anchor="middle" stroke="#fff" stroke-width="0.55" paint-order="stroke" style="font-variant-numeric:tabular-nums">${nums}</g>` +
     `<rect x="${r2(x0)}" y="${r2(y1)}" width="${r2(x1 - x0)}" height="${r2(y0 - y1)}" fill="none" stroke="#141414" stroke-width="0.4"/>` +
     dimensions(T, d.L, d.W, [null, null]) +
-    '</svg>';
+    scaleMark(box, d.n) + '</svg>';
 }
 
 /** False-colour scale: 27 steps, each label is the lower bound of its colour, width w mm. */
 export function colorScaleSvg(w = 165) {
-  const n = LEVELS.length, cw = w / n, h = 4, fs = 5.4 * PT;
-  let boxes = '', text = '';
+  // the labels alternate below and above the bar, so they can be larger; each stands at the
+  // lower bound of its colour, with a short tick
+  const n = LEVELS.length, cw = w / n, h = 4.5, fs = 7 * PT, top = fs + 2, H = top + h + fs + 2.4;
+  let boxes = '', text = '', ticks = '';
   for (let k = 0; k < n; k++) {
-    boxes += `<rect x="${r2(k * cw)}" y="0" width="${r2(cw + 0.02)}" height="${h}" fill="${COLORS_HEX[k]}"/>`;
-    const s = LEVELS[k].toLocaleString('ru-RU').replace(/\s/g, ' ');
-    text += `<text x="${r2(k * cw + 0.3)}" y="${r2(h + fs + 0.9)}">${esc(s)}</text>`;
+    boxes += `<rect x="${r2(k * cw)}" y="${r2(top)}" width="${r2(cw + 0.02)}" height="${h}" fill="${COLORS_HEX[k]}"/>`;
+    const s = LEVELS[k].toLocaleString('ru-RU').replace(/\s/g, '\u202f'), x = k * cw, below = k % 2 === 0;
+    text += `<text x="${r2(x)}" y="${r2(below ? top + h + fs + 1.2 : top - 1.4)}" text-anchor="${k === 0 ? 'start' : 'middle'}">${esc(s)}</text>`;
+    ticks += `<path d="M${r2(x)} ${r2(below ? top + h : top - 0.9)}V${r2(below ? top + h + 0.9 : top)}"/>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="scale" width="${r2(w)}mm" height="${r2(h + fs + 2)}mm" viewBox="0 0 ${r2(w)} ${r2(h + fs + 2)}">` +
-    `${boxes}<rect x="0" y="0" width="${r2(w)}" height="${h}" fill="none" stroke="#141414" stroke-width="0.12"/>` +
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="scale" width="${r2(w + 3)}mm" height="${r2(H)}mm" viewBox="0 0 ${r2(w + 3)} ${r2(H)}">` +
+    `${boxes}<rect x="0" y="${r2(top)}" width="${r2(w)}" height="${h}" fill="none" stroke="#141414" stroke-width="0.12"/>` +
+    `<g stroke="#141414" stroke-width="0.15">${ticks}</g>` +
     `<g fill="#141414" font-size="${r2(fs)}" style="font-variant-numeric:tabular-nums">${text}</g></svg>`;
+}
+
+/**
+ * Polar diagram of the luminous intensity, cd/klm: C0–C180 solid, C90–C270 dashed, rings with
+ * their values. `c` — lidcCurves(phot, R) of photui.js (paths around 0,0 with radius R).
+ */
+export function polarSvg(c, R, size = 46) {
+  const s = size / (2 * R + 14), lab = 6 * PT / s;
+  const ring = (k) => Math.round(c.max * (k + 1) / c.rings.length);
+  let text = '';
+  c.rings.forEach((r, k) => { text += `<text x="1.2" y="${r2(-r - 0.8)}">${ring(k)}</text>`; });
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="polar" width="${r2(size)}mm" height="${r2(size)}mm" viewBox="${-R - 7} ${-R - 7} ${2 * R + 14} ${2 * R + 14}">` +
+    `<g fill="none" stroke="#bdbdbd" stroke-width="${r2(0.15 / s)}">${c.rings.map((r) => `<circle r="${r2(r)}"/>`).join('')}<path d="${c.spokes}"/></g>` +
+    `<path d="${c.c90}" fill="none" stroke="#141414" stroke-width="${r2(0.22 / s)}" stroke-dasharray="${r2(1 / s)} ${r2(0.6 / s)}"/>` +
+    `<path d="${c.c0}" fill="none" stroke="#141414" stroke-width="${r2(0.35 / s)}"/>` +
+    `<g fill="#6b6b6b" font-size="${r2(lab)}" style="font-variant-numeric:tabular-nums">${text}</g></svg>`;
 }

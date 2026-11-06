@@ -89,7 +89,7 @@ export function parseProject(text) {
     const values = cleanValues(r.values);
     if (!file) values.phot = 'cosine';
     const n = r.norm;
-    const norm = n && typeof n.source === 'string' && Number.isFinite(n.En) ? { source: n.source, set: String(n.set ?? ''), ref: String(n.ref ?? ''), En: n.En, hwp: n.hwp, U0n: n.U0n ?? null } : null;
+    const norm = n && typeof n.source === 'string' && Number.isFinite(n.En) ? { source: n.source, name: typeof n.name === 'string' ? n.name : '', set: String(n.set ?? ''), ref: String(n.ref ?? ''), En: n.En, hwp: n.hwp, U0n: n.U0n ?? null } : null;
     rooms.push({ id: newId(), name: String(r.name ?? '').trim() || nextRoomName(rooms), values, file, norm });
   }
   const info = emptyInfo();
