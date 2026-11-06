@@ -33,7 +33,7 @@ export function summaryRows(v, file, norm = null) {
     ['Площадь пола', `${formatNumber(v.L * v.W, 2)}${NB}м²`],
     ['Отражение: потолок / стены / пол', `${formatNumber(v.rhoC, 2)} / ${formatNumber(v.rhoW, 2)} / ${formatNumber(v.rhoF, 2)}`],
     ['Норма', esc(normSource(norm))],
-    ['Целевая освещённость E<sub>н</sub>', `${formatNumber(v.En, 0)}${NB}лк`],
+    ['Целевая освещенность E<sub>н</sub>', `${formatNumber(v.En, 0)}${NB}лк`],
     ['Равномерность U<sub>0</sub>, не менее', v.U0n != null ? formatNumber(v.U0n, 2) : 'не нормируется'],
     ['Рабочая поверхность', `${planeName(v.hwp)}${v.hwp > 0 ? `, h<sub>р</sub>${NB}=${NB}${n2(v.hwp)}${NB}м` : ' (пол)'}`],
     ['Коэффициент эксплуатации MF', formatNumber(v.mf, 2)],
@@ -63,6 +63,15 @@ export function summaryRows(v, file, norm = null) {
   return { roomRows, lumRows };
 }
 
+/** The luminaire of a room for the list of luminaires. */
+export function lumOf(v, file) {
+  const t = file?.table ?? null;
+  return {
+    maker: t?.manufacturer?.trim() || '', article: t ? (t.catalog || t.name || '').trim() || 'Светильник' : 'Без файла (косинусная КСС)',
+    flux: v.flux, power: t ? v.power : null, cct: t ? v.cct : null, count: v.nx * v.ny,
+  };
+}
+
 /**
  * Prepares one room for the report: plans of the planes (values with MF, isolines), tables.
  * @param {{ id, name, values, file, params, key, result }} rd — page.roomData()
@@ -85,7 +94,7 @@ export function prepareRoom(rd) {
   });
   return {
     id: rd.id, name: rd.name?.trim() || 'Без названия', key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys,
-    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, ...summaryRows(v, rd.file, rd.norm), images: null,
+    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm), images: null,
   };
 }
 
@@ -148,7 +157,7 @@ export function initReport(o) {
     const out = [];
     try {
       for (let k = 0; k < list.length; k++) {
-        setBusy(list.length > 1 ? `Расчёт: ${list[k].name || 'помещение'} (${k + 1} из ${list.length})…` : 'Расчёт…');
+        setBusy(list.length > 1 ? `Расчет: ${list[k].name || 'помещение'} (${k + 1} из ${list.length})…` : 'Расчет…');
         const rd = await o.roomData(list[k]);
         if (my !== token) return;
         const room = prepareRoom(rd);
@@ -159,7 +168,7 @@ export function initReport(o) {
       }
     } catch (e) {
       console.error(e);
-      if (my === token) setBusy(`Не удалось подготовить отчёт: ${e.message}`, true);
+      if (my === token) setBusy(`Не удалось подготовить отчет: ${e.message}`, true);
       return;
     }
     rooms = out;
@@ -179,7 +188,7 @@ export function initReport(o) {
       return `<li><div class="rn ${cls}${on ? '' : ' off'}"><input type="checkbox" data-node="${node}" aria-label="${esc(label)}"${on ? ' checked' : ''}>` +
         `<button type="button" data-go="${node}">${label}</button><small data-page="${node}"></small></div>${children ? `<ul>${children}</ul>` : ''}</li>`;
     };
-    o.tree.innerHTML = item(nodeId.title, 'Титульный лист') + item(nodeId.toc, 'Оглавление') + rooms.map((r) =>
+    o.tree.innerHTML = item(nodeId.title, 'Титульный лист') + item(nodeId.toc, 'Оглавление') + item(nodeId.lumlist, 'Перечень светильников') + rooms.map((r) =>
       item(nodeId.room(r.id), esc(r.name), {
         cls: 'room',
         children: item(nodeId.summary(r.id), 'Сводная информация') +

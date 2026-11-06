@@ -53,6 +53,7 @@ export function initNormDialog(o) {
         }).join('')}</tbody></table></details>`;
     }).join('');
     o.note.textContent = set.note;
+    o.note.hidden = !set.note;
   }
 
   function choose(tr) {

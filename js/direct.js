@@ -1,6 +1,6 @@
 // Direct illuminance from point luminaires.
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Spec, section "Метод расчёта", item 1:
+// Spec, section "Метод расчета", item 1:
 //
 //   E_dir(x) = Σ_s I_s(C, γ) · cos ξ / d_s² ,   zero when cos ξ ≤ 0,
 //

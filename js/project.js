@@ -79,8 +79,8 @@ export function serializeProject(p) {
 export function parseProject(text) {
   let d;
   try { d = JSON.parse(text); } catch (e) { throw new Error('Файл не читается: это не файл проекта.'); }
-  if (!d || d.format !== FILE_FORMAT) throw new Error('Это не файл проекта расчёта освещения.');
-  if (!(d.version <= FILE_VERSION)) throw new Error(`Файл сохранён более новой версией программы (${d.version}).`);
+  if (!d || d.format !== FILE_FORMAT) throw new Error('Это не файл проекта расчета освещения.');
+  if (!(d.version <= FILE_VERSION)) throw new Error(`Файл сохранен более новой версией программы (${d.version}).`);
   if (!Array.isArray(d.rooms) || !d.rooms.length) throw new Error('В файле проекта нет помещений.');
   const rooms = [];
   for (const r of d.rooms) {

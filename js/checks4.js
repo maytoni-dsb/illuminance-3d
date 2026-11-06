@@ -52,7 +52,7 @@ export function stage4Checks(kernel, res, pairs = 300) {
   let rs = 0;
   for (const s of rowSums(kernel)) rs = Math.max(rs, Math.abs(s - 1));
   out.push({
-    name: 'Ядро совпадает с прямым расчётом F',
+    name: 'Ядро совпадает с прямым расчетом F',
     ok: worst <= 1e-9 && rs <= 1e-9,
     detail: `${n} случайных пар разных граней: наибольшее относительное отличие ${exp(worst)}; max |ΣF<sub>ij</sub> − 1| = ${exp(rs)} при N = ${room.N}`,
   });
@@ -68,14 +68,14 @@ export function stage4Checks(kernel, res, pairs = 300) {
   // 3. Sumpner's estimate
   const sp = res.sumpner;
   out.push({
-    name: 'Отражённая освещённость близка к оценке Сампнера',
+    name: 'Отраженная освещенность близка к оценке Сампнера',
     ok: Math.abs(sp.rel) <= 0.15,
     detail: `средняя по граням ${sp.mean.toFixed(1).replace('.', ',')} лк, оценка Φ₁ / (A·(1 − ρ<sub>ср</sub>)) = ${sp.estimate.toFixed(1).replace('.', ',')} лк, отличие ${Number.isFinite(sp.rel) ? pct(sp.rel) : '—'} (допуск 15 %)`,
   });
 
   // Solver convergence (informational, part of the method)
   out.push({
-    name: 'Решатель сошёлся',
+    name: 'Решатель сошелся',
     ok: res.converged,
     detail: `${res.iterations} итер. Гаусса–Зейделя с поправкой по граням; последнее изменение ${exp(res.change)} &lt; ε = ${exp(SOLVER_EPS)}`,
   });

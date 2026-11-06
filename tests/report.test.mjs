@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildReport, nodeId, typo, num, FRAME } from '../js/report.js';
+import { buildReport, nodeId, typo, num, FRAME, lumTypes } from '../js/report.js';
 import { planScale, planBox, roomPlanSvg, isolinePlanSvg, colorScaleSvg } from '../js/reportsvg.js';
 import { prepareRoom, summaryRows } from '../js/reportui.js';
 import { createCalc } from '../js/calc.js';
@@ -27,21 +27,35 @@ test('pages, contents and page numbers', () => {
   const b = buildReport({ info: { name: 'Проект' }, rooms });
   // title, contents, then per room: summary, one page per plane, illustrations
   const per = rooms.map((r) => 1 + r.planes.length + 1);
-  assert.equal(b.pages.length, 2 + per[0] + per[1]);
+  // title, contents, list of luminaires, then the rooms
+  assert.equal(b.pages.length, 3 + per[0] + per[1]);
+  assert.equal(b.toc[0].title, 'Перечень светильников');
   assert.equal(b.toc[0].page, 3);
-  assert.equal(b.toc[1].page, 3 + per[0]);
-  assert.deepEqual(b.toc[0].secs.map((s) => s.page), [3, 4, 3 + rooms[0].planes.length + 1]);
+  assert.equal(b.toc[1].page, 4);
+  assert.equal(b.toc[2].page, 4 + per[0]);
+  assert.deepEqual(b.toc[1].secs.map((s) => s.page), [4, 5, 4 + rooms[0].planes.length + 1]);
+  assert.ok(!/ё/i.test(b.html)); // «е» throughout
+  assert.equal((b.html.match(/class="rhl"/g) ?? []).length, b.pages.length - 1); // the logo on every page after the title
   for (let n = 1; n <= b.pages.length; n++) assert.ok(b.html.includes(`id="pg-${n}"`));
   assert.ok(b.html.includes('class="tt">Офис</span>'));
 });
 
 test('switched-off nodes leave the report and the numbers follow', () => {
-  const off = new Set([nodeId.toc, nodeId.summary('a'), nodeId.room('b'), nodeId.plane('a', rooms[0].planes[0].key)]);
+  const off = new Set([nodeId.toc, nodeId.lumlist, nodeId.summary('a'), nodeId.room('b'), nodeId.plane('a', rooms[0].planes[0].key)]);
   const b = buildReport({ info: {}, rooms, include: (id) => !off.has(id) });
   assert.equal(b.pages.length, 1 + (rooms[0].planes.length - 1) + 1);
   assert.ok(!b.html.includes('Холл'));
-  assert.ok(b.html.includes('Светотехнический расчёт'));
+  assert.ok(b.html.includes('Светотехнический расчет'));
   assert.ok(b.html.includes('class="roomhead"')); // the room heading moves to its first page
+});
+
+test('list of luminaires: one line per type with the rooms', () => {
+  const t = lumTypes(rooms);
+  assert.equal(t.length, 1);
+  assert.equal(t[0].count, rooms.reduce((a, r) => a + r.xs.length * r.ys.length, 0));
+  assert.deepEqual(t[0].rooms.map((x) => x.name), ['Офис', 'Холл']);
+  const b = buildReport({ info: {}, rooms });
+  assert.ok(b.html.includes('class="lum"') && b.html.includes('Всего'));
 });
 
 test('typography of user text', () => {

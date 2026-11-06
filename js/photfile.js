@@ -126,7 +126,7 @@ export function parseIes(text, fileName = '') {
     const v = next('сила света');
     cd[i] = v * factor;
   }
-  if (have > need) warnings.push(`После таблицы силы света в файле ещё ${have - need} чисел; они пропущены`);
+  if (have > need) warnings.push(`После таблицы силы света в файле еще ${have - need} чисел; они пропущены`);
   if (!(factor > 0)) fail('Множитель силы света должен быть больше нуля');
 
   checkAscending(V, 'вертикальные углы');
@@ -205,7 +205,7 @@ export function parseLdt(text, fileName = '') {
     if (!Number.isInteger(v)) fail(`Строка ${n} файла LDT (${what}): нужно целое число, а не ${v}`);
     return v;
   };
-  if (lines.length < 30) fail('Это не файл LDT (EULUMDAT): в нём меньше 30 строк');
+  if (lines.length < 30) fail('Это не файл LDT (EULUMDAT): в нем меньше 30 строк');
   let isym = int(3, 'симметрия Isym');
   const Mc = int(4, 'число плоскостей C');
   const Ng = int(6, 'число углов γ');
@@ -217,7 +217,7 @@ export function parseLdt(text, fileName = '') {
   const areaL = mm(16, 'длина светящей части'), areaB = mm(17, 'ширина светящей части');
   const areaH = [18, 19, 20, 21].map((n) => mm(n, 'высота светящей части'));
   const lorl = num(23, 'КПД светильника LORL');
-  const conv = num(24, 'коэффициент пересчёта силы света');
+  const conv = num(24, 'коэффициент пересчета силы света');
   const tilt = num(25, 'наклон при измерении');
   const nSets = int(26, 'число наборов ламп');
   if (!(nSets >= 1 && nSets <= 50)) fail(`Неверное число наборов ламп: ${nSets}`);
@@ -273,13 +273,13 @@ export function parseLdt(text, fileName = '') {
   const nStored = idx.length;
   const need = nStored * Ng, have = toks.length - q;
   if (have < need) fail(`В файле ${have} значений силы света вместо ${need} (${nStored} плоскостей × ${Ng} углов)`);
-  if (have > need) warnings.push(`После таблицы силы света в файле ещё ${have - need} чисел; они пропущены`);
+  if (have > need) warnings.push(`После таблицы силы света в файле еще ${have - need} чисел; они пропущены`);
   if (!(lampFlux > 0)) fail(`Поток ламп должен быть больше нуля, а не ${lampFlux}`);
   const scale = lampFlux / 1000;
   const raw = new Float64Array(need);
   for (let i = 0; i < need; i++) raw[i] = next('сила света') * scale;
   if (Math.abs(tilt) > 1e-9) warnings.push(`Светильник измерен с наклоном ${tilt}°; наклон не учитывается`);
-  if (Math.abs(conv - 1) > 1e-9) warnings.push(`Коэффициент пересчёта силы света ${conv} не применяется (значения в кд/клм)`);
+  if (Math.abs(conv - 1) > 1e-9) warnings.push(`Коэффициент пересчета силы света ${conv} не применяется (значения в кд/клм)`);
 
   checkAscending(Gd, 'углы γ');
   if (Gd[0] < -1e-9 || Gd[Ng - 1] > 180 + 1e-9) fail('Углы γ должны лежать в пределах 0…180°');

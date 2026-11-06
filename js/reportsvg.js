@@ -103,7 +103,7 @@ export function roomPlanSvg(d) {
   return `<svg xmlns="http://www.w3.org/2000/svg" class="plan" width="${r2(box.w)}mm" height="${r2(box.h)}mm" viewBox="0 0 ${r2(box.w)} ${r2(box.h)}">` +
     `<rect x="${r2(x0)}" y="${r2(y1)}" width="${r2(x1 - x0)}" height="${r2(y0 - y1)}" fill="#f7f7f5"/>` +
     `<g fill="none" stroke="#8a8a8a" stroke-width="0.13" stroke-dasharray="4 0.8 0.5 0.8">${axes}</g>` +
-    luminaires(T, d) +
+    luminaires(T, d, { fill: 'none', glow: 'none' }) +
     `<rect x="${r2(x0)}" y="${r2(y1)}" width="${r2(x1 - x0)}" height="${r2(y0 - y1)}" fill="none" stroke="#141414" stroke-width="0.5"/>` +
     dimensions(T, d.L, d.W, [chain([0, ...d.xs, d.L]), chain([0, ...d.ys, d.W])]) +
     '</svg>';

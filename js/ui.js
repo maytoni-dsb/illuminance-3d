@@ -175,7 +175,7 @@ export function initForm(root, onChange) {
     const fld = document.createElement('div');
     fld.className = 'fld';
     fld.id = `w-${p.key}`;
-    fld.innerHTML = `<label class="fl" for="in-${p.key}"><span class="t">${p.label}</span><i>${p.sym}</i></label>
+    fld.innerHTML = `<label class="fl" for="in-${p.key}"><span class="t">${p.label}</span></label>
       <div class="ibox"><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="Больше">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="Меньше">${DOWN}</button></span><input id="in-${p.key}" name="${p.key}" inputmode="decimal" autocomplete="off" spellcheck="false"
         value="${formatNumber(p.def)}"${p.placeholder ? ` placeholder="${p.placeholder}"` : ''} aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
       <span class="ferr" id="err-${p.key}" role="alert" hidden></span>`;

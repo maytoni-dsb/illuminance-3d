@@ -20,7 +20,7 @@ const TWO_PI = 2 * Math.PI;
 /** Photometry models available in the UI before stage 5. Labels are user-facing (Russian). */
 export const MODELS = Object.freeze({
   cosine: 'косинусная',
-  directIndirect: 'прямо-отражённая',
+  directIndirect: 'прямо-отраженная',
 });
 
 /**

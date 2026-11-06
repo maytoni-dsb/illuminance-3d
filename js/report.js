@@ -47,7 +47,7 @@ const MAYTONI = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 106 22" fi
 
 /** Node ids of the report tree (reportui.js) — also the anchors of the table of contents. */
 export const nodeId = {
-  title: 'title', toc: 'toc', room: (r) => `room:${r}`, summary: (r) => `room:${r}/summary`,
+  title: 'title', toc: 'toc', lumlist: 'lumlist', room: (r) => `room:${r}`, summary: (r) => `room:${r}/summary`,
   results: (r) => `room:${r}/results`, plane: (r, k) => `room:${r}/results/${k}`, ill: (r) => `room:${r}/ill`,
 };
 
@@ -64,7 +64,7 @@ export const nodeId = {
  */
 export function buildReport(d) {
   const inc = d.include ?? (() => true);
-  const project = d.info.name?.trim() || 'Светотехнический расчёт';
+  const project = d.info.name?.trim() || '';
   // ---- the page plan: what goes on every page ----
   const plan = [];
   if (inc(nodeId.title)) plan.push({ kind: 'title', node: nodeId.title });
@@ -79,9 +79,13 @@ export function buildReport(d) {
     if (secs.length) roomsIn.push({ r, secs });
   }
   // contents: rooms and their sections; a page holds about 30 lines
-  const tocLines = roomsIn.reduce((a, x) => a + 1 + x.secs.length, 0);
+  const tocLines = roomsIn.reduce((a, x) => a + 1 + x.secs.length, 0) + (inc(nodeId.lumlist) ? 1 : 0);
   const tocPages = inc(nodeId.toc) && roomsIn.length ? Math.max(1, Math.ceil(tocLines / 30)) : 0;
   for (let k = 0; k < tocPages; k++) plan.push({ kind: 'toc', node: nodeId.toc, part: k });
+  // list of luminaires of all rooms in the report: one line per type, 22 lines a page
+  const types = lumTypes(roomsIn.map((x) => x.r));
+  const lumPages = inc(nodeId.lumlist) && types.length ? Math.ceil(types.length / 22) : 0;
+  for (let k = 0; k < lumPages; k++) plan.push({ kind: 'lumlist', node: nodeId.lumlist, part: k });
   for (const { r, secs } of roomsIn) {
     let first = true;
     for (const s of secs) {
@@ -94,10 +98,11 @@ export function buildReport(d) {
   plan.forEach((p, k) => { p.n = k + 1; });
   const pageOf = (node) => plan.find((p) => p.node === node || p.pnode === node)?.n ?? null;
   const toc = roomsIn.map(({ r, secs }) => ({ node: nodeId.room(r.id), title: r.name, page: pageOf(secs[0].node), secs: secs.map((s) => ({ node: s.node, title: s.title, page: pageOf(s.node) })) }));
+  if (lumPages) toc.unshift({ node: nodeId.lumlist, title: 'Перечень светильников', page: pageOf(nodeId.lumlist), secs: [] });
 
   // ---- pages ----
   const date = (d.date ?? new Date()).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-  const head = (right) => `<div class="rh"><span>${typo(project)}</span><span>${typo(right)}</span></div>`;
+  const head = (mid) => `<div class="rh"><span class="rhp">${typo(project)}</span><span class="rhm">${typo(mid)}</span><span class="rhl">${MAYTONI}</span></div>`;
   const foot = (n) => `<div class="folio">${n}</div>`;
   const roomHead = (r) => `<div class="roomhead"><div class="kick">Помещение</div><h1>${typo(r.name)}</h1>
     <div class="roomsub">${num(r.L, 2)}${NB}×${NB}${num(r.W, 2)}${NB}×${NB}${num(r.H, 2)}${NB}м · ${r.xs.length * r.ys.length}${NB}${plural(r.xs.length * r.ys.length, 'светильник', 'светильника', 'светильников')}</div></div>`;
@@ -113,7 +118,7 @@ export function buildReport(d) {
       ].filter(([, v]) => v);
       return `<section class="page title" id="${id}" data-node="${p.node}">
         <div class="logo">${MAYTONI}</div>
-        <div class="tblock"><div class="kick">Светотехнический расчёт</div>
+        <div class="tblock"><div class="kick">Светотехнический расчет</div>
           <h1 class="pname">${typo(d.info.name?.trim() || 'Проект без названия')}</h1>
           ${d.info.description?.trim() ? `<p class="pdesc">${typo(d.info.description).replace(/\n+/g, '<br>')}</p>` : ''}</div>
         <dl class="tmeta">${meta.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
@@ -132,6 +137,19 @@ export function buildReport(d) {
       }
       return `<section class="page" id="${id}" data-node="${p.node}">${head('Содержание')}<div class="frame">
         ${p.part === 0 ? '<h2 class="toch">Содержание</h2>' : ''}${body}</div>${foot(p.n)}</section>`;
+    }
+    if (p.kind === 'lumlist') {
+      const part = types.slice(p.part * 22, p.part * 22 + 22);
+      const totalN = types.reduce((a, t) => a + t.count, 0), totalP = types.reduce((a, t) => a + (t.power ? t.power * t.count : 0), 0);
+      const rows = part.map((t, k) => `<tr><td class="c">${p.part * 22 + k + 1}</td><td><b>${typo(t.article)}</b>${t.maker ? `<br><span>${typo(t.maker)}</span>` : ''}</td>
+        <td class="n">${t.flux ? num(t.flux) : '—'}</td><td class="n">${t.power ? num(t.power, 1) : '—'}</td><td class="n">${t.cct ? num(t.cct) : '—'}</td>
+        <td>${t.rooms.map((x) => `${typo(x.name)}${NB}— ${x.count}`).join('<br>')}</td><td class="n"><b>${t.count}</b></td></tr>`).join('');
+      const last = p.part === lumPages - 1;
+      return `<section class="page" id="${id}" data-node="${p.node}">${head('Перечень светильников')}<div class="frame">
+        ${p.part === 0 ? '<h2 class="toch">Перечень светильников</h2>' : ''}
+        <table class="lum"><thead><tr><th class="c">Поз.</th><th>Светильник</th><th class="n">Φ, лм</th><th class="n">P, Вт</th><th class="n">T<sub>ц</sub>, K</th><th>Помещения</th><th class="n">Кол-во, шт.</th></tr></thead>
+        <tbody>${rows}</tbody>${last ? `<tfoot><tr><td></td><td colspan="5">Всего${totalP ? `; установленная мощность ${num(totalP, totalP < 100 ? 1 : 0)}${NB}Вт` : ''}</td><td class="n"><b>${totalN}</b></td></tr></tfoot>` : ''}</table>
+      </div>${foot(p.n)}</section>`;
     }
     const r = p.r;
     const top = p.head ? roomHead(r) : '';
@@ -171,10 +189,28 @@ export function buildReport(d) {
 
   const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(project)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap">
 <style>${CSS}</style></head><body>${pages.join('\n')}
-<script>${FIT}</script></body></html>`;
+<script>${FIT}</script></body></html>`.replace(/ё/g, 'е').replace(/Ё/g, 'Е'); // «е» throughout the report
   return { html, pages: plan.map((p) => ({ node: p.node, pnode: p.pnode ?? null, n: p.n })), toc };
+}
+
+/**
+ * Types of luminaires of the rooms: one entry per manufacturer, article, flux, power and colour
+ * temperature, with the count per room.
+ */
+export function lumTypes(rooms) {
+  const map = new Map();
+  for (const r of rooms) {
+    const l = r.lum;
+    if (!l) continue;
+    const key = [l.maker, l.article, l.flux, l.power, l.cct].join('|');
+    if (!map.has(key)) map.set(key, { ...l, count: 0, rooms: [] });
+    const t = map.get(key);
+    t.count += l.count;
+    t.rooms.push({ name: r.name, count: l.count });
+  }
+  return [...map.values()];
 }
 
 function plural(n, one, few, many) {
@@ -203,7 +239,7 @@ const CSS = `
 @page{size:A4;margin:0}
 *{box-sizing:border-box}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;color:#141414;font-family:"Report Sans","Suisse Intl","Suisse Int'l",Inter,"Helvetica Neue",Arial,sans-serif;
+body{margin:0;color:#141414;font-family:"Report Sans","Suisse Intl","Suisse Int'l",Jost,"Helvetica Neue",Arial,sans-serif;
   font-size:9.5pt;line-height:1.45;font-kerning:normal;font-feature-settings:"kern","liga";hyphens:auto;-webkit-hyphens:auto;
   hyphenate-limit-chars:6 3 3;text-rendering:optimizeLegibility}
 .page{position:relative;width:210mm;height:297mm;overflow:hidden;background:#fff;break-after:page;page-break-after:always}
@@ -211,9 +247,12 @@ body{margin:0;color:#141414;font-family:"Report Sans","Suisse Intl","Suisse Int'
 @media screen{body{background:#dcdcdc;padding:24px 0}.page{margin:0 auto 24px;box-shadow:0 1px 3px rgba(0,0,0,.12),0 8px 28px rgba(0,0,0,.10)}}
 @media print{body{zoom:1!important;background:none;padding:0}.page{margin:0;box-shadow:none}}
 .frame{position:absolute;left:${PAGE.left}mm;right:${PAGE.right}mm;top:${PAGE.top}mm;bottom:${PAGE.bottom}mm}
-.rh{position:absolute;left:${PAGE.left}mm;right:${PAGE.right}mm;top:11mm;display:flex;justify-content:space-between;gap:10mm;
+.rh{position:absolute;left:${PAGE.left}mm;right:${PAGE.right}mm;top:9mm;height:9mm;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6mm;align-items:center;
   font-size:7pt;letter-spacing:.06em;text-transform:uppercase;color:#7a7a7a;font-weight:500}
-.rh span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48%}
+.rh .rhp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;line-height:1.3;max-width:62mm}
+.rh .rhm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62mm;text-align:center;color:#141414}
+.rh .rhl{justify-self:end;width:22mm;color:#141414;display:block}
+.rh .rhl svg{display:block;width:100%;height:auto}
 .folio{position:absolute;right:${PAGE.right}mm;bottom:11mm;font-size:8pt;color:#141414;font-variant-numeric:tabular-nums;font-weight:500}
 .kick{font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;color:#7a7a7a;font-weight:500}
 h1,h2,h3{font-weight:600;margin:0;hyphens:manual;-webkit-hyphens:manual}
@@ -224,10 +263,9 @@ h2{font-size:13pt;line-height:1.2;margin:0 0 6mm;padding-bottom:2.2mm;border-bot
 h3{font-size:9.5pt;line-height:1.3;margin:0 0 2.5mm}
 h3.plh{font-size:11pt;margin:0 0 4mm;display:flex;align-items:baseline;gap:3mm}
 h3.plh span{font-size:8.5pt;font-weight:400;color:#6b6b6b}
-.fig{margin:0 0 6mm}
+.fig{margin:0 0 6mm;display:flex;flex-direction:column;align-items:center}
 .fig svg,.fig img{display:block}
-.fig figcaption{font-size:7.5pt;line-height:1.4;color:#6b6b6b;margin-top:2.2mm;max-width:135mm}
-.fig.plan svg{margin-left:-2mm}
+.fig figcaption{font-size:7.5pt;line-height:1.4;color:#6b6b6b;margin-top:2.2mm;max-width:135mm;text-align:center}
 .fig.ill{margin-bottom:5mm}
 .fig.ill img{object-fit:cover;background:#fff}
 .fig.scale{margin:2mm 0 0}
@@ -245,7 +283,7 @@ table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 .verdict.bad{border-left-color:#eb3d00}
 sub{font-size:.72em;line-height:0;vertical-align:-.25em}
 /* title page */
-.title .logo{position:absolute;left:${PAGE.left}mm;top:22mm;width:34mm;color:#141414}
+.title .logo{position:absolute;right:${PAGE.right}mm;top:14mm;width:34mm;color:#141414}
 .title .logo svg{display:block;width:100%;height:auto}
 .title .tblock{position:absolute;left:${PAGE.left}mm;right:30mm;top:96mm}
 .title .pname{font-size:32pt;line-height:1.06;letter-spacing:-.018em;margin:5mm 0 7mm;font-weight:600}
@@ -255,6 +293,14 @@ sub{font-size:.72em;line-height:0;vertical-align:-.25em}
 .title .tmeta dt{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:#7a7a7a;margin:0 0 1.6mm;font-weight:500}
 .title .tmeta dd{margin:0;font-size:9pt;line-height:1.45}
 .title .tfoot{position:absolute;left:${PAGE.left}mm;right:60mm;bottom:20mm;font-size:7pt;line-height:1.45;color:#7a7a7a}
+/* list of luminaires */
+.lum th{font-size:7.5pt;font-weight:500;color:#555;text-align:left;padding:0 3mm 1.6mm 0;border-bottom:.5pt solid #141414;vertical-align:bottom}
+.lum td{font-size:8.5pt;padding:2mm 3mm 2mm 0;border-bottom:.35pt solid #cfcfcf;vertical-align:top;line-height:1.35}
+.lum td span{color:#6b6b6b;font-size:7.5pt}
+.lum .n{text-align:right;white-space:nowrap}
+.lum .c{width:9mm;color:#6b6b6b}
+.lum tfoot td{border-bottom:0;border-top:.5pt solid #141414;font-weight:500}
+.lum th:last-child,.lum td:last-child{padding-right:0}
 /* contents */
 .toch{border:0;padding:0;font-size:22pt;letter-spacing:-.01em;margin:0 0 12mm}
 .toc{list-style:none;margin:0 0 5.5mm;padding:0}

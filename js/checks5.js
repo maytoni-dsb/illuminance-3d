@@ -32,7 +32,7 @@ export function stage5Checks(room, lums, phot, E, table) {
     out.push({
       name: 'Поток по КСС совпадает с паспортным (1 %)',
       ok: Math.abs(dev) <= 0.01,
-      detail: `интеграл КСС ${lm(phot.tableFlux)}, в файле ${lm(table.ratedFlux)}, отличие ${pct(dev)}` + (phot.scale !== 1 ? `; в расчёте поток ${lm(phot.flux)} (КСС × ${phot.scale.toFixed(4).replace('.', ',')})` : ''),
+      detail: `интеграл КСС ${lm(phot.tableFlux)}, в файле ${lm(table.ratedFlux)}, отличие ${pct(dev)}` + (phot.scale !== 1 ? `; в расчете поток ${lm(phot.flux)} (КСС × ${phot.scale.toFixed(4).replace('.', ',')})` : ''),
     });
   } else {
     out.push({
@@ -63,7 +63,7 @@ export function stage5Checks(room, lums, phot, E, table) {
   out.push({
     name: 'КСС проходит через табличные значения',
     ok: worst <= 1e-12,
-    detail: `${table.C.length} плоскостей в файле, ${planes.length} после развёртки (симметрия: ${SYM[table.sym]}), ${nG} углов γ: наибольшее отличие ${exp(worst)} от I<sub>max</sub>`,
+    detail: `${table.C.length} плоскостей в файле, ${planes.length} после развертки (симметрия: ${SYM[table.sym]}), ${nG} углов γ: наибольшее отличие ${exp(worst)} от I<sub>max</sub>`,
   });
 
   // 3. The closed-form flux of the interpolant against Gauss quadrature over every cell

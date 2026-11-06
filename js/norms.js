@@ -9,7 +9,7 @@ export const NORM_SETS = Object.freeze([
   {
     id: 'sp52', title: 'СП 52.13330.2016', table: 'таблица Л.1', sections: SP52, refLabel: '№',
     source: (ref) => `СП 52.13330.2016 табл. Л.1: № ${ref}`,
-    note: 'Ē — средняя освещённость рабочей поверхности при общем освещении; U₀ — равномерность, не менее.',
+    note: '',
   },
   {
     id: 'en12464', title: 'EN 12464-1:2021', table: 'tables 9–61', sections: EN12464, refLabel: 'Ref. no.',

@@ -1,7 +1,7 @@
 // The whole calculation for one set of inputs: kernel (cached per geometry), direct component,
 // solver and the stage checks. Pure module: no DOM and no Three.js; the Web Worker (worker.js)
 // runs it in the browser, the tests run it in Node.
-// Spec, section "Метод расчёта", item 5 (recalculation):
+// Spec, section "Метод расчета", item 5 (recalculation):
 //   room size or step changed  → kernel, then E_dir and the solver;
 //   luminaires or ρ changed    → E_dir (if the luminaires changed) and the solver only.
 // The maintenance factor is not an input here: results are initial values E₀, MF is applied by

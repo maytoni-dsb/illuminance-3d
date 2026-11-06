@@ -1,6 +1,6 @@
 // Element-to-element form-factor kernel.
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Spec, section "Метод расчёта", item 3:
+// Spec, section "Метод расчета", item 3:
 //
 // The form factor between two elements depends only on their relative position, and all elements
 // along one room edge have the same size (geometry.js divides every edge once for all faces). So

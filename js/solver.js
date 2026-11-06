@@ -1,6 +1,6 @@
 // Radiosity solver: Gauss–Seidel gathering with a face-level coarse correction.
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Spec, section "Метод расчёта", item 4:
+// Spec, section "Метод расчета", item 4:
 //
 //   E_ind,i = Σ_j F_ij · M_j,   M_j = ρ_j · (E_dir,j + E_ind,j)
 //

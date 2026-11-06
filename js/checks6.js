@@ -85,8 +85,8 @@ export function stage6Checks(plan, sets, mf, stats) {
     name: 'Изолинии проходят по границам цветов',
     ok: a.vertices > 0 ? a.onLevel === a.vertices && a.colorsDiffer === a.vertices && a.maxMid < 0.05 : true,
     detail: a.vertices > 0
-      ? `${a.vertices.toLocaleString('ru-RU')} вершин на рёбрах ячеек: на уровне — ${a.onLevel.toLocaleString('ru-RU')}, цвет по обе стороны разный — ${a.colorsDiffer.toLocaleString('ru-RU')}; середины отрезков отстоят от границы цвета не больше ${exp(a.maxMid)} ячейки`
-      : 'на плане нет изолиний (освещённость в пределах одного уровня шкалы)',
+      ? `${a.vertices.toLocaleString('ru-RU')} вершин на ребрах ячеек: на уровне — ${a.onLevel.toLocaleString('ru-RU')}, цвет по обе стороны разный — ${a.colorsDiffer.toLocaleString('ru-RU')}; середины отрезков отстоят от границы цвета не больше ${exp(a.maxMid)} ячейки`
+      : 'на плане нет изолиний (освещенность в пределах одного уровня шкалы)',
   });
 
   const m = nodeMean(plan), dev = m / stats.avg - 1;
@@ -105,9 +105,9 @@ export function stage6Checks(plan, sets, mf, stats) {
     if (g.E[k] > 0) worst = Math.max(worst, Math.abs(r - g.Eref[k]) / g.E[k]);
   }
   out.push({
-    name: 'Отражённая между вершинами сетки: интерполяция против точного расчёта (1 %)',
+    name: 'Отраженная между вершинами сетки: интерполяция против точного расчета (1 %)',
     ok: worst <= 0.01,
-    detail: `в ${g.E.length} точках сетки ГОСТ наибольшее отличие ${pct(worst)} от полной освещённости`,
+    detail: `в ${g.E.length} точках сетки ГОСТ наибольшее отличие ${pct(worst)} от полной освещенности`,
   });
   return out;
 }

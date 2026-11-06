@@ -1,6 +1,6 @@
 // Point-to-polygon form factor (configuration factor from a differential area to a polygon).
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Spec, section "Метод расчёта", item 2 (Lambert's contour integral, exact):
+// Spec, section "Метод расчета", item 2 (Lambert's contour integral, exact):
 //
 //   F(x → A) = 1/(2π) · | Σ_k γ_k · n_x · (r_k × r_{k+1}) / |r_k × r_{k+1}| |
 //
