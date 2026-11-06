@@ -66,6 +66,17 @@ Closed forms from Howell's catalogue (B-3, C-11, C-14) are used as references.
 MATLAB reference values (`tests/fixtures/`, 528 point and 500 rectangle cases) agree within
 1.1e-16 and 3.5e-18 absolute (relative 1.7e-13 for rectangle → rectangle).
 
+Stage 7 — interface and report:
+- speed: mirror symmetry of the regular grid (`js/direct.js`: one luminaire per orbit when the
+  photometry turned by ψ is invariant under x → L − x and/or y → W − y; images by permutation) and a
+  precomputed interpolation table (`js/photometry.js`); 10 × 10 × 3 m, 6 × 6 luminaires: 0.5–0.6 s;
+- three stages in the top bar (project, rooms, results), project file `.lcalc.json`
+  (`js/project.js`), room list, split pill of the work plane, decimal comma, hot keys
+  F1–F10 and Ctrl+S (`js/hotkeys.js`), help texts (`js/help.js`);
+- report (`js/report.js`, `js/reportsvg.js`, `js/reportui.js`): A4 pages laid out by the program,
+  vector plans to a drafting scale, 3D illustrations at 300 dpi (`view3d.snapshot`), PDF through the
+  browser's print dialog. Font: Suisse Int'l if installed or put into `fonts/` (see `fonts/README.md`).
+
 ## MATLAB reference values
 
 `matlab/stage2_reference.m` (MATLAB R2025b) writes `matlab/stage2_reference.txt` (point → rectangle)
