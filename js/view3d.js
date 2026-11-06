@@ -430,7 +430,8 @@ export function createView(container, opts = {}) {
   }
 
   /** Overlay sizes from the page (buttons on top, status and legend below), CSS px. */
-  const insets = () => ({ top: 56, bottom: 24, side: 24, ...(opts.insets?.() ?? {}) });
+  let snapping = false;     // rendering a snapshot: no overlays to keep clear of
+  const insets = () => (snapping ? { top: 0, bottom: 0, side: 0 } : { top: 56, bottom: 24, side: 24, ...(opts.insets?.() ?? {}) });
   /** Plan fit keeps clear of the status row and the axis indicator as well. */
   const planInsets = () => { const i = insets(); return { ...i, bottom: i.planBottom ?? i.bottom + 40, side: i.planSide ?? i.side }; };
 
@@ -938,9 +939,63 @@ export function createView(container, opts = {}) {
     return res;
   }
 
+  /**
+   * The initial 3D view of the room rendered at w × h device pixels on white, without the axis
+   * indicator (report illustrations, stage 7). The room is framed tightly: its 8 corners fill
+   * `fill` of the frame and are centred. The view on the page is restored afterwards.
+   * @param {{ mode?: 'real'|'false'|'neutral', type?: string, quality?: number, fill?: number }} o
+   * @returns {string|null} data URL
+   */
+  function snapshot(w, h, o = {}) {
+    if (!room) return null;
+    const saved = { orbit: orbit && JSON.parse(JSON.stringify(orbit)), plan, viewW, viewH, pr: renderer.getPixelRatio(),
+      touched: viewTouched, mode: colorMode, near: camera.near, far: camera.far };
+    snapping = true; plan = null;
+    if (o.mode) { colorMode = o.mode; applyMaterials(); }
+    renderer.setPixelRatio(1); renderer.setSize(w, h, false);
+    viewW = w; viewH = h; camera.aspect = w / h;
+    fitCamera(room, false);
+    const fill = o.fill ?? 0.9;
+    const corners = [];
+    for (const x of [0, room.L]) for (const y of [0, room.W]) for (const z of [0, room.H]) corners.push(toThree([x, y, z]));
+    let cx = 0, cy = 0;
+    for (let it = 0; it < 6; it++) {
+      orbit.shiftX = 0; orbit.shiftY = 0;
+      applyCamera(false);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const c of corners) {
+        const q = v3(c).project(camera);
+        x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y);
+      }
+      cx = (x0 + x1) / 2; cy = (y0 + y1) / 2;
+      const ext = Math.max((x1 - x0) / 2, (y1 - y0) / 2);
+      if (Math.abs(ext / fill - 1) < 1e-3) break;
+      orbit.distance *= ext / fill;
+    }
+    orbit.shiftX = -cx * w / 2; orbit.shiftY = cy * h / 2;
+    applyCamera(true);
+    updateVisibility();
+    renderer.setClearColor(0xffffff, 1);
+    renderer.setViewport(0, 0, w, h);
+    renderer.render(scene, camera);
+    const url = renderer.domElement.toDataURL(o.type ?? 'image/png', o.quality ?? 0.92);
+    // back to the page's view
+    renderer.setClearColor(0x000000, 0);
+    snapping = false;
+    renderer.setPixelRatio(saved.pr); renderer.setSize(saved.viewW, saved.viewH, false);
+    viewW = saved.viewW; viewH = saved.viewH; camera.aspect = viewW / viewH;
+    camera.near = saved.near; camera.far = saved.far;
+    orbit = saved.orbit; plan = saved.plan; viewTouched = saved.touched;
+    if (o.mode) { colorMode = saved.mode; applyMaterials(); }
+    if (orbit) applyCamera();
+    requestRender();
+    return url;
+  }
+
   return {
     setRoom,
     selfCheck,
+    snapshot,
     setValues,
     setLuminaires,
     setLuminance,

@@ -75,6 +75,9 @@ export function setValues(t, tableFlux, set = 0) {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** Simple hash of the text, so the calculation can tell files apart without comparing tables. */
+/** Key of a file for the calculation caches (the same for the page and the report). */
+export const fileKey = (name, text) => `${name}|${text.length}|${hash(text)}`;
+
 function hash(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -96,7 +99,7 @@ function polarSvg(phot) {
  *   called with the file (and the values of its lamp set for the form) or null when removed;
  *   reason: 'load' (a new file), 'restore' (the file kept in this browser), 'set' (another lamp set)
  */
-export function initPhotFile(el, onChange) {
+export function initPhotFile(el, onChange, opts = {}) {
   el.zone.innerHTML = `
     <div class="pfdrop" role="button" tabindex="0" aria-label="Выбрать файл IES или LDT">
       <input type="file" accept=".ies,.ldt,.IES,.LDT" hidden>
@@ -141,14 +144,15 @@ export function initPhotFile(el, onChange) {
     fileRow.hidden = false;
   }
 
-  function load(text, name, { store = true, reason = 'load' } = {}) {
+  function load(text, name, { store = true, reason = 'load', set = 0 } = {}) {
     try {
       const table = parsePhotometryFile(text, name);
       const phot = createPhotometry({ type: 'file', table });
-      current = { table, phot, shape: luminaireShape(table), key: `${name}|${text.length}|${hash(text)}`, name, set: 0, values: setValues(table, phot.tableFlux, 0), reason };
+      const k = Number.isInteger(set) && set > 0 && set < (table.lampSets?.length ?? 0) ? set : 0;
+      current = { table, phot, shape: luminaireShape(table), key: fileKey(name, text), name, text, set: k, values: setValues(table, phot.tableFlux, k), reason };
       err.hidden = true;
       show(current);
-      if (store) { try { localStorage.setItem(STORE_KEY, JSON.stringify({ name, text })); } catch (e) { /* full or blocked */ } }
+      if (store && opts.restore !== false) { try { localStorage.setItem(STORE_KEY, JSON.stringify({ name, text })); } catch (e) { /* full or blocked */ } }
       onChange(current);
     } catch (e) {
       err.textContent = `${name}: ${e.message}`;
@@ -156,12 +160,12 @@ export function initPhotFile(el, onChange) {
       console.error(e);
     }
   }
-  function clear() {
+  function clear({ reason = 'clear' } = {}) {
     current = null;
     fileRow.hidden = true; err.hidden = true;
-    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* storage unavailable */ }
+    if (opts.restore !== false) { try { localStorage.removeItem(STORE_KEY); } catch (e) { /* storage unavailable */ } }
     showCosine();
-    onChange(null);
+    onChange(null, reason);
   }
 
   async function readFile(file) {
@@ -183,8 +187,9 @@ export function initPhotFile(el, onChange) {
   }
 
   showCosine();
-  // the last file of this browser (a convenience: works without it)
-  try {
+  // the last file of this browser (a convenience: works without it); off when the page keeps the
+  // files itself (the project, stage 7)
+  if (opts.restore !== false) try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (saved?.text) load(saved.text, saved.name, { store: false, reason: 'restore' });
   } catch (e) { /* storage unavailable */ }

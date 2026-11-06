@@ -23,18 +23,23 @@
       "./js/estimate.js": "./js/estimate.js?v=8262379e",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
-      "./js/help.js": "./js/help.js?v=4b3f2854",
+      "./js/help.js": "./js/help.js?v=175ff58e",
+      "./js/hotkeys.js": "./js/hotkeys.js?v=e9422ea3",
       "./js/isolines.js": "./js/isolines.js?v=ea7b03a7",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
       "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
       "./js/photfile.js": "./js/photfile.js?v=a8a26e0c",
       "./js/photometry.js": "./js/photometry.js?v=80ac0f3a",
-      "./js/photui.js": "./js/photui.js?v=8fe44dbd",
+      "./js/photui.js": "./js/photui.js?v=b0f6c406",
       "./js/planview.js": "./js/planview.js?v=54dee309",
+      "./js/project.js": "./js/project.js?v=db256ab7",
+      "./js/report.js": "./js/report.js?v=77fc365a",
+      "./js/reportsvg.js": "./js/reportsvg.js?v=f5ddfca9",
+      "./js/reportui.js": "./js/reportui.js?v=46a48bac",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=87fc7013",
-      "./js/view3d.js": "./js/view3d.js?v=0b4e2741",
+      "./js/ui.js": "./js/ui.js?v=b7637a85",
+      "./js/view3d.js": "./js/view3d.js?v=67dfcc65",
       "./js/worker.js": "./js/worker.js?v=bf308824",
       "./js/workplane.js": "./js/workplane.js?v=6db5b51d"
     }
@@ -309,6 +314,109 @@
     .vbtn[data-tip]:hover::after,.vbtn[data-tip]:focus-visible::after{opacity:1;transform:none}
     @media (hover:none){ .vbtn[data-tip]::after{display:none} }
 
+
+    /* stages in the top bar (as in Maytoni Track Configurator): number, name; the current one filled */
+    .stnav{display:flex;align-items:center;gap:8px;margin:0 auto}
+    .gsst{position:relative;display:flex;align-items:center;gap:10px;height:38px;padding:0 16px 0 6px;border-radius:999px;border:0;
+      background:transparent;color:var(--muted);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+    .gsst .gsn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;
+      align-items:center;justify-content:center;font-size:13px;flex:none}
+    .gsst.cur{background:var(--sel);color:var(--on-sel);font-weight:600}
+    .gsst.cur .gsn{background:var(--accent);border-color:var(--accent);color:#fff}
+    .gsst.done{color:var(--ink)}
+    .gsst.done .gsn{background:var(--sel);border-color:var(--sel);color:var(--on-sel)}
+    .gsst:not(.cur):hover{background:var(--soft);color:var(--ink)}
+    .gsst .gsc{display:inline-flex;margin-left:-4px;opacity:.75}
+    .gsst .gsrn{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+    .gsln{width:28px;height:1px;background:var(--line);flex:none}
+    .gsln.on{background:var(--ink)}
+    .stroomw{position:relative}
+    .stroomw .vmenu{left:0;right:auto;min-width:240px}
+    .vmenu .vmsep{height:1px;background:var(--rule);margin:6px 2px}
+    .vmenu button.vmadd{color:var(--accent);font-weight:600}
+    .sbtools{display:flex;align-items:center;gap:8px;flex:none}
+    .sbbtn{height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);
+      font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
+    .sbbtn:hover{border-color:var(--ink)}
+    .sbbtn.round{width:36px;padding:0;justify-content:center;font-size:14px;font-weight:600}
+    .sbbtn.round[aria-expanded="true"]{border-color:var(--ink)}
+    /* tooltips with the hot key: data-tip and data-key on buttons of the bar and the view */
+    [data-tip]{position:relative}
+    .tipr[data-tip]::after,.tipl[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);white-space:nowrap;
+      background:var(--sel);color:var(--on-sel);font-size:12px;font-weight:400;line-height:1;padding:6px 9px;border-radius:6px;
+      pointer-events:none;opacity:0;transform:translateY(-2px);transition:opacity .08s,transform .08s;z-index:60;letter-spacing:0}
+    .tipr[data-tip]::after{right:0} .tipl[data-tip]::after{left:0}
+    [data-tip][data-key]::after{content:attr(data-tip) "\2003" attr(data-key);white-space:pre}
+    .tipr[data-tip]:hover::after,.tipr[data-tip]:focus-visible::after,.tipl[data-tip]:hover::after,.tipl[data-tip]:focus-visible::after{opacity:1;transform:none}
+    @media (hover:none){ .tipr[data-tip]::after,.tipl[data-tip]::after{display:none} }
+    .stage[hidden]{display:none!important}
+
+    /* stage 1: project */
+    .pstage{flex:1 1 auto;min-height:0;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto}
+    .pcard{width:min(680px,100%);display:flex;flex-direction:column}
+    .pbody{padding:30px 36px 8px;display:flex;flex-direction:column;gap:18px}
+    .gskick{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+    .gshd{display:flex;flex-direction:column;gap:6px}
+    .gshd h1{margin:0;font-size:28px;font-weight:600;line-height:1.15}
+    .gshd p{margin:0;font-size:14px;color:var(--ink3);line-height:1.45}
+    .tfld{display:flex;flex-direction:column;gap:5px}
+    .tfld label{font-size:12px;color:var(--ink3)}
+    .tfld input,.tfld textarea{width:100%;border:1px solid var(--rule);border-radius:5px;padding:7px 10px;font-size:14px;background:var(--card);color:var(--ink)}
+    .tfld input{height:36px}
+    .tfld textarea{min-height:92px;resize:vertical;line-height:1.45;font-family:inherit}
+    .tfld input:hover,.tfld textarea:hover{border-color:var(--line)}
+    .tfld input:focus,.tfld textarea:focus{outline:none;border-color:var(--accent)}
+    .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+    .tgrid .wide{grid-column:1/-1}
+    .gsfoot{display:flex;align-items:center;gap:12px;padding:16px 36px 22px;border-top:1px solid var(--rule);margin-top:18px}
+    .gsgo{height:44px;padding:0 22px;border-radius:999px;border:0;background:var(--accent);color:var(--on-accent);
+      font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:10px;cursor:pointer;margin-left:auto;white-space:nowrap}
+    .gsgo:hover{background:var(--accent-hov)}
+    .gsgo:disabled{background:var(--soft);color:var(--muted);cursor:default}
+    .gssec{height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);
+      font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+    .gssec:hover{border-color:var(--ink)}
+    .gsmsg{font-size:12.5px;color:var(--ink3)} .gsmsg.err{color:var(--err)}
+
+    /* stage 2: name of the room, buttons at the bottom of the results */
+    .fld.text input{padding:0 10px}
+    .rfoot{margin-top:auto;position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--rule);
+      padding:14px 20px;display:flex;gap:8px;align-items:center}
+    .rfoot .gsgo,.rfoot .gssec{height:38px;font-size:13px;padding:0 16px}
+    .rfoot .gssec{flex:1 1 auto;justify-content:center}
+
+    /* split pill of the view: show / hide the plane | choose it */
+    .vsplit{display:flex;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--card)}
+    .vsplit button{height:100%;border:0;background:none;color:var(--ink2);display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+      font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .vsplit .vsl{padding:0 9px 0 11px;border-radius:999px 0 0 999px}
+    .vsplit .vsr{padding:0 10px 0 7px;border-radius:0 999px 999px 0;border-left:1px solid var(--rule)}
+    .vsplit button:hover{color:var(--ink);background:var(--soft)}
+    .vsplit .vsl[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);font-weight:600}
+    .vsplit .vsl:disabled{color:var(--muted);cursor:default;background:none}
+    .vsplit:hover{border-color:var(--ink)}
+
+    /* stage 3: report tree | preview */
+    .rstage{flex:1 1 auto;min-height:0;display:grid;gap:16px;grid-template-columns:minmax(0,340px) minmax(0,1fr)}
+    .rtreecard{display:flex;flex-direction:column;min-height:0}
+    .rtreebody{flex:1 1 auto;min-height:0;overflow-y:auto;padding:22px 22px 10px}
+    .rtree{list-style:none;margin:10px 0 0;padding:0;font-size:13px}
+    .rtree ul{list-style:none;margin:0;padding:0 0 0 22px}
+    .rtree li{margin:0}
+    .rtree .rn{display:flex;align-items:center;gap:8px;min-height:30px;border-radius:6px;padding:0 6px}
+    .rtree .rn:hover{background:var(--soft)}
+    .rtree .rn input{accent-color:var(--accent);margin:0;flex:none}
+    .rtree .rn button{border:0;background:none;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;flex:1;min-width:0;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .rtree .rn.room button{font-weight:600}
+    .rtree .rn small{color:var(--ink3);font-variant-numeric:tabular-nums}
+    .rtree .rn.off button{color:var(--muted)}
+    .rprev{position:relative;overflow:hidden;background:var(--soft)}
+    .rprev iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent}
+    .rbusy{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:2}
+    .rtreecard .gsfoot{margin-top:0;padding:14px 22px 18px;flex-wrap:wrap}
+    .rtreecard .gsfoot .gsgo{margin-left:0;flex:1 1 auto;justify-content:center}
+
     /* developer details */
     .dev summary{cursor:pointer;font-size:12px;color:var(--ink3)}
     .dev summary:hover{color:var(--ink)}
@@ -317,6 +425,7 @@
 
     @media (max-width:1279.98px){
       .wrap{height:auto;min-height:100%}
+      .apptitle{display:none}
       .work{grid-template-columns:minmax(0,340px) minmax(0,1fr);grid-template-areas:"form view" "results results";
         grid-template-rows:max(440px,calc(100vh - 120px)) auto}
       .results{overflow:visible}
@@ -325,6 +434,8 @@
       .work{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "form" "results";grid-template-rows:62vh auto auto}
       .side{overflow:visible}
       .apptitle,.stagebadge{display:none}
+      .gsst{font-size:0;gap:0;padding:0 6px} .gsst.cur{font-size:13px;gap:8px;padding:0 12px 0 6px}
+      .rstage{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 70vh}
       .themebtn{margin-left:auto}
       .vhint{display:none}
     }
@@ -347,15 +458,47 @@
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle">Расчёт освещения<br>помещения</span>
-    <span class="stagebadge">Этап 6 · планы плоскостей</span>
-    <button type="button" class="themebtn" id="themebtn" title="Светлая или тёмная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
+    <nav class="stnav" id="stnav" aria-label="Стадии">
+      <button type="button" class="gsst" data-s="1"><span class="gsn">1</span>Проект</button>
+      <span class="gsln" data-l="1"></span>
+      <div class="stroomw">
+        <button type="button" class="gsst" data-s="2" id="stroom" aria-haspopup="menu" aria-expanded="false"><span class="gsn">2</span><span class="gsrn" id="stroomname">Расчёт</span><span class="gsc"><svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></span></button>
+        <div class="vmenu" id="roommenu" role="menu" hidden></div>
+      </div>
+      <span class="gsln" data-l="2"></span>
+      <button type="button" class="gsst" data-s="3"><span class="gsn">3</span>Результаты</button>
+    </nav>
+    <div class="sbtools">
+      <button type="button" class="sbbtn tipr" id="savebtn" data-tip="Сохранить проект в файл" data-key="Ctrl+S"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5M4.8 7 8 10.2 11.2 7"/><path d="M2.5 11v2.5h11V11"/></svg>Сохранить</button>
+      <button type="button" class="sbbtn round tipr" id="apphelp" data-tip="Справка" data-key="F1" aria-label="Справка" aria-expanded="false">?</button>
+      <button type="button" class="themebtn tipr" id="themebtn" data-tip="Светлая или тёмная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
+    </div>
   </header>
 
-  <main class="work">
+  <main class="stage pstage" id="stage1" hidden>
+    <section class="gscard pcard" aria-label="Проект">
+      <div class="pbody">
+        <div class="gshd"><span class="gskick">Шаг 1 из 3</span><h1>Проект</h1>
+          <p>Эти сведения попадут на титульный лист отчёта. Их можно заполнить и позже.</p></div>
+        <div class="tgrid" id="infofields"></div>
+      </div>
+      <div class="gsfoot">
+        <button type="button" class="gssec" id="openbtn">Открыть проект…</button>
+        <button type="button" class="gssec" id="newproj">Новый проект</button>
+        <input type="file" id="openfile" accept=".json,application/json" hidden>
+        <span class="gsmsg" id="openmsg" role="status"></span>
+        <button type="button" class="gsgo" id="go2">Далее <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+  </main>
+
+  <main class="stage work" id="stage2" hidden>
     <section class="gscard side form" aria-label="Исходные данные">
       <form id="form" autocomplete="off" onsubmit="return false">
         <div class="fsec">
           <div class="shd">Помещение <button type="button" class="help" data-help="room" aria-label="Справка: размеры помещения" aria-expanded="false">?</button></div>
+          <div class="fld text wide" id="w-roomname"><label class="fl" for="roomname"><span class="t">Название</span></label>
+            <div class="ibox"><input id="roomname" autocomplete="off" spellcheck="false" maxlength="80"></div></div>
           <div class="fgrid" data-group="room" style="--cols:3"></div>
           <div class="fsub">Коэффициенты отражения <button type="button" class="help" data-help="refl" aria-label="Справка: коэффициенты отражения" aria-expanded="false">?</button></div>
           <div class="fgrid" data-group="refl" style="--cols:3"></div>
@@ -382,19 +525,20 @@
       <div id="view"></div>
       <div class="vbusy" id="busy" hidden>Расчёт…</div>
       <div class="vtools">
-        <div class="vmenuw">
-          <button type="button" class="vbtn" id="planebtn" aria-pressed="false" aria-haspopup="menu" aria-expanded="false" aria-label="Расчётная поверхность" data-tip="Расчётная поверхность">
-            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 12.5 8 8.5h9.5L12 12.5z"/><path d="M5 11c2-1.2 4-1.2 6 0M8.5 9.6c1.4-.7 2.8-.7 4.2 0" stroke-width="1.1"/></svg>
-            <svg class="caret" viewBox="0 0 8 5" width="7" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
+        <div class="vmenuw vsplit">
+          <button type="button" class="vsl tipr" id="planeshow" aria-pressed="false" data-tip="Показать расчётную поверхность" data-key="F4">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M4 13.5c0-3 2-5 4-5s4 2 4 5M6 13.5c0-1.6.9-2.8 2-2.8s2 1.2 2 2.8"/></svg><span id="planelabel">Г-0,0</span></button>
+          <button type="button" class="vsr tipr" id="planebtn" aria-haspopup="menu" aria-expanded="false" aria-label="Выбрать расчётную поверхность" data-tip="Выбрать расчётную поверхность">
+            <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
           <div class="vmenu" id="planemenu" role="menu" hidden></div>
         </div>
-        <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета">
+        <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета" data-key="F9">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="3.5" height="12" rx="1" fill="#0042ff"/><rect x="6.5" y="4" width="3.5" height="12" fill="#00ff00"/><rect x="10" y="4" width="3.5" height="12" fill="#ffff00"/><rect x="13.5" y="4" width="3.5" height="12" rx="1" fill="#ff0000"/></svg></button>
-        <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="План" data-tip="План">
+        <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="План" data-tip="Вид 2D (план)" data-key="F2">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4.5" width="14" height="11" rx="1"/><g fill="currentColor" stroke="none"><rect x="5.6" y="7.2" width="2" height="2"/><rect x="9" y="7.2" width="2" height="2"/><rect x="12.4" y="7.2" width="2" height="2"/><rect x="5.6" y="10.8" width="2" height="2"/><rect x="9" y="10.8" width="2" height="2"/><rect x="12.4" y="10.8" width="2" height="2"/></g></svg></button>
-        <button type="button" class="vbtn" id="view3d" aria-pressed="true" aria-label="Вид 3D" data-tip="Вид 3D">
+        <button type="button" class="vbtn" id="view3d" aria-pressed="true" aria-label="Вид 3D" data-tip="Вид 3D" data-key="F3">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M10 2.8 16.5 6.4v7.2L10 17.2 3.5 13.6V6.4z"/><path d="M3.5 6.4 10 10l6.5-3.6M10 10v7.2"/></svg></button>
-        <button type="button" class="vbtn" id="reset" aria-label="Исходный вид" data-tip="Исходный вид">
+        <button type="button" class="vbtn" id="reset" aria-label="Исходный вид" data-tip="Исходный вид" data-key="F10">
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
         <button type="button" class="vbtn help" data-help="view" aria-label="Справка: управление видом" aria-expanded="false">?</button>
       </div>
@@ -407,7 +551,7 @@
     <section class="gscard side results" aria-label="Результаты">
       <div class="fsec">
         <div class="calcbar">
-          <button type="button" class="gsbtn" id="calc" disabled>Рассчитать</button>
+          <button type="button" class="gsbtn tipl" id="calc" data-tip="Рассчитать" data-key="F5" disabled>Рассчитать</button>
           <label class="tgl" title="Пересчитывать при каждом изменении параметров"><input type="checkbox" id="auto" role="switch" checked> Автоматически</label>
         </div>
         <div class="shd">Результаты <button type="button" class="help" data-help="results" aria-label="Справка: результаты" aria-expanded="false">?</button></div>
@@ -477,6 +621,28 @@
           </div>
         </details>
       </div>
+      <div class="rfoot">
+        <button type="button" class="gssec" id="newroom">+ Новое помещение</button>
+        <button type="button" class="gsgo" id="go3">Далее <span aria-hidden="true">→</span></button>
+      </div>
+    </section>
+  </main>
+
+  <main class="stage rstage" id="stage3" hidden>
+    <section class="gscard rtreecard" aria-label="Состав отчёта">
+      <div class="rtreebody">
+        <div class="gshd"><span class="gskick">Шаг 3 из 3</span><h1>Отчёт</h1>
+          <p>Отметьте разделы, которые войдут в отчёт; нажмите на название, чтобы перейти к странице.</p></div>
+        <ul class="rtree" id="rtree"></ul>
+      </div>
+      <div class="gsfoot">
+        <button type="button" class="gsgo" id="pdfbtn" disabled><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5M4.8 7 8 10.2 11.2 7"/><path d="M2.5 11v2.5h11V11"/></svg>Скачать PDF</button>
+        <span class="gsmsg" id="pdfnote">В окне печати выберите «Сохранить как PDF».</span>
+      </div>
+    </section>
+    <section class="gscard rprev" aria-label="Предпросмотр отчёта">
+      <div class="vbusy rbusy" id="rbusy" hidden>Подготовка отчёта…</div>
+      <iframe id="preview" title="Предпросмотр отчёта"></iframe>
     </section>
   </main>
 </div>
@@ -488,7 +654,8 @@
   import { faceAverages } from './js/direct.js';
   import { luminance, exposure } from './js/tonemap.js';
   import { LEVELS, COLORS_HEX } from './js/colorscale.js';
-  import { initPhotFile } from './js/photui.js';
+  import { initPhotFile, fileKey } from './js/photui.js';
+  import { parsePhotometryFile, luminaireShape } from './js/photfile.js';
   import { initHelp } from './js/help.js';
   import { levelStatus, U0_MIN, bilinear, cellStats } from './js/workplane.js';
   import { isolineSet } from './js/isolines.js';
@@ -496,6 +663,9 @@
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry, luminaireGrid } from './js/photometry.js';
+  import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS } from './js/project.js';
+  import { hotkeyAction } from './js/hotkeys.js';
+  import { initReport } from './js/reportui.js';
 
   const $ = (s) => document.querySelector(s);
   const DEG = Math.PI / 180;
@@ -596,16 +766,16 @@
 
   /** Sends a job; while one is running only the latest request is kept. */
   function request(params) {
-    pending = params;
+    pending = { params, roomId: project.active };
     flush();
   }
-  const jobKeys = new Map(); // job id → key of its parameters
+  const jobKeys = new Map(); // job id → { key of its parameters, room }
   function flush() {
     if (busy || !pending || (!worker && !mainCalc)) return;
-    const params = pending; pending = null;
+    const { params, roomId } = pending; pending = null;
     busy = true;
     const id = ++jobId;
-    jobKeys.set(id, paramsKey(params));
+    jobKeys.set(id, { key: paramsKey(params), roomId });
     setBusy('Расчёт…');
     if (worker) worker.postMessage({ type: 'run', id, params });
     else setTimeout(() => {   // let the busy pill paint first
@@ -615,6 +785,7 @@
 
   // ---- planes on the view: the field of every plane comes with the result (workplane.planeField) ----
   let planeZ = null;         // height of the plane shown (isolines and numbers), or null
+  let planePick = null;      // the plane last chosen (left part of the pill shows it)
   let is2D = false;          // the view shows the plan
   let planDraw = null;       // what the overlay draws: { z, L, W, ax, ay, values, sets, gost }
   const zKey = (z) => z.toFixed(6);
@@ -637,10 +808,16 @@
   const paramsKey = (p) => JSON.stringify({ ...p, table: undefined, checks: undefined });
 
   let photFile = null;  // { table, phot, shape, key, name, set, values } of the loaded IES / LDT file
+  // ---- project (stage 7): rooms, the active one, results kept per room ----
+  const STORE = 'lcalc.project';
+  let project = null;            // { info, rooms: [{ id, name, values, file }], active }
+  let stage = 0;                 // 1 — project, 2 — rooms, 3 — results
+  let switching = false;         // a room is being loaded into the form
+  const roomResults = new Map(); // room id → { key, result } (the last result of every room)
   /** Housing height of the loaded file, m (0 without a file): the photometric centre is that much below h_м. */
-  const housingOf = (v) => (v.phot === 'file' && photFile ? photFile.table.luminaire?.height || 0 : 0);
+  const housingOf = (v, file = photFile) => (v.phot === 'file' && file ? file.table.luminaire?.height || 0 : 0);
   /** Distance from the ceiling to the photometric centre for the calculation. */
-  const hcOf = (v) => ceilingDrop(v.H, v.hm, housingOf(v));
+  const hcOf = (v, file = photFile) => ceilingDrop(v.H, v.hm, housingOf(v, file));
   /** The note under the grid: where the photometric centre is. */
   function showCentre(v) {
     const hh = housingOf(v), z = photometricHeight(v.hm, hh), el = $('#hmnote');
@@ -650,19 +827,21 @@
       (z <= v.hwp + 1e-9 ? ' Светильник не выше рабочей поверхности.' : '');
     el.classList.toggle('warn', z <= v.hwp + 1e-9);
   }
-  function calcParams(v) {
-    const file = v.phot === 'file' && photFile;
+  function calcParams(v, fileOf = photFile) {
+    const file = v.phot === 'file' && fileOf;
     const p = {
-      L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: hcOf(v), psi: v.psi * DEG,
+      L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: hcOf(v, fileOf), psi: v.psi * DEG,
       phot: file ? 'file' : 'cosine', rho: faceRho(v), hwp: v.hwp,
       checks: $('#dev').open, // the stage checks cost as much as the calculation: only when shown
     };
-    if (file) { p.fileKey = photFile.key; p.table = photFile.table; }
+    if (file) { p.fileKey = file.key; p.table = file.table; }
     return p;
   }
 
   function update(values) {
     current = values;
+    const ar = activeRoom();
+    if (ar && !switching) { ar.values = { ...values }; autosave(); }
     showCentre(values);
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
@@ -702,6 +881,14 @@
     // a change drops the result until "Рассчитать" is pressed.
     const p = calcParams(values);
     const key = paramsKey(p);
+    // a result kept for this room (another room was shown meanwhile, or the report computed it)
+    const kept = roomResults.get(project.active);
+    if (kept && kept.key === key && kept.result.N === room.N && key !== resultKey) {
+      sentKey.v = key;
+      adopt(kept.result, key);
+      updateCalcButton();
+      return;
+    }
     if (autoCalc) {
       if (key !== sentKey.v) { sentKey.v = key; request(p); } else render();
     } else if (key !== resultKey) clearResult();
@@ -737,10 +924,19 @@
     busy = false;
     if (!pending) setBusy('');
     const rk = `${r.key}`;
-    const key = jobKeys.get(id); jobKeys.delete(id);
-    // without the automatic update a result for parameters changed meanwhile is dropped
+    const job = jobKeys.get(id) ?? { key: '', roomId: null }; jobKeys.delete(id);
+    const key = job.key;
+    if (job.roomId) roomResults.set(job.roomId, { key, result: r });
+    // without the automatic update a result for parameters changed meanwhile is dropped; a result of
+    // another room is only kept for it
     const fresh = autoCalc || (current && key === paramsKey(calcParams(current)));
-    if (rk === lastRoomKey && room && r.N === room.N && fresh) {
+    if (job.roomId === project.active && rk === lastRoomKey && room && r.N === room.N && fresh) adopt(r, key);
+    flush();
+  }
+
+  /** Shows a result of the active room: the views, the results column and the developer panels. */
+  function adopt(r, key) {
+    {
       result = r; resultKey = key;
       // the plane at h disappears when h becomes 0 or 0.8 m: show the normative plane instead
       const zs = r.planes.map((q) => zKey(q.z)), norm = r.planes.find((q) => q.normative).z;
@@ -770,7 +966,6 @@
       window.__stage3 = { room, result: r, checks: r.checks3 };
       window.__stage4 = { room, result: r, checks: c4, shown, exposure: ex };
     }
-    flush();
   }
 
   /**
@@ -865,13 +1060,29 @@
   /** Shows the plane at z (null: none); the results rows and the view menu follow. */
   function setPlaneZ(z) {
     planeZ = z;
+    if (z != null) planePick = z;
     if (result) renderPlanes(current.mf);
     renderPlaneMenu();
     applyPlane();
   }
   /** The menu of the view button "Расчётная поверхность": the same choice as the results rows. */
+  /** Plane of the left part of the pill: the last one chosen, else the normative one. */
+  function planeChoice() {
+    const planes = result ? result.planes : [];
+    const hit = planePick != null && planes.find((q) => zKey(q.z) === zKey(planePick));
+    return hit ? hit.z : planes.find((q) => q.normative)?.z ?? (current ? current.hwp : null);
+  }
+  /** Left part of the pill (F4): shows the chosen plane or hides it. */
+  function togglePlaneShown() {
+    if (!result) return;
+    setPlaneZ(planeZ != null ? null : planeChoice());
+  }
   function renderPlaneMenu() {
-    $('#planebtn').setAttribute('aria-pressed', String(planeZ != null));
+    const show = $('#planeshow'), zc = planeChoice();
+    show.setAttribute('aria-pressed', String(planeZ != null));
+    show.disabled = !result;
+    $('#planelabel').textContent = zc != null ? planeName(zc) : 'Г-…';
+    show.dataset.tip = planeZ != null ? `Скрыть ${planeName(planeZ)}` : zc != null ? `Показать ${planeName(zc)}` : 'Расчётная поверхность';
     const item = (z, label, note, on, dis = false) =>
       `<button type="button" role="menuitemradio" aria-checked="${on}" data-z="${z}"${dis ? ' disabled' : ''}><i>${on ? '✓' : ''}</i>${label}${note ? `<small>${note}</small>` : ''}</button>`;
     const planes = result ? result.planes : [];
@@ -946,13 +1157,16 @@
 
   const form = initForm($('#form'), update);
   // a file sets the photometry and fills flux, colour temperature and power from its lamp set
-  initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('.form') }, (f) => {
+  const photUI = initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('.form') }, (f) => {
     photFile = f;
+    if (switching) return; // another room is being loaded: its values come with it
+    const ar = activeRoom();
+    if (ar) { ar.file = f ? { name: f.name, text: f.text, set: f.set } : null; autosave(); }
     if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
     else { form.set({ phot: 'cosine', flux: 4000 }); $('#estnote').hidden = true; }
     // a new file: estimate the number of luminaires and place them; another lamp set does not move the grid
     if (f && f.reason !== 'set') suggestGrid();
-  });
+  }, { restore: false });
   $('#suggest').addEventListener('click', suggestGrid);
   $('#planes').addEventListener('click', (e) => {
     const b = e.target.closest('.pplan');
@@ -983,8 +1197,293 @@
   });
   // the stage checks are computed only while the developer block is open
   $('#dev').addEventListener('toggle', () => { if ($('#dev').open && current && autoCalc) calculate(); });
-  initHelp(document);
-  update(form.values());
+  const help = initHelp(document);
+
+
+  // ---- project: rooms, stages, saving (stage 7) ----
+  function activeRoom() { return project ? project.rooms.find((r) => r.id === project.active) ?? null : null; }
+
+  let saveTimer = 0;
+  /** Keeps the project in this browser (a convenience: everything works without it). */
+  function autosave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(STORE, serializeProject(project)); localStorage.setItem(`${STORE}.stage`, String(stage)); } catch (e) { /* full or blocked */ }
+    }, 400);
+  }
+  function restoreProject() {
+    try { const t = localStorage.getItem(STORE); if (t) return parseProject(t); } catch (e) { /* none or broken */ }
+    return null;
+  }
+
+  /** Fields of the stage «Проект». */
+  function renderInfo() {
+    const wide = new Set(['name', 'description', 'author', 'customer']);
+    $('#infofields').innerHTML = INFO_FIELDS.map((f) => `<div class="tfld${wide.has(f.key) ? ' wide' : ''}" id="pi-${f.key}">
+      <label for="in-pi-${f.key}">${f.label}</label>${f.kind === 'area'
+        ? `<textarea id="in-pi-${f.key}" data-k="${f.key}" placeholder="${f.placeholder}" rows="4"></textarea>`
+        : `<input id="in-pi-${f.key}" data-k="${f.key}" type="${f.kind === 'text' ? 'text' : f.kind}" placeholder="${f.placeholder}" autocomplete="off">`}</div>`).join('');
+    fillInfo();
+  }
+  function fillInfo() {
+    for (const f of INFO_FIELDS) $(`#in-pi-${f.key}`).value = project.info[f.key] ?? '';
+  }
+  $('#infofields').addEventListener('input', (e) => {
+    const k = e.target.dataset.k;
+    if (!k) return;
+    project.info[k] = e.target.value;
+    report.invalidate('info');
+    autosave();
+  });
+
+  const roomFiles = new Map(); // file key → { table, phot, shape, key } of rooms that are not shown
+  /** Photometric file of a room, parsed (the active room: the file in the form). */
+  function roomFile(r) {
+    if (r.id === project.active) return photFile;
+    if (!r.file) return null;
+    const key = fileKey(r.file.name, r.file.text);
+    if (!roomFiles.has(key)) {
+      try {
+        const table = parsePhotometryFile(r.file.text, r.file.name);
+        roomFiles.set(key, { table, phot: createPhotometry({ type: 'file', table }), shape: luminaireShape(table), key, name: r.file.name });
+      } catch (e) { roomFiles.set(key, null); }
+    }
+    return roomFiles.get(key);
+  }
+
+  /** Loads a room into the form, the photometric file and the view. */
+  function loadRoom(r) {
+    switching = true;
+    try {
+      photUI.clear({ reason: 'room' });
+      if (r.file) photUI.load(r.file.text, r.file.name, { store: false, reason: 'room', set: r.file.set });
+      photFile = photUI.current();
+      if (r.file && !photFile) r.file = null; // a file that no longer reads
+      const v = { ...r.values };
+      if (!photFile) v.phot = 'cosine';
+      $('#roomname').value = r.name;
+      $('#estnote').hidden = true;
+      planeZ = null; planePick = null;
+      clearResult();
+      $('#planenote').textContent = '';
+      form.set(v, { exact: true });
+    } finally { switching = false; }
+    r.values = form.values();
+  }
+  function switchRoom(id) {
+    if (!project.rooms.some((r) => r.id === id)) return;
+    if (id !== project.active) {
+      project.active = id;
+      loadRoom(activeRoom());
+    }
+    renderRoomNav();
+    autosave();
+  }
+  /** A new room after the current one, with its luminaire and norms. */
+  function addRoom() {
+    const cur = activeRoom();
+    const r = createRoomState(project.rooms, cur);
+    project.rooms.splice(project.rooms.indexOf(cur) + 1, 0, r);
+    switchRoom(r.id);
+    setStage(2);
+    report.invalidate('rooms');
+    const name = $('#roomname'); name.focus(); name.select();
+  }
+  function deleteRoom(id) {
+    const r = project.rooms.find((x) => x.id === id);
+    if (!r || project.rooms.length < 2) return;
+    if (!confirm(`Удалить помещение «${r.name}»? Его исходные данные пропадут.`)) return;
+    const k = project.rooms.indexOf(r);
+    project.rooms.splice(k, 1);
+    roomResults.delete(id);
+    if (project.active === id) { project.active = project.rooms[Math.min(k, project.rooms.length - 1)].id; loadRoom(activeRoom()); }
+    renderRoomNav();
+    report.invalidate('rooms');
+    autosave();
+  }
+
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /** The pill of the second stage: name of the active room; its menu lists the rooms. */
+  function renderRoomNav() {
+    const ar = activeRoom();
+    $('#stroomname').textContent = ar ? ar.name || 'Без названия' : 'Расчёт';
+    const many = project.rooms.length > 1;
+    $('#roommenu').innerHTML = '<div class="vmh">Помещения</div>' + project.rooms.map((r) => {
+      const on = r.id === project.active, v = r.values;
+      return `<button type="button" role="menuitemradio" aria-checked="${on}" data-room="${r.id}"><i>${on ? '✓' : ''}</i>${esc(r.name || 'Без названия')}<small>${formatNumber(v.L, 2)} × ${formatNumber(v.W, 2)} × ${formatNumber(v.H, 2)} м</small></button>`;
+    }).join('') + '<div class="vmsep"></div><button type="button" class="vmadd" data-act="add"><i>+</i>Новое помещение</button>' +
+      (many && ar ? `<button type="button" data-act="del"><i></i>Удалить «${esc(ar.name || 'Без названия')}»</button>` : '');
+  }
+  const roomMenu = $('#roommenu'), roomBtn = $('#stroom');
+  const closeRoomMenu = () => { roomMenu.hidden = true; roomBtn.setAttribute('aria-expanded', 'false'); };
+  function openRoomMenu() { renderRoomNav(); roomMenu.hidden = false; roomBtn.setAttribute('aria-expanded', 'true'); }
+  roomBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!roomMenu.hidden) { closeRoomMenu(); return; }
+    // on another stage the pill leads to the rooms; the arrow (or the pill on this stage) opens the list
+    if (stage !== 2 && !e.target.closest('.gsc')) { setStage(2); return; }
+    openRoomMenu();
+  });
+  roomMenu.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    closeRoomMenu();
+    if (b.dataset.room) { switchRoom(b.dataset.room); setStage(2); }
+    else if (b.dataset.act === 'add') addRoom();
+    else if (b.dataset.act === 'del') deleteRoom(project.active);
+  });
+  document.addEventListener('click', (e) => { if (!roomMenu.hidden && !roomMenu.contains(e.target)) closeRoomMenu(); });
+
+  $('#roomname').addEventListener('input', (e) => {
+    e.stopPropagation(); // not a calculation input
+    const r = activeRoom();
+    r.name = e.target.value;
+    renderRoomNav(); report.invalidate('rooms'); autosave();
+  });
+  $('#roomname').addEventListener('change', (e) => {
+    e.stopPropagation();
+    const r = activeRoom();
+    if (!r.name.trim()) { r.name = nextRoomName(project.rooms.filter((x) => x !== r)); e.target.value = r.name; }
+    renderRoomNav(); autosave();
+  });
+
+  /** Shows a stage: 1 — project, 2 — rooms, 3 — results (the report). */
+  function setStage(n) {
+    stage = n;
+    document.body.dataset.stage = String(n);
+    for (const k of [1, 2, 3]) $(`#stage${k}`).hidden = k !== n;
+    for (const b of document.querySelectorAll('#stnav .gsst')) {
+      const k = Number(b.dataset.s);
+      b.classList.toggle('cur', k === n); b.classList.toggle('done', k < n);
+      if (k === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    }
+    for (const l of document.querySelectorAll('#stnav .gsln')) l.classList.toggle('on', Number(l.dataset.l) < n);
+    help.close(); closeRoomMenu();
+    if (n === 3) report.open(); else report.leave();
+    autosave();
+  }
+  for (const b of document.querySelectorAll('#stnav .gsst[data-s="1"], #stnav .gsst[data-s="3"]')) b.addEventListener('click', () => setStage(Number(b.dataset.s)));
+  $('#go2').addEventListener('click', () => setStage(2));
+  $('#go3').addEventListener('click', () => setStage(3));
+  $('#newroom').addEventListener('click', addRoom);
+
+  /** Downloads the project file (rooms with their photometric files; no results). */
+  function saveProject() {
+    const blob = new Blob([serializeProject(project)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = projectFileName(project);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  function useProject(p, stageAfter) {
+    project = p;
+    roomResults.clear();
+    fillInfo();
+    loadRoom(activeRoom());
+    renderRoomNav();
+    report.invalidate('all');
+    setStage(stageAfter);
+  }
+  $('#savebtn').addEventListener('click', saveProject);
+  $('#openbtn').addEventListener('click', () => $('#openfile').click());
+  $('#openfile').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    const msg = $('#openmsg');
+    try {
+      const p = parseProject(await f.text());
+      useProject(p, 1);
+      msg.classList.remove('err');
+      msg.textContent = `Открыт «${f.name}»: ${p.rooms.length} ${p.rooms.length === 1 ? 'помещение' : p.rooms.length < 5 ? 'помещения' : 'помещений'}.`;
+    } catch (err) { msg.classList.add('err'); msg.textContent = err.message; }
+  });
+  $('#newproj').addEventListener('click', () => {
+    if (!confirm('Начать новый проект? Текущий пропадёт, если не сохранён в файл.')) return;
+    $('#openmsg').textContent = '';
+    useProject(createProject(), 1);
+  });
+
+  function startProject() {
+    const saved = restoreProject();
+    project = saved ?? createProject();
+    renderInfo();
+    loadRoom(activeRoom());
+    renderRoomNav();
+    let st = 1;
+    try { st = Number(localStorage.getItem(`${STORE}.stage`)) || (saved ? 2 : 1); } catch (e) { /* storage unavailable */ }
+    setStage(st === 3 ? 2 : st);
+  }
+
+  // ---- help and hot keys ----
+  function contextHelp() {
+    const el = document.activeElement;
+    const fld = el?.closest?.('.fld[id^="w-"], .tfld[id^="pi-"]');
+    if (fld && !fld.closest('[hidden]')) { help.show(`f:${fld.id.replace(/^(w|pi)-/, '')}`, fld); return; }
+    help.show(`stage${stage}`, $('#apphelp'));
+  }
+  $('#apphelp').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (help.isOpenFor($('#apphelp'))) help.close(); else help.show(`stage${stage}`, $('#apphelp'));
+  });
+  $('#planeshow').addEventListener('click', togglePlaneShown);
+  document.addEventListener('keydown', (e) => {
+    const a = hotkeyAction(e);
+    if (!a) return;
+    if (a === 'save') { e.preventDefault(); saveProject(); return; }
+    if (a === 'help') { e.preventDefault(); contextHelp(); return; }
+    if (stage !== 2) return; // the view keys belong to the calculation stage
+    e.preventDefault();
+    if (a === 'plan') { if (view && !view.isPlan()) view.showPlan(); }
+    else if (a === 'view3d') view?.show3D();
+    else if (a === 'plane') togglePlaneShown();
+    else if (a === 'calc') { if (!autoCalc) calculate(); }
+    else if (a === 'falsecolors') $('#falsecolors').click();
+    else if (a === 'reset') view?.resetView();
+  });
+
+  // ---- report (stage 3): results of every room, computed when missing ----
+  let rworker = null, rmain = null, rseq = 0;
+  const rjobs = new Map();
+  function rejectAll(msg) { for (const j of rjobs.values()) j.reject(new Error(msg)); rjobs.clear(); }
+  async function reportRun(params) {
+    if (!rworker && !rmain) {
+      try {
+        rworker = new Worker(import.meta.resolve('./js/worker.js'), { type: 'module' });
+        rworker.onmessage = (e) => {
+          const m = e.data;
+          if (m.id == null) { rworker.terminate(); rworker = null; rejectAll(m.message ?? 'worker'); return; }
+          const j = rjobs.get(m.id); if (!j) return;
+          rjobs.delete(m.id);
+          if (m.type === 'result') j.resolve(m.result); else j.reject(new Error(m.message));
+        };
+        rworker.onerror = (e) => { e.preventDefault(); rworker?.terminate(); rworker = null; rejectAll(e.message); };
+        rworker.postMessage({ type: 'init', imports });
+      } catch (e) { rworker = null; }
+    }
+    if (rworker) {
+      try {
+        return await new Promise((resolve, reject) => { const id = ++rseq; rjobs.set(id, { resolve, reject }); rworker.postMessage({ type: 'run', id, params }); });
+      } catch (e) { console.warn('Report calculation on the main thread:', e.message); }
+    }
+    if (!rmain) { const { createCalc } = await import('./js/calc.js'); rmain = createCalc(); }
+    return rmain.run(params);
+  }
+  /** Inputs and result of a room for the report (computed when not kept). */
+  async function roomData(r) {
+    const file = r.values.phot === 'file' ? roomFile(r) : null;
+    const params = { ...calcParams(r.values, file), checks: false };
+    const key = paramsKey(params);
+    let kept = roomResults.get(r.id);
+    if (!kept || kept.key !== key) {
+      kept = { key, result: await reportRun(params) };
+      roomResults.set(r.id, kept);
+    }
+    return { id: r.id, name: r.name, values: { ...r.values }, file, params, key, result: kept.result };
+  }
+  const report = initReport({
+    tree: $('#rtree'), iframe: $('#preview'), busy: $('#rbusy'), pdf: $('#pdfbtn'),
+    project: () => project, roomData, FACE_COLORS: () => FACE_COLORS,
+  });
 
   function toggle(btn, apply) {
     btn.addEventListener('click', () => {
@@ -1037,6 +1536,8 @@
     view?.refreshTheme();
   });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => view?.refreshTheme());
+
+  startProject();
 </script>
 </body>
 </html>

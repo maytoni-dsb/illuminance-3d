@@ -1,0 +1,102 @@
+// Project: information about the project and its rooms (stage 7). Pure module: no DOM, tested in Node.
+// A room keeps the form values, its name and the photometric file (name, text and lamp set), so the
+// whole project can be saved to one file and opened again; results are not saved, they are
+// recalculated. User-facing strings are in Russian.
+
+import { DEFAULTS, validateParams } from './ui.js';
+
+/** Format tag and version of the project file. */
+export const FILE_FORMAT = 'maytoni-lighting-calc';
+export const FILE_VERSION = 1;
+
+/** Fields of the stage «Проект» in their order on the page. */
+export const INFO_FIELDS = Object.freeze([
+  { key: 'name', label: 'Название проекта', kind: 'text', placeholder: 'Например, «Офис на Лесной, 3 этаж»' },
+  { key: 'description', label: 'Описание проекта', kind: 'area', placeholder: 'Что освещаем и для чего' },
+  { key: 'author', label: 'Исполнитель', kind: 'text', placeholder: 'Фамилия, имя; организация' },
+  { key: 'phone', label: 'Телефон', kind: 'tel', placeholder: '+7 900 000-00-00' },
+  { key: 'email', label: 'Эл. почта', kind: 'email', placeholder: 'name@example.com' },
+  { key: 'customer', label: 'Заказчик', kind: 'text', placeholder: 'Организация или частное лицо' },
+]);
+
+const emptyInfo = () => Object.fromEntries(INFO_FIELDS.map((f) => [f.key, '']));
+
+let seq = 0;
+const newId = () => `r${Date.now().toString(36)}${(seq++).toString(36)}`;
+
+/** Default name of a new room: «Помещение N», the first N not taken. */
+export function nextRoomName(rooms) {
+  const taken = new Set(rooms.map((r) => r.name.trim()));
+  for (let n = rooms.length + 1; ; n++) if (!taken.has(`Помещение ${n}`)) return `Помещение ${n}`;
+}
+
+/**
+ * A new room. Without `from` it gets the defaults; with it, a copy of that room's values and file
+ * (a new room usually has the same luminaire and norms as the one before).
+ */
+export function createRoomState(rooms = [], from = null) {
+  return {
+    id: newId(),
+    name: nextRoomName(rooms),
+    values: { ...(from ? from.values : DEFAULTS) },
+    file: from?.file ? { ...from.file } : null,
+  };
+}
+
+/** A new project with one room. */
+export function createProject() {
+  const room = createRoomState([]);
+  return { info: emptyInfo(), rooms: [room], active: room.id };
+}
+
+/** Values of a saved room checked against the form rules; invalid or missing ones become defaults. */
+function cleanValues(v) {
+  const raw = { ...DEFAULTS, ...(v && typeof v === 'object' ? v : {}) };
+  const r = validateParams(raw);
+  if (r.ok) return { ...r.values, phot: raw.phot === 'file' ? 'file' : 'cosine' };
+  // drop the fields with errors one by one and keep the rest
+  const fixed = { ...raw };
+  for (const k of Object.keys(r.errors)) fixed[k] = DEFAULTS[k];
+  const r2 = validateParams(fixed);
+  return r2.ok ? r2.values : { ...DEFAULTS };
+}
+
+/** The project as a JSON string for the file. */
+export function serializeProject(p) {
+  return JSON.stringify({
+    format: FILE_FORMAT, version: FILE_VERSION, saved: new Date().toISOString(),
+    info: { ...emptyInfo(), ...p.info },
+    rooms: p.rooms.map((r) => ({ name: r.name, values: r.values, file: r.file ? { name: r.file.name, text: r.file.text, set: r.file.set ?? 0 } : null })),
+    active: Math.max(0, p.rooms.findIndex((r) => r.id === p.active)),
+  }, null, 1);
+}
+
+/**
+ * Reads a project file. Throws an Error with a message for the user when it is not a project.
+ * @param {string} text
+ */
+export function parseProject(text) {
+  let d;
+  try { d = JSON.parse(text); } catch (e) { throw new Error('Файл не читается: это не файл проекта.'); }
+  if (!d || d.format !== FILE_FORMAT) throw new Error('Это не файл проекта расчёта освещения.');
+  if (!(d.version <= FILE_VERSION)) throw new Error(`Файл сохранён более новой версией программы (${d.version}).`);
+  if (!Array.isArray(d.rooms) || !d.rooms.length) throw new Error('В файле проекта нет помещений.');
+  const rooms = [];
+  for (const r of d.rooms) {
+    const file = r.file && typeof r.file.text === 'string' && typeof r.file.name === 'string'
+      ? { name: r.file.name, text: r.file.text, set: Number.isInteger(r.file.set) ? r.file.set : 0 } : null;
+    const values = cleanValues(r.values);
+    if (!file) values.phot = 'cosine';
+    rooms.push({ id: newId(), name: String(r.name ?? '').trim() || nextRoomName(rooms), values, file });
+  }
+  const info = emptyInfo();
+  for (const f of INFO_FIELDS) if (typeof d.info?.[f.key] === 'string') info[f.key] = d.info[f.key];
+  const a = Number.isInteger(d.active) && d.active >= 0 && d.active < rooms.length ? d.active : 0;
+  return { info, rooms, active: rooms[a].id };
+}
+
+/** File name for saving: the project name without characters that file systems refuse. */
+export function projectFileName(p) {
+  const base = (p.info.name || 'Проект').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Проект';
+  return `${base}.lcalc.json`;
+}

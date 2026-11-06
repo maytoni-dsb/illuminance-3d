@@ -73,6 +73,9 @@ export function parseNumber(s) {
   return Number(t);
 }
 
+/** A typed value with every decimal point turned into a comma (fields always show a comma). */
+export const toComma = (s) => String(s).replace(/\./g, ',');
+
 /** Formats a number for display: decimal comma, no trailing zeros. */
 export function formatNumber(x, digits = 3) {
   if (!Number.isFinite(x)) return '—';
@@ -182,6 +185,13 @@ export function initForm(root, onChange) {
       check();
     };
     fld.querySelectorAll('.spin button').forEach((b) => b.addEventListener('click', () => bump(Number(b.dataset.d))));
+    // the decimal separator is always shown as a comma, whatever is typed (stage 7)
+    input.addEventListener('input', () => {
+      if (!input.value.includes('.')) return;
+      const at = input.selectionStart;
+      input.value = toComma(input.value);
+      if (at != null) input.setSelectionRange(at, at);
+    });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); bump(e.key === 'ArrowUp' ? 1 : -1); }
     });
@@ -199,10 +209,10 @@ export function initForm(root, onChange) {
   function showWhen(v) {
     for (const p of PARAMS) if (p.when && flds[p.key]) flds[p.key].hidden = !p.when(v);
   }
-  function check() {
-    // the mounting height at the ceiling follows the room height
+  function check(follow = true) {
+    // the mounting height at the ceiling follows the room height (not when a room is loaded)
     const h = parseNumber(inputs.H.value), m = parseNumber(inputs.hm.value);
-    if (Number.isFinite(h) && h !== last.H && Number.isFinite(m) && Math.abs(m - last.H) < 1e-9) inputs.hm.value = formatNumber(h, 6);
+    if (follow && Number.isFinite(h) && h !== last.H && Number.isFinite(m) && Math.abs(m - last.H) < 1e-9) inputs.hm.value = formatNumber(h, 6);
     const raw = readRaw();
     const r = validateParams(raw);
     showWhen({ ...last, ...r.values, ...choice });
@@ -217,16 +227,17 @@ export function initForm(root, onChange) {
     if (r.ok) { last = r.values; onChange(r.values); }
   }
   // Debounce typing; apply immediately on change (blur / Enter).
-  root.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(check, 200); });
+  root.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => check(), 200); });
   root.addEventListener('change', () => { clearTimeout(timer); check(); });
 
-  function set(v) {
+  /** Sets values from the page; { exact: true } loads them as they are (another room). */
+  function set(v, { exact = false } = {}) {
     for (const [k, x] of Object.entries(v)) {
       if (k in choice) choice[k] = x;
-      else if (inputs[k]) inputs[k].value = typeof x === 'number' ? formatNumber(x, 6) : x;
+      else if (inputs[k]) inputs[k].value = typeof x === 'number' ? formatNumber(x, 6) : toComma(x);
     }
     clearTimeout(timer);
-    check();
+    check(!exact);
   }
   return { values: () => ({ ...last }), set };
 }
