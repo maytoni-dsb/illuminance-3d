@@ -128,7 +128,7 @@ export const U0_MIN = 0.3;
 // floor elements are below or in it and give nothing.
 
 import { axisRect, rectToRect, pointToRect } from './formfactor.js';
-import { elementDirectAdaptive, elementDirectExact } from './direct.js';
+import { elementDirectAdaptive, elementDirectExact, mirrorSymmetry, luminaireOrbits, addOrbit } from './direct.js';
 
 /** A face-like description of the plane at height z, on the floor mesh (for direct.js). */
 export function planeFace(room, z) {
@@ -220,8 +220,8 @@ export function planeReflected(room, t, M, out = new Float64Array(t.nL * t.nW)) 
 export function planeDirect(room, z, lums, phot) {
   const face = planeFace(room, z);
   const pr = { L: room.L, W: room.W, H: room.H, N: face.count, faces: [face] };
-  if (phot.lobes) return elementDirectExact(pr, lums, phot);
-  return elementDirectAdaptive(pr, lums, phot, { balance: Infinity, maxRetries: 0 });
+  if (phot.lobes) return elementDirectExact(pr, lums, phot, undefined, true);
+  return elementDirectAdaptive(pr, lums, phot, { balance: Infinity, maxRetries: 0, symmetric: true });
 }
 
 /** Ē, E_min, E_max, U₀ = E_min / Ē and E_min / E_max of equal cells. */
@@ -396,13 +396,26 @@ export function planeField(room, z, lums, phot, M, cache = {}, dirKey = null) {
   const x = [0, 0, z], up = [0, 0, 1];
   t = now();
   if (!cache.dir || dirKey === null || cache.dir.key !== dirKey) {
-    const Ed = new Float64Array(nn);
-    for (let j = 0; j <= grid.ay; j++) {
-      for (let i = 0; i <= grid.ax; i++) {
-        x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
+    // the nodes are symmetric about the centre too: node (i, j) ↔ (ax − i, j) ↔ (i, ay − j)
+    const Ed = new Float64Array(nn), tmp = new Float64Array(nn), one = [null];
+    const sym = lums.length > 1 ? mirrorSymmetry(phot, lums[0].psi) : { x: false, y: false };
+    const orbits = luminaireOrbits(lums, sym, room.L, room.W);
+    const w = grid.ax + 1;
+    const perms = {
+      x: Int32Array.from({ length: nn }, (_, k) => grid.ax - (k % w) + Math.floor(k / w) * w),
+      y: Int32Array.from({ length: nn }, (_, k) => (k % w) + (grid.ay - Math.floor(k / w)) * w),
+    };
+    perms.xy = Int32Array.from(perms.x, (v) => perms.y[v]);
+    for (const { lum, images } of orbits) {
+      one[0] = lum;
+      for (let j = 0; j <= grid.ay; j++) {
         x[1] = Math.min(Math.max(j * grid.dy, eps), room.W - eps);
-        Ed[i + j * (grid.ax + 1)] = directAtPoint(x, up, lums, phot);
+        for (let i = 0; i <= grid.ax; i++) {
+          x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
+          tmp[i + j * w] = directAtPoint(x, up, one, phot);
+        }
       }
+      addOrbit(Ed, tmp, images, perms);
     }
     cache.dir = { key: dirKey, Edir: Ed };
   }

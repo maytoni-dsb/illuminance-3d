@@ -225,25 +225,30 @@ function createTablePhotometry(table, flux) {
     const t = (gamma_ - gamma[k]) / (gamma[k + 1] - gamma[k]);
     return r[k] + t * (r[k + 1] - r[k]);
   };
+  // Precomputed table (stage 7): reciprocal steps in γ and C and the γ-slopes of every row, so
+  // that a lookup is two index computations and four multiply-adds — the same bilinear interpolant.
+  const invG = new Float64Array(nG - 1);
+  for (let k = 0; k < nG - 1; k++) invG[k] = 1 / (gamma[k + 1] - gamma[k]);
+  const invC = new Float64Array(Math.max(nP - 1, 0));
+  for (let q = 0; q < nP - 1; q++) invC[q] = 1 / (planes[q + 1] - planes[q]);
+  const slope = new Float64Array(nP * nG);
+  for (let q = 0; q < nP; q++) for (let k = 0; k < nG - 1; k++) slope[q * nG + k] = (rows[q * nG + k + 1] - rows[q * nG + k]) * invG[k];
   let intensity;
   if (nP === 1) {
     intensity = (C, gm) => {
       if (gm < g0 || gm > g1) return 0;
       const k = gi(gm);
-      const t = (gm - gamma[k]) / (gamma[k + 1] - gamma[k]);
-      return rows[k] + t * (rows[k + 1] - rows[k]);
+      return rows[k] + (gm - gamma[k]) * slope[k];
     };
   } else {
     intensity = (C, gm) => {
       if (gm < g0 || gm > g1) return 0;
-      const k = gi(gm);
-      const t = (gm - gamma[k]) / (gamma[k + 1] - gamma[k]);
+      const k = gi(gm), dg = gm - gamma[k];
       const p = ci(C);
-      const s = (C - planes[p]) / (planes[p + 1] - planes[p]);
+      const s = (C - planes[p]) * invC[p];
       const a = p * nG + k, b = a + nG;
-      const ia = rows[a] + t * (rows[a + 1] - rows[a]);
-      const ib = rows[b] + t * (rows[b + 1] - rows[b]);
-      return ia + s * (ib - ia);
+      const ia = rows[a] + dg * slope[a];
+      return ia + s * (rows[b] + dg * slope[b] - ia);
     };
   }
   return Object.freeze({

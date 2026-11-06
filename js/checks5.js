@@ -96,7 +96,7 @@ export function stage5Checks(room, lums, phot, E, table) {
   out.push({
     name: 'Поток каждого светильника на грани (10⁻³)',
     ok: per.length > 0 && w <= 1e-3,
-    detail: `${per.length} светильников: наибольшее |ΣE·A / Φ − 1| = ${exp(w)}; ${Math.round((E.stats?.evals ?? 0) / Math.max(1, room.N * lums.length))} вычислений КСС на пару элемент–светильник, глубина ${E.stats?.depth ?? '—'}, повторов ${E.stats?.retries ?? '—'}`,
+    detail: `${E.stats?.luminaires ?? per.length} светильников (проинтегрировано ${per.length}, остальные — зеркально): наибольшее |ΣE·A / Φ − 1| = ${exp(w)}; ${Math.round((E.stats?.evals ?? 0) / Math.max(1, room.N * lums.length))} вычислений КСС на пару элемент–светильник, глубина ${E.stats?.depth ?? '—'}, повторов ${E.stats?.retries ?? '—'}`,
   });
   return out;
 }

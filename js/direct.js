@@ -17,7 +17,6 @@
 // closed room. Photometry without lobes (IES/LDT, stage 5) is averaged with a Gauss rule.
 
 import { pointToElement } from './formfactor.js';
-import { photometricAngles } from './photometry.js';
 
 const TWO_PI = 2 * Math.PI;
 
@@ -31,19 +30,151 @@ const TWO_PI = 2 * Math.PI;
  */
 export function directAtPoint(x, n, lums, phot) {
   let E = 0;
-  const d = [0, 0, 0];
+  const I = phot.intensity, rot = !!phot.rotational;
   for (const s of lums) {
     const p = s.pos;
-    d[0] = x[0] - p[0]; d[1] = x[1] - p[1]; d[2] = x[2] - p[2]; // luminaire → point
-    const r2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    const dx = x[0] - p[0], dy = x[1] - p[1], dz = x[2] - p[2]; // luminaire → point
+    const rh2 = dx * dx + dy * dy, r2 = rh2 + dz * dz;
     if (!(r2 > 0)) continue; // point at the source: undefined, skip
     const r = Math.sqrt(r2);
-    const cosXi = -(n[0] * d[0] + n[1] * d[1] + n[2] * d[2]) / r; // n · (s − x) / r
+    const cosXi = -(n[0] * dx + n[1] * dy + n[2] * dz) / r; // n · (s − x) / r
     if (!(cosXi > 0)) continue;
-    const { C, gamma } = photometricAngles(d, s.psi);
-    E += phot.intensity(C, gamma) * cosXi / r2;
+    // photometricAngles inlined (no object per call): γ from the downward vertical, C in the
+    // luminaire frame rotated by ψ
+    const gamma = Math.atan2(Math.sqrt(rh2), -dz);
+    let C = 0;
+    if (!rot && rh2 > 0) {
+      const cp = Math.cos(s.psi), sp = Math.sin(s.psi);
+      C = Math.atan2(-sp * dx + cp * dy, cp * dx + sp * dy);
+      if (C < 0) C += TWO_PI;
+      if (C >= TWO_PI) C -= TWO_PI;
+    }
+    E += I(C, gamma) * cosXi / r2;
   }
   return E;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Mirror symmetry of a regular grid (stage 7, accepted 6 Nov 2026)
+//
+// The luminaires of a regular grid lie symmetrically about the planes x = L/2 and y = W/2. If the
+// light distribution, turned by ψ, is invariant under the same mirror, the field of the mirrored
+// luminaire is the mirrored field of the original one. Then only one luminaire of every orbit
+// (≤ 4 luminaires: itself and its images) is integrated, and the images are added by permuting
+// the receivers: E(k) += F_rep(P(k)), P — the mirror map of elements, cells or nodes.
+// A room mirror x → L − x turns a horizontal direction at angle φ into π − φ; in the luminaire frame
+// (C = φ − ψ) that is C → π − 2ψ − C. The mirror y → W − y gives C → −2ψ − C.
+// Invariance is tested on the interpolant itself: at all planes, their images and the midpoints,
+// at all tabulated γ and the midpoints, to 10⁻¹² of the peak intensity. Measured files are rarely
+// symmetric to that precision unless declared so; then nothing is gained and nothing is lost.
+
+const wrap2pi = (c) => { c %= TWO_PI; return c < 0 ? c + TWO_PI : c; };
+
+/** True when I(C, γ) = I(a − C, γ) for every direction (C in the luminaire frame). */
+export function mirrorInvariant(phot, a) {
+  if (phot.rotational) return true;
+  if (phot.lobes) return phot.lobes.every((l) => Math.abs(l.axis[0]) < 1e-15 && Math.abs(l.axis[1]) < 1e-15);
+  const t = phot.table;
+  if (!t) return false;
+  const Cs = [];
+  for (let p = 0; p < t.planes.length; p++) {
+    Cs.push(t.planes[p], wrap2pi(a - t.planes[p]));
+    if (p + 1 < t.planes.length) Cs.push((t.planes[p] + t.planes[p + 1]) / 2);
+  }
+  const Gs = [];
+  for (let k = 0; k < t.gamma.length; k++) {
+    Gs.push(t.gamma[k]);
+    if (k + 1 < t.gamma.length) Gs.push((t.gamma[k] + t.gamma[k + 1]) / 2);
+  }
+  let peak = 0;
+  for (const v of t.rows) if (v > peak) peak = v;
+  const tol = 1e-12 * Math.max(peak, 1e-300);
+  for (const C0 of Cs) {
+    const C = wrap2pi(C0), Cm = wrap2pi(a - C);
+    for (const g of Gs) if (Math.abs(phot.intensity(C, g) - phot.intensity(Cm, g)) > tol) return false;
+  }
+  return true;
+}
+
+/** Room mirrors the photometry turned by ψ allows: { x: x → L − x, y: y → W − y }. */
+export function mirrorSymmetry(phot, psi = 0) {
+  return { x: mirrorInvariant(phot, Math.PI - 2 * psi), y: mirrorInvariant(phot, -2 * psi) };
+}
+
+/**
+ * Orbits of the luminaires under the allowed mirrors: [{ lum, images: ('x'|'y'|'xy')[] }]; the
+ * representative itself is always included (image 'id'). Every luminaire belongs to exactly one
+ * orbit; a mirror whose image is not a luminaire of the set is not used for that orbit.
+ */
+export function luminaireOrbits(lums, sym, L, W) {
+  const key = (x, y) => `${Math.round(x * 1e6)}|${Math.round(y * 1e6)}`;
+  const byPos = new Map();
+  lums.forEach((s, k) => byPos.set(key(s.pos[0], s.pos[1]), k));
+  const psi0 = lums.length ? lums[0].psi : 0;
+  const same = lums.every((s) => s.psi === psi0 && s.pos[2] === lums[0].pos[2]);
+  const used = new Uint8Array(lums.length), out = [];
+  lums.forEach((s, k) => {
+    if (used[k]) return;
+    used[k] = 1;
+    const images = ['id'];
+    if (same) {
+      const [x, y] = s.pos, cand = [];
+      if (sym.x) cand.push(['x', L - x, y]);
+      if (sym.y) cand.push(['y', x, W - y]);
+      if (sym.x && sym.y) cand.push(['xy', L - x, W - y]);
+      for (const [name, px, py] of cand) {
+        const m = byPos.get(key(px, py));
+        if (m !== undefined && !used[m]) { used[m] = 1; images.push(name); }
+      }
+    }
+    out.push({ lum: s, images });
+  });
+  return out;
+}
+
+/**
+ * Mirror maps of the elements of a set of faces (faces with origin, u, v, normal, nu, nv, du, dv,
+ * offset): { x, y, xy } — Int32Array P with P[k] the element that element k is mirrored to.
+ */
+export function elementMirrors(faces, N, L, W) {
+  const map = (axis) => {
+    const size = axis ? W : L, P = new Int32Array(N);
+    for (const f of faces) {
+      const n2 = f.normal.slice(); n2[axis] = -n2[axis];
+      for (let j = 0; j < f.nv; j++) for (let i = 0; i < f.nu; i++) {
+        const c = [0, 1, 2].map((q) => f.origin[q] + (i + 0.5) * f.du * f.u[q] + (j + 0.5) * f.dv * f.v[q]);
+        c[axis] = size - c[axis];
+        const g = faces.find((h) => h.normal.every((v, q) => Math.abs(v - n2[q]) < 1e-12)
+          && Math.abs(h.normal.reduce((a, v, q) => a + v * (c[q] - h.origin[q]), 0)) < 1e-9);
+        if (!g) throw new Error('elementMirrors: no mirror face');
+        const rel = [0, 1, 2].map((q) => c[q] - g.origin[q]);
+        const ii = Math.floor(rel.reduce((a, v, q) => a + v * g.u[q], 0) / g.du);
+        const jj = Math.floor(rel.reduce((a, v, q) => a + v * g.v[q], 0) / g.dv);
+        P[f.offset + i + j * f.nu] = g.offset + Math.min(g.nu - 1, Math.max(0, ii)) + Math.min(g.nv - 1, Math.max(0, jj)) * g.nu;
+      }
+    }
+    return P;
+  };
+  const x = map(0), y = map(1);
+  return { x, y, xy: Int32Array.from(x, (v) => y[v]) };
+}
+
+/** Adds the field F of an orbit's representative and its mirrored copies to out. */
+export function addOrbit(out, F, images, perms) {
+  const n = out.length;
+  for (const img of images) {
+    if (img === 'id') { for (let k = 0; k < n; k++) out[k] += F[k]; continue; }
+    const P = perms[img];
+    for (let k = 0; k < n; k++) out[k] += F[P[k]];
+  }
+}
+
+/** Orbits for a room-like object { L, W, faces, N }: { orbits, perms } (perms built lazily). */
+function symmetryOf(room, lums, phot, symmetric) {
+  const sym = symmetric && lums.length > 1 ? mirrorSymmetry(phot, lums[0].psi) : { x: false, y: false };
+  const orbits = luminaireOrbits(lums, sym, room.L, room.W);
+  const needs = orbits.some((o) => o.images.length > 1);
+  return { orbits, perms: needs ? elementMirrors(room.faces, room.N, room.L, room.W) : null };
 }
 
 /**
@@ -51,20 +182,23 @@ export function directAtPoint(x, n, lums, phot) {
  * @param {import('./geometry.js').Room} room
  * @returns {Float64Array} E₀ per element (global order), lx
  */
-export function elementDirectExact(room, lums, phot, out = new Float64Array(room.N)) {
+export function elementDirectExact(room, lums, phot, out = new Float64Array(room.N), symmetric = false) {
   if (!phot.lobes) throw new Error('elementDirectExact: photometry has no cosine lobes');
   out.fill(0);
-  for (const face of room.faces) {
-    const inv = 1 / face.elementArea;
-    for (let j = 0; j < face.nv; j++) {
-      for (let i = 0; i < face.nu; i++) {
-        let flux = 0;
-        for (const s of lums) {
+  const { orbits, perms } = symmetryOf(room, lums, phot, symmetric);
+  const tmp = new Float64Array(room.N);
+  for (const { lum: s, images } of orbits) {
+    for (const face of room.faces) {
+      const inv = 1 / face.elementArea;
+      for (let j = 0; j < face.nv; j++) {
+        for (let i = 0; i < face.nu; i++) {
+          let flux = 0;
           for (const l of phot.lobes) flux += l.flux * pointToElement(room, face.id, i, j, s.pos, l.axis);
+          tmp[face.offset + i + j * face.nu] = flux * inv;
         }
-        out[face.offset + i + j * face.nu] = flux * inv;
       }
     }
+    addOrbit(out, tmp, images, perms);
   }
   return out;
 }
@@ -146,7 +280,7 @@ export function elementDirectCenters(room, lums, phot, out = new Float64Array(ro
 // missed by every sample point would show up there too).
 
 /** Defaults of the adaptive cubature (internal; not shown in the UI). */
-export const ADAPTIVE = Object.freeze({ order: 3, eps: 1e-3, abs: 1e-7, maxDepth: 10, minDepth: 0, balance: 1e-3, maxRetries: 2 });
+export const ADAPTIVE = Object.freeze({ order: 3, eps: 1e-3, abs: 1e-7, maxDepth: 10, minDepth: 0, balance: 1e-3, maxRetries: 2, symmetric: false });
 
 /**
  * Flux a luminaire at z_s can send into the room: Φ, or only Φ_down when it lies in the ceiling
@@ -173,8 +307,9 @@ export function elementDirectAdaptive(room, lums, phot, opts = {}) {
   const out = opts.out ?? new Float64Array(room.N);
   out.fill(0);
   const tmp = new Float64Array(room.N);
-  const stats = { evals: 0, depth: 0, retries: 0, perLum: [] };
-  for (const s of lums) {
+  const { orbits, perms } = symmetryOf(room, lums, phot, !!o.symmetric);
+  const stats = { evals: 0, depth: 0, retries: 0, perLum: [], integrated: orbits.length, luminaires: lums.length };
+  for (const { lum: s, images } of orbits) {
     const em = emittedFlux(phot, s.pos[2], room.H);
     let eps = o.eps, abs = o.abs, rel = 0;
     for (let attempt = 0; ; attempt++) {
@@ -186,7 +321,7 @@ export function elementDirectAdaptive(room, lums, phot, opts = {}) {
       eps /= 10; abs /= 10;
     }
     stats.perLum.push(rel);
-    for (let g = 0; g < room.N; g++) out[g] += tmp[g];
+    addOrbit(out, tmp, images, perms);
   }
   out.stats = stats;
   return out;
@@ -266,8 +401,8 @@ function integrateLuminaire(room, s, phot, o, E, stats) {
 }
 
 /** Element-average direct illuminance: exact for cosine lobes, adaptive cubature otherwise. */
-export function elementDirect(room, lums, phot, out) {
-  return phot.lobes ? elementDirectExact(room, lums, phot, out) : elementDirectAdaptive(room, lums, phot, { out });
+export function elementDirect(room, lums, phot, out, symmetric = true) {
+  return phot.lobes ? elementDirectExact(room, lums, phot, out, symmetric) : elementDirectAdaptive(room, lums, phot, { out, symmetric });
 }
 
 /** Flux reaching the faces: Σ_j E_j · A_j, lm (per face and total). */
