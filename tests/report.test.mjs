@@ -71,7 +71,8 @@ test('plans: drafting scale that fits, valid SVG in millimetres', () => {
 
 test('summary tables', () => {
   const { roomRows, lumRows } = summaryRows({ ...v1 }, file);
-  assert.equal(roomRows.length, 8);
+  assert.equal(roomRows.length, 10);
+  assert.equal(Object.fromEntries(roomRows)['Норма'], 'задано пользователем');
   const lum = Object.fromEntries(lumRows);
   assert.match(lum['Производитель'], /MAYTONI/);
   assert.match(lum['Размеры'], /мм$/);

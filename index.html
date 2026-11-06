@@ -23,22 +23,25 @@
       "./js/estimate.js": "./js/estimate.js?v=8262379e",
       "./js/formfactor.js": "./js/formfactor.js?v=3ce6f2b3",
       "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
-      "./js/help.js": "./js/help.js?v=175ff58e",
+      "./js/help.js": "./js/help.js?v=d5dd111c",
       "./js/hotkeys.js": "./js/hotkeys.js?v=e9422ea3",
       "./js/isolines.js": "./js/isolines.js?v=ea7b03a7",
       "./js/kernel.js": "./js/kernel.js?v=19e195ca",
+      "./js/norms-data.js": "./js/norms-data.js?v=3d3548ce",
+      "./js/norms.js": "./js/norms.js?v=d30398d2",
+      "./js/normui.js": "./js/normui.js?v=31e9a950",
       "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
       "./js/photfile.js": "./js/photfile.js?v=a8a26e0c",
       "./js/photometry.js": "./js/photometry.js?v=80ac0f3a",
       "./js/photui.js": "./js/photui.js?v=b0f6c406",
       "./js/planview.js": "./js/planview.js?v=54dee309",
-      "./js/project.js": "./js/project.js?v=db256ab7",
-      "./js/report.js": "./js/report.js?v=77fc365a",
+      "./js/project.js": "./js/project.js?v=01d2d727",
+      "./js/report.js": "./js/report.js?v=d779b169",
       "./js/reportsvg.js": "./js/reportsvg.js?v=f5ddfca9",
-      "./js/reportui.js": "./js/reportui.js?v=46a48bac",
+      "./js/reportui.js": "./js/reportui.js?v=4c4c0ddd",
       "./js/solver.js": "./js/solver.js?v=7f30a49e",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=b7637a85",
+      "./js/ui.js": "./js/ui.js?v=2101de56",
       "./js/view3d.js": "./js/view3d.js?v=67dfcc65",
       "./js/worker.js": "./js/worker.js?v=bf308824",
       "./js/workplane.js": "./js/workplane.js?v=6db5b51d"
@@ -331,6 +334,64 @@
     .gsln{width:28px;height:1px;background:var(--line);flex:none}
     .gsln.on{background:var(--ink)}
     .stroomw{position:relative}
+    .gssplit{padding:0;gap:0;cursor:default}
+    .gssplit button{height:100%;border:0;background:none;color:inherit;font:inherit;display:inline-flex;align-items:center;cursor:pointer;white-space:nowrap}
+    .gssplit .gsl{gap:10px;padding:0 12px 0 6px;border-radius:999px 0 0 999px}
+    .gssplit .gsr{gap:8px;padding:0 14px 0 12px;border-radius:0 999px 999px 0;position:relative;font-weight:400}
+    .gssplit .gsr::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:1px;background:currentColor;opacity:.3}
+    .gssplit:not(.cur) button:hover{background:var(--soft);color:var(--ink)}
+    .gssplit.cur:hover{background:var(--sel)}
+    .gssplit.cur button:hover{background:color-mix(in srgb,var(--on-sel) 12%,transparent)}
+    .gssplit .gsc{margin-left:0;opacity:.85}
+    /* norms: «Выбрать», source line, codifier dialog */
+    .fsub .gslink{margin-left:auto;font-weight:500}
+    .normsrc{font-size:11.5px;color:var(--ink3);margin-top:-2px;line-height:1.35}
+    .normsrc b{font-weight:600;color:var(--ink2)}
+    .ndlg{width:min(1000px,94vw);height:min(86vh,940px);max-width:none;max-height:none;padding:0;border:1px solid var(--rule);border-radius:12px;
+      background:var(--card);color:var(--ink);box-shadow:0 24px 80px -20px rgba(0,0,0,.45)}
+    .ndlg[open]{display:flex;flex-direction:column}
+    .ndlg::backdrop{background:rgba(0,0,0,.38)}
+    .ndhead{display:flex;align-items:flex-start;gap:16px;padding:22px 26px 14px}
+    .ndhead .gshd{flex:1}
+    .ndclose{width:34px;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink2);font-size:18px;line-height:1;cursor:pointer;flex:none}
+    .ndclose:hover{border-color:var(--ink);color:var(--ink)}
+    .ndbar{display:flex;gap:12px;align-items:center;padding:0 26px 14px;flex-wrap:wrap;border-bottom:1px solid var(--rule)}
+    .seg{display:inline-flex;padding:3px;border-radius:999px;background:var(--soft);gap:2px;flex:none}
+    .seg button{height:32px;padding:0 14px;border-radius:999px;border:0;background:transparent;color:var(--ink3);font-size:13px;cursor:pointer;white-space:nowrap}
+    .seg button:hover{color:var(--ink)}
+    .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 0 0 1px var(--rule)}
+    .nsearch{position:relative;flex:1 1 260px;min-width:200px}
+    .nsearch input{width:100%;height:38px;border:1px solid var(--rule);border-radius:999px;padding:0 14px 0 36px;font-size:13.5px;background:var(--card);color:var(--ink)}
+    .nsearch input:focus{outline:none;border-color:var(--accent)}
+    .nsearch svg{position:absolute;left:13px;top:12px;color:var(--muted)}
+    .ncount{font-size:12px;color:var(--ink3);white-space:nowrap}
+    .ndbody{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 26px 18px}
+    .nsec{border-bottom:1px solid var(--rule)}
+    .nsec summary{list-style:none;display:flex;align-items:baseline;gap:10px;padding:12px 0;cursor:pointer;font-size:13.5px;font-weight:600;line-height:1.35}
+    .nsec summary::-webkit-details-marker{display:none}
+    .nsec summary::before{content:"";flex:none;width:0;height:0;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;
+      transform:translateY(-1px);transition:transform .12s;opacity:.7}
+    .nsec[open] summary::before{transform:translateY(-1px) rotate(90deg)}
+    .nsec summary small{margin-left:auto;font-weight:400;color:var(--ink3);font-size:12px;font-variant-numeric:tabular-nums;flex:none}
+    .ntable{width:100%;border-collapse:collapse;font-size:12.5px;margin:0 0 12px}
+    .ntable th{text-align:left;font-weight:600;font-size:11.5px;color:var(--ink3);padding:5px 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
+    .ntable td{padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.4}
+    .ntable tr:last-child td{border-bottom:0}
+    .ntable .r{width:62px;color:var(--ink3);font-variant-numeric:tabular-nums;white-space:nowrap}
+    .ntable .p{width:66px;white-space:nowrap}
+    .ntable .v{width:64px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .ntable th.v{text-align:right}
+    .ntable td.v b{font-weight:600}
+    .ntable td small{display:block;color:var(--ink3);font-size:11.5px;margin-top:2px}
+    .ntable tr.nrow{cursor:pointer}
+    .ntable tr.nrow:hover td,.ntable tr.nrow:focus-visible td{background:var(--accent-soft)}
+    .ntable tr.nrow:focus-visible{outline:none}
+    .ntable tr.sel td{background:var(--soft)}
+    .ntable tr.sel td.r::before{content:"✓ ";color:var(--accent);font-weight:700}
+    .ntable tr.na{color:var(--muted);cursor:not-allowed}
+    .ndfoot{padding:12px 26px 16px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink3);line-height:1.45}
+    .nempty{padding:28px 0;color:var(--ink3);font-size:13.5px}
+    mark{background:color-mix(in srgb,var(--accent) 22%,transparent);color:inherit;border-radius:2px}
     .stroomw .vmenu{left:0;right:auto;min-width:240px}
     .vmenu .vmsep{height:1px;background:var(--rule);margin:6px 2px}
     .vmenu button.vmadd{color:var(--accent);font-weight:600}
@@ -462,11 +523,14 @@
       <button type="button" class="gsst" data-s="1"><span class="gsn">1</span>Проект</button>
       <span class="gsln" data-l="1"></span>
       <div class="stroomw">
-        <button type="button" class="gsst" data-s="2" id="stroom" aria-haspopup="menu" aria-expanded="false"><span class="gsn">2</span><span class="gsrn" id="stroomname">Расчёт</span><span class="gsc"><svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></span></button>
+        <div class="gsst gssplit" data-s="2">
+          <button type="button" class="gsl" id="stcalc"><span class="gsn">2</span>Расчёт</button>
+          <button type="button" class="gsr" id="stroom" aria-haspopup="menu" aria-expanded="false" aria-label="Помещения"><span class="gsrn" id="stroomname">Помещение 1</span><span class="gsc"><svg viewBox="0 0 10 7" width="10" height="7" aria-hidden="true"><path d="M1 1h8L5 6z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></span></button>
+        </div>
         <div class="vmenu" id="roommenu" role="menu" hidden></div>
       </div>
       <span class="gsln" data-l="2"></span>
-      <button type="button" class="gsst" data-s="3"><span class="gsn">3</span>Результаты</button>
+      <button type="button" class="gsst" data-s="3"><span class="gsn">3</span>Документация</button>
     </nav>
     <div class="sbtools">
       <button type="button" class="sbbtn tipr" id="savebtn" data-tip="Сохранить проект в файл" data-key="Ctrl+S"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5M4.8 7 8 10.2 11.2 7"/><path d="M2.5 11v2.5h11V11"/></svg>Сохранить</button>
@@ -502,8 +566,10 @@
           <div class="fgrid" data-group="room" style="--cols:3"></div>
           <div class="fsub">Коэффициенты отражения <button type="button" class="help" data-help="refl" aria-label="Справка: коэффициенты отражения" aria-expanded="false">?</button></div>
           <div class="fgrid" data-group="refl" style="--cols:3"></div>
-          <div class="fsub">Нормы <button type="button" class="help" data-help="norm" aria-label="Справка: нормы освещения" aria-expanded="false">?</button></div>
-          <div class="fgrid" data-group="norm" style="--cols:3"></div>
+          <div class="fsub">Нормы <button type="button" class="help" data-help="norm" aria-label="Справка: нормы освещения" aria-expanded="false">?</button>
+            <button type="button" class="gslink" id="normpick" aria-haspopup="dialog">Выбрать…</button></div>
+          <div class="fgrid" data-group="norm" style="--cols:2"></div>
+          <div class="normsrc" id="normsrc"></div>
         </div>
         <div class="fsec">
           <div class="shd">Светильник <button type="button" class="help" data-help="file" aria-label="Справка: фотометрический файл" aria-expanded="false">?</button></div>
@@ -628,10 +694,24 @@
     </section>
   </main>
 
+  <dialog class="ndlg" id="normdlg" aria-labelledby="normtitle">
+    <div class="ndhead"><div class="gshd"><span class="gskick">Кодификатор</span><h1 id="normtitle">Нормы освещённости</h1>
+      <p>Нажмите строку — норма, рабочая поверхность и равномерность подставятся в помещение.</p></div>
+      <button type="button" class="ndclose" id="normclose" aria-label="Закрыть">×</button></div>
+    <div class="ndbar">
+      <div class="seg" id="normset" role="group" aria-label="Нормы"></div>
+      <label class="nsearch"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+        <input type="search" id="normq" placeholder="Поиск: помещение, номер, слово" autocomplete="off" spellcheck="false" aria-label="Поиск по нормам"></label>
+      <span class="ncount" id="normcount"></span>
+    </div>
+    <div class="ndbody" id="normbody"></div>
+    <div class="ndfoot" id="normnote"></div>
+  </dialog>
+
   <main class="stage rstage" id="stage3" hidden>
     <section class="gscard rtreecard" aria-label="Состав отчёта">
       <div class="rtreebody">
-        <div class="gshd"><span class="gskick">Шаг 3 из 3</span><h1>Отчёт</h1>
+        <div class="gshd"><span class="gskick">Шаг 3 из 3</span><h1>Документация</h1>
           <p>Отметьте разделы, которые войдут в отчёт; нажмите на название, чтобы перейти к странице.</p></div>
         <ul class="rtree" id="rtree"></ul>
       </div>
@@ -657,7 +737,7 @@
   import { initPhotFile, fileKey } from './js/photui.js';
   import { parsePhotometryFile, luminaireShape } from './js/photfile.js';
   import { initHelp } from './js/help.js';
-  import { levelStatus, U0_MIN, bilinear, cellStats } from './js/workplane.js';
+  import { levelStatus, bilinear, cellStats } from './js/workplane.js';
   import { isolineSet } from './js/isolines.js';
   import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D } from './js/planview.js';
   import { stage6Checks } from './js/checks6.js';
@@ -665,6 +745,8 @@
   import { createPhotometry, luminaireGrid } from './js/photometry.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS } from './js/project.js';
   import { hotkeyAction } from './js/hotkeys.js';
+  import { initNormDialog } from './js/normui.js';
+  import { normMatches, normSource } from './js/norms.js';
   import { initReport } from './js/reportui.js';
 
   const $ = (s) => document.querySelector(s);
@@ -841,7 +923,12 @@
   function update(values) {
     current = values;
     const ar = activeRoom();
-    if (ar && !switching) { ar.values = { ...values }; autosave(); }
+    if (ar && !switching) {
+      ar.values = { ...values };
+      if (ar.norm && !normMatches(ar.norm, values)) ar.norm = null; // edited by hand
+      autosave();
+    }
+    renderNormSrc();
     showCentre(values);
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
@@ -994,22 +1081,22 @@
       const name = planeName(pl.z);
       const on = planeZ != null && zKey(planeZ) === zKey(pl.z);
       const level = pl.normative ? levelStatus(avg, current.En) : null;
-      const uBad = pl.normative && u0 < U0_MIN;
+      const uBad = pl.normative && current.U0n != null && u0 < current.U0n - 1e-9;
       if (!pl.normative) ref = true;
       return `<details class="prow" data-z="${pl.z}"${open.has(String(pl.z)) ? ' open' : ''}>
         <summary><span class="pn">${name}${pl.normative ? '' : '*'}</span>
           <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` ${mark(level, `${LABEL[level]}: Eн = ${current.En} лк`)}` : ''}</span>
-          <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ` ${mark('low', 'U₀ меньше 0,3')}` : ''}</span>
+          <span class="pv"><i>U₀</i> ${n2(u0)}${uBad ? ` ${mark('low', `U₀ меньше нормы ${formatNumber(current.U0n, 2)}`)}` : ''}</span>
           <button type="button" class="pplan" data-z="${pl.z}" aria-pressed="${on}" aria-label="Изолинии ${name}" title="${name}: изолинии и значения в точках сетки ГОСТ — на плане и в 3D">${PLAN_ICON}</button></summary>
         <div class="gstech">
-          ${row('Средняя Ē', `${n0(avg)} лк`)}
-          ${row('Минимальная E<sub>min</sub>', `${n0(min)} лк`)}
-          ${row('Максимальная E<sub>max</sub>', `${n0(max)} лк`)}
-          ${row('E<sub>min</sub> / Ē', n2(u0))}
-          ${row('E<sub>min</sub> / E<sub>max</sub>', n2(st.minMax))}
+          ${row('Ē', `${n0(avg)} лк`)}
+          ${row('E<sub>min</sub>', `${n0(min)} лк`)}
+          ${row('E<sub>max</sub>', `${n0(max)} лк`)}
+          ${row('U<sub>0</sub> = E<sub>min</sub> / Ē', n2(u0))}
+          ${row('U<sub>d</sub> = E<sub>min</sub> / E<sub>max</sub>', n2(st.minMax))}
         </div></details>`;
     }).join('');
-    $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учётом MF = ${formatNumber(mf, 2)}. U₀ = E<sub>min</sub> / Ē.`;
+    $('#planenote').innerHTML = (ref ? '* Для справки. ' : '') + `С учётом MF = ${formatNumber(mf, 2)}.`;
   }
 
   /**
@@ -1306,7 +1393,7 @@
   /** The pill of the second stage: name of the active room; its menu lists the rooms. */
   function renderRoomNav() {
     const ar = activeRoom();
-    $('#stroomname').textContent = ar ? ar.name || 'Без названия' : 'Расчёт';
+    $('#stroomname').textContent = ar ? ar.name || 'Без названия' : '—';
     const many = project.rooms.length > 1;
     $('#roommenu').innerHTML = '<div class="vmh">Помещения</div>' + project.rooms.map((r) => {
       const on = r.id === project.active, v = r.values;
@@ -1319,11 +1406,9 @@
   function openRoomMenu() { renderRoomNav(); roomMenu.hidden = false; roomBtn.setAttribute('aria-expanded', 'true'); }
   roomBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (!roomMenu.hidden) { closeRoomMenu(); return; }
-    // on another stage the pill leads to the rooms; the arrow (or the pill on this stage) opens the list
-    if (stage !== 2 && !e.target.closest('.gsc')) { setStage(2); return; }
-    openRoomMenu();
+    if (!roomMenu.hidden) closeRoomMenu(); else openRoomMenu();
   });
+  $('#stcalc').addEventListener('click', () => setStage(2));
   roomMenu.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b) return;
@@ -1414,6 +1499,25 @@
     setStage(st === 3 ? 2 : st);
   }
 
+  // ---- norms: source line and the codifier ----
+  function renderNormSrc() {
+    const n = activeRoom()?.norm;
+    $('#normsrc').innerHTML = n ? `Норма: <b>${esc(n.source)}</b>` : 'Норма: задано пользователем';
+  }
+  const normDlg = initNormDialog({
+    dialog: $('#normdlg'), set: $('#normset'), query: $('#normq'), body: $('#normbody'), count: $('#normcount'),
+    note: $('#normnote'), close: $('#normclose'),
+    current: () => activeRoom()?.norm ?? null,
+    apply: (n) => {
+      const r = activeRoom();
+      r.norm = n;
+      form.set({ En: n.En, hwp: n.hwp, U0n: n.U0n });
+      renderNormSrc();
+      autosave();
+    },
+  });
+  $('#normpick').addEventListener('click', () => normDlg.open());
+
   // ---- help and hot keys ----
   function contextHelp() {
     const el = document.activeElement;
@@ -1431,7 +1535,7 @@
     if (!a) return;
     if (a === 'save') { e.preventDefault(); saveProject(); return; }
     if (a === 'help') { e.preventDefault(); contextHelp(); return; }
-    if (stage !== 2) return; // the view keys belong to the calculation stage
+    if (stage !== 2 || normDlg.isOpen()) return; // the view keys belong to the calculation stage
     e.preventDefault();
     if (a === 'plan') { if (view && !view.isPlan()) view.showPlan(); }
     else if (a === 'view3d') view?.show3D();
@@ -1478,7 +1582,7 @@
       kept = { key, result: await reportRun(params) };
       roomResults.set(r.id, kept);
     }
-    return { id: r.id, name: r.name, values: { ...r.values }, file, params, key, result: kept.result };
+    return { id: r.id, name: r.name, values: { ...r.values }, norm: r.norm ?? null, file, params, key, result: kept.result };
   }
   const report = initReport({
     tree: $('#rtree'), iframe: $('#preview'), busy: $('#rbusy'), pdf: $('#pdfbtn'),

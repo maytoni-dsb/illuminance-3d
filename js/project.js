@@ -40,6 +40,7 @@ export function createRoomState(rooms = [], from = null) {
     name: nextRoomName(rooms),
     values: { ...(from ? from.values : DEFAULTS) },
     file: from?.file ? { ...from.file } : null,
+    norm: from?.norm ? { ...from.norm } : null, // the codifier row of the norms, null — set by the user
   };
 }
 
@@ -66,7 +67,7 @@ export function serializeProject(p) {
   return JSON.stringify({
     format: FILE_FORMAT, version: FILE_VERSION, saved: new Date().toISOString(),
     info: { ...emptyInfo(), ...p.info },
-    rooms: p.rooms.map((r) => ({ name: r.name, values: r.values, file: r.file ? { name: r.file.name, text: r.file.text, set: r.file.set ?? 0 } : null })),
+    rooms: p.rooms.map((r) => ({ name: r.name, values: r.values, norm: r.norm ?? null, file: r.file ? { name: r.file.name, text: r.file.text, set: r.file.set ?? 0 } : null })),
     active: Math.max(0, p.rooms.findIndex((r) => r.id === p.active)),
   }, null, 1);
 }
@@ -87,7 +88,9 @@ export function parseProject(text) {
       ? { name: r.file.name, text: r.file.text, set: Number.isInteger(r.file.set) ? r.file.set : 0 } : null;
     const values = cleanValues(r.values);
     if (!file) values.phot = 'cosine';
-    rooms.push({ id: newId(), name: String(r.name ?? '').trim() || nextRoomName(rooms), values, file });
+    const n = r.norm;
+    const norm = n && typeof n.source === 'string' && Number.isFinite(n.En) ? { source: n.source, set: String(n.set ?? ''), ref: String(n.ref ?? ''), En: n.En, hwp: n.hwp, U0n: n.U0n ?? null } : null;
+    rooms.push({ id: newId(), name: String(r.name ?? '').trim() || nextRoomName(rooms), values, file, norm });
   }
   const info = emptyInfo();
   for (const f of INFO_FIELDS) if (typeof d.info?.[f.key] === 'string') info[f.key] = d.info[f.key];

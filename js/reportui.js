@@ -9,7 +9,8 @@ import { luminaireGrid } from './photometry.js';
 import { luminance, exposure } from './tonemap.js';
 import { isolineSet } from './isolines.js';
 import { LEVELS } from './colorscale.js';
-import { levelStatus, U0_MIN } from './workplane.js';
+import { levelStatus } from './workplane.js';
+import { normSource } from './norms.js';
 import { formatNumber } from './ui.js';
 
 const NB = ' ';
@@ -23,7 +24,7 @@ const zKey = (z) => z.toFixed(3);
  * Rows of the summary tables of a room.
  * @param {object} v — form values; @param {object|null} file — the parsed photometric file
  */
-export function summaryRows(v, file) {
+export function summaryRows(v, file, norm = null) {
   const t = file?.table ?? null;
   const roomRows = [
     ['Длина L', `${n2(v.L)}${NB}м`],
@@ -31,7 +32,9 @@ export function summaryRows(v, file) {
     ['Высота H', `${n2(v.H)}${NB}м`],
     ['Площадь пола', `${formatNumber(v.L * v.W, 2)}${NB}м²`],
     ['Отражение: потолок / стены / пол', `${formatNumber(v.rhoC, 2)} / ${formatNumber(v.rhoW, 2)} / ${formatNumber(v.rhoF, 2)}`],
+    ['Норма', esc(normSource(norm))],
     ['Целевая освещённость E<sub>н</sub>', `${formatNumber(v.En, 0)}${NB}лк`],
+    ['Равномерность U<sub>0</sub>, не менее', v.U0n != null ? formatNumber(v.U0n, 2) : 'не нормируется'],
     ['Рабочая поверхность', `${planeName(v.hwp)}${v.hwp > 0 ? `, h<sub>р</sub>${NB}=${NB}${n2(v.hwp)}${NB}м` : ' (пол)'}`],
     ['Коэффициент эксплуатации MF', formatNumber(v.mf, 2)],
   ];
@@ -77,12 +80,12 @@ export function prepareRoom(rd) {
     const stats = { avg: mf * s.avg, min: mf * s.min, max: mf * s.max, u0: s.u0, minMax: s.minMax };
     return {
       key: zKey(pl.z), z: pl.z, name: planeName(pl.z), normative: !!pl.normative, sets, gost, stats, mf,
-      norm: pl.normative ? { En: v.En, status: levelStatus(stats.avg, v.En), u0Low: stats.u0 < U0_MIN } : null,
+      norm: pl.normative ? { En: v.En, U0n: v.U0n ?? null, status: levelStatus(stats.avg, v.En), u0Low: v.U0n != null && stats.u0 < v.U0n - 1e-9 } : null,
     };
   });
   return {
     id: rd.id, name: rd.name?.trim() || 'Без названия', key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys,
-    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, ...summaryRows(v, rd.file), images: null,
+    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, ...summaryRows(v, rd.file, rd.norm), images: null,
   };
 }
 

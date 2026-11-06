@@ -154,7 +154,7 @@ export function buildReport(d) {
         <h3 class="plh">${pl.name}<span>${pl.normative ? 'нормируемая поверхность' : 'для справки'}${pl.z > 0 ? `, высота ${num(pl.z, 2)}${NB}м` : ', пол'}</span></h3>
         <figure class="fig plan">${isolinePlanSvg({ ...r, n, sets: pl.sets, gost: pl.gost }, `p${p.n}`)}
           <figcaption>Изолинии и значения освещённости в точках расчётной сетки (ГОСТ${NB}Р${NB}55710), лк, с${NB}учётом MF${NB}=${NB}${num(pl.mf, 2)}. Масштаб${NB}1:${n}.</figcaption></figure>
-        <table class="res"><thead><tr><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>E<sub>min</sub>${NB}/${NB}Ē</th><th>E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
+        <table class="res"><thead><tr><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
           <tbody><tr><td>${lux(st.avg)}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td><td>${num(st.u0, 2)}</td><td>${num(st.minMax, 2)}</td></tr></tbody></table>
         ${verdict ? `<p class="verdict ${pl.norm.status === 'low' || pl.norm.u0Low ? 'bad' : 'good'}">${verdict}</p>` : ''}
       </div>${foot(p.n)}</section>`;
@@ -188,7 +188,8 @@ function normText(norm, st) {
   if (norm.status === 'low') parts.push(`Ē${NB}=${NB}${lux(st.avg)}${NB}лк ниже нормы E<sub>н</sub>${NB}=${NB}${num(norm.En)}${NB}лк.`);
   else if (norm.status === 'high') parts.push(`Норма E<sub>н</sub>${NB}=${NB}${num(norm.En)}${NB}лк выполнена; Ē выше следующей ступени шкалы освещённостей.`);
   else parts.push(`Норма E<sub>н</sub>${NB}=${NB}${num(norm.En)}${NB}лк выполнена.`);
-  if (norm.u0Low) parts.push(`Равномерность E<sub>min</sub>${NB}/${NB}Ē${NB}=${NB}${num(st.u0, 2)} меньше 0,3.`);
+  if (norm.u0Low) parts.push(`Равномерность U<sub>0</sub>${NB}=${NB}${num(st.u0, 2)} меньше нормы ${num(norm.U0n, 2)}.`);
+  else if (norm.U0n != null) parts.push(`Равномерность U<sub>0</sub>${NB}=${NB}${num(st.u0, 2)} не меньше нормы ${num(norm.U0n, 2)}.`);
   return parts.join(' ');
 }
 

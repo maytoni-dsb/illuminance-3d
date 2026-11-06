@@ -45,9 +45,11 @@ export const PARAMS = Object.freeze([
   // between the two standard planes 0.0 and 0.8 m; any other value can still be typed
   { key: 'En', group: 'norm', label: 'Норма', sym: 'E<sub>н</sub>', unit: 'лк', def: 200, min: 1, max: 5000, ladder: ILLUMINANCE_SCALE },
   {
-    key: 'hwp', group: 'norm', label: 'Раб. пов.', sym: 'h<sub>р</sub>', unit: 'м', def: 0, min: 0, ladder: [0, 0.8],
+    key: 'hwp', group: 'norm', label: 'Поверхность', sym: 'h<sub>р</sub>', unit: 'м', def: 0, min: 0, ladder: [0, 0.8],
     max: (v) => Math.max(0, (v.H ?? 20) - 0.1), maxNote: 'H − 0,1',
   },
+  // uniformity required by the norm, U₀ = Emin / Ē; empty — not set (stage 7)
+  { key: 'U0n', group: 'norm', label: 'Равномерность', sym: 'U<sub>0</sub>', unit: '', def: 0.4, min: 0.1, max: 1, step: 0.05, optional: true, placeholder: '—' },
   { key: 'mf', group: 'norm', label: 'Коэф.', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
   { key: 'nx', group: 'grid', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true, step: 1 },
   { key: 'ny', group: 'grid', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true, step: 1 },
@@ -130,6 +132,7 @@ export function validateParams(raw) {
       continue;
     }
     if (p.when && !p.when({ ...choices, ...values })) { values[p.key] = p.def; continue; }
+    if (p.optional && (raw[p.key] == null || String(raw[p.key]).trim() === '')) { values[p.key] = null; continue; }
     const x = parseNumber(raw[p.key] ?? '');
     if (!Number.isFinite(x)) { errors[p.key] = 'Введите число'; continue; }
     if (p.int && !Number.isInteger(x)) { errors[p.key] = 'Введите целое число'; continue; }
@@ -174,7 +177,7 @@ export function initForm(root, onChange) {
     fld.id = `w-${p.key}`;
     fld.innerHTML = `<label class="fl" for="in-${p.key}"><span class="t">${p.label}</span><i>${p.sym}</i></label>
       <div class="ibox"><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="Больше">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="Меньше">${DOWN}</button></span><input id="in-${p.key}" name="${p.key}" inputmode="decimal" autocomplete="off" spellcheck="false"
-        value="${formatNumber(p.def)}" aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
+        value="${formatNumber(p.def)}"${p.placeholder ? ` placeholder="${p.placeholder}"` : ''} aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
       <span class="ferr" id="err-${p.key}" role="alert" hidden></span>`;
     const input = fld.querySelector('input');
     inputs[p.key] = input;
@@ -234,7 +237,7 @@ export function initForm(root, onChange) {
   function set(v, { exact = false } = {}) {
     for (const [k, x] of Object.entries(v)) {
       if (k in choice) choice[k] = x;
-      else if (inputs[k]) inputs[k].value = typeof x === 'number' ? formatNumber(x, 6) : toComma(x);
+      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? formatNumber(x, 6) : toComma(x);
     }
     clearTimeout(timer);
     check(!exact);
