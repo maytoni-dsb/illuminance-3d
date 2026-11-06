@@ -47,7 +47,7 @@ const MAYTONI = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 106 22" fi
 
 /** Node ids of the report tree (reportui.js) — also the anchors of the table of contents. */
 export const nodeId = {
-  title: 'title', toc: 'toc', lumlist: 'lumlist', room: (r) => `room:${r}`, summary: (r) => `room:${r}/summary`,
+  title: 'title', toc: 'toc', lumlist: 'lumlist', restable: 'restable', room: (r) => `room:${r}`, summary: (r) => `room:${r}/summary`,
   results: (r) => `room:${r}/results`, plane: (r, k) => `room:${r}/results/${k}`, ill: (r) => `room:${r}/ill`,
 };
 
@@ -79,13 +79,16 @@ export function buildReport(d) {
     if (secs.length) roomsIn.push({ r, secs });
   }
   // contents: rooms and their sections; a page holds about 30 lines
-  const tocLines = roomsIn.reduce((a, x) => a + 1 + x.secs.length, 0) + (inc(nodeId.lumlist) ? 1 : 0);
+  const tocLines = roomsIn.reduce((a, x) => a + 1 + x.secs.length, 0) + (inc(nodeId.lumlist) ? 1 : 0) + (inc(nodeId.restable) ? 1 : 0);
   const tocPages = inc(nodeId.toc) && roomsIn.length ? Math.max(1, Math.ceil(tocLines / 30)) : 0;
   for (let k = 0; k < tocPages; k++) plan.push({ kind: 'toc', node: nodeId.toc, part: k });
-  // list of luminaires of all rooms in the report: one line per type, 22 lines a page
-  const types = lumTypes(roomsIn.map((x) => x.r));
-  const lumPages = inc(nodeId.lumlist) && types.length ? Math.ceil(types.length / 22) : 0;
+  // list of luminaires (a line per room) and the summary of results (two lines per room: Г-0,0 and Г-0,8)
+  const rIn = roomsIn.map((x) => x.r).filter((r) => r.lum);
+  const LUM_ROWS = 20, RES_ROOMS = 13;
+  const lumPages = inc(nodeId.lumlist) && rIn.length ? Math.ceil(rIn.length / LUM_ROWS) : 0;
   for (let k = 0; k < lumPages; k++) plan.push({ kind: 'lumlist', node: nodeId.lumlist, part: k });
+  const resPages = inc(nodeId.restable) && rIn.length ? Math.ceil(rIn.length / RES_ROOMS) : 0;
+  for (let k = 0; k < resPages; k++) plan.push({ kind: 'restable', node: nodeId.restable, part: k });
   for (const { r, secs } of roomsIn) {
     let first = true;
     for (const s of secs) {
@@ -102,6 +105,7 @@ export function buildReport(d) {
   plan.forEach((p, k) => { p.n = k + 1; });
   const pageOf = (node) => plan.find((p) => p.node === node || p.pnodes?.includes(node))?.n ?? null;
   const toc = roomsIn.map(({ r, secs }) => ({ node: nodeId.room(r.id), title: r.name, page: pageOf(secs[0].node), secs: secs.map((s) => ({ node: s.node, title: s.title, page: pageOf(s.node) })) }));
+  if (resPages) toc.unshift({ node: nodeId.restable, title: 'Сводная таблица результатов', page: pageOf(nodeId.restable), secs: [] });
   if (lumPages) toc.unshift({ node: nodeId.lumlist, title: 'Перечень светильников', page: pageOf(nodeId.lumlist), secs: [] });
 
   // ---- pages ----
@@ -142,16 +146,32 @@ export function buildReport(d) {
         ${p.part === 0 ? '<h2 class="toch">Содержание</h2>' : ''}${body}</div>${foot(p.n)}</section>`;
     }
     if (p.kind === 'lumlist') {
-      const part = types.slice(p.part * 22, p.part * 22 + 22);
-      const totalN = types.reduce((a, t) => a + t.count, 0), totalP = types.reduce((a, t) => a + (t.power ? t.power * t.count : 0), 0);
-      const rows = part.map((t, k) => `<tr><td class="c">${p.part * 22 + k + 1}</td><td><b>${typo(t.article)}</b>${t.maker ? `<br><span>${typo(t.maker)}</span>` : ''}</td>
-        <td class="n">${t.flux ? num(t.flux) : '—'}</td><td class="n">${t.power ? num(t.power, 1) : '—'}</td><td class="n">${t.cct ? num(t.cct) : '—'}</td>
-        <td>${t.rooms.map((x) => `${typo(x.name)}${NB}— ${x.count}`).join('<br>')}</td><td class="n"><b>${t.count}</b></td></tr>`).join('');
-      const last = p.part === lumPages - 1;
+      const part = rIn.slice(p.part * LUM_ROWS, p.part * LUM_ROWS + LUM_ROWS);
+      const dash = '—';
+      const rows = part.map((r) => { const t = r.lum; return `<tr><td>${typo(r.name)}</td><td>${t.maker ? typo(t.maker) : dash}</td><td><b>${typo(t.article)}</b></td>
+        <td class="n">${t.flux ? num(t.flux) : dash}</td><td class="n">${t.power ? num(t.power, 1) : dash}</td><td class="n">${t.cct ? num(t.cct) : dash}</td>
+        <td>${t.kit ? typo(t.kit) : dash}</td><td class="n"><b>${t.count}</b></td></tr>`; }).join('');
       return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Перечень светильников' : '')}<div class="frame">
         ${p.part === 0 ? '<h2 class="toch">Перечень светильников</h2>' : ''}
-        <table class="lum"><thead><tr><th class="c">Поз.</th><th>Светильник</th><th class="n">Φ, лм</th><th class="n">P, Вт</th><th class="n">T<sub>ц</sub>, K</th><th>Помещения</th><th class="n">Кол-во, шт.</th></tr></thead>
-        <tbody>${rows}</tbody>${last ? `<tfoot><tr><td></td><td colspan="5">Всего${totalP ? `; установленная мощность ${num(totalP, totalP < 100 ? 1 : 0)}${NB}Вт` : ''}</td><td class="n"><b>${totalN}</b></td></tr></tfoot>` : ''}</table>
+        <table class="lum"><colgroup><col style="width:16%"><col style="width:13%"><col style="width:24%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:14%"><col style="width:10%"></colgroup>
+        <thead><tr><th>Помещение</th><th>Производитель</th><th>Артикул</th><th class="n">Φ, лм</th><th class="n">P, Вт</th><th class="n">T<sub>ц</sub>, K</th><th>Комплектация</th><th class="n">Кол-во, шт.</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>${foot(p.n)}</section>`;
+    }
+    if (p.kind === 'restable') {
+      const part = rIn.slice(p.part * RES_ROOMS, p.part * RES_ROOMS + RES_ROOMS);
+      const rows = part.map((r) => {
+        const planes = [0, 0.8].map((z) => r.planes.find((q) => Math.abs(q.z - z) < 1e-6)).filter(Boolean);
+        return planes.map((pl, k) => { const st = pl.stats; return `<tr${k === planes.length - 1 ? ' class="last"' : ''}>${k === 0 ? `<td rowspan="${planes.length}">${typo(r.name)}</td>` : ''}
+          <td class="c">${pl.name}${pl.normative ? '*' : ''}</td><td>${lux(st.avg)}${pl.norm ? `${MARK[pl.norm.status]}${NB}(${num(pl.norm.En)})` : ''}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td>
+          <td>${num(st.u0, 2)}${u0Mark(pl)}</td><td>${num(st.minMax, 2)}</td></tr>`; }).join('');
+      }).join('');
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Сводная таблица результатов' : '')}<div class="frame">
+        ${p.part === 0 ? '<h2 class="toch">Сводная таблица результатов</h2>' : ''}
+        <table class="sumres"><colgroup><col style="width:22%"><col style="width:10%"><col><col><col><col><col></colgroup>
+        <thead><tr><th>Помещение</th><th class="c">Поверхность</th><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        <p class="note">* Нормируемая поверхность; в скобках — норма.</p>
       </div>${foot(p.n)}</section>`;
     }
     const r = p.r;
@@ -161,10 +181,11 @@ export function buildReport(d) {
     if (p.kind === 'summary') {
       const n = planScale(r.L, r.W, FRAME.w - 17, 82 - 17);
       return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
-        <figure class="fig plan">${roomPlanSvg({ ...r, n })}<figcaption>План помещения со${NB}светильниками, размеры в${NB}миллиметрах</figcaption></figure>
-        <div class="cols"><div><h3>Помещение</h3>${kv(r.roomRows)}
-            ${r.polar ? `<figure class="fig polarfig">${r.polar}<figcaption>КСС, кд/клм: C0–C180 — сплошная, C90–C270 — пунктир</figcaption></figure>` : ''}</div>
-          <div><h3>Светильник</h3>${kv(r.lumRows)}</div></div>
+        <figure class="fig plan">${roomPlanSvg({ ...r, n, frameW: FRAME.w })}</figure>
+        <h3>Помещение</h3>
+        <div class="cols">${kv(r.roomRows.slice(0, Math.ceil(r.roomRows.length / 2)))}${kv(r.roomRows.slice(Math.ceil(r.roomRows.length / 2)))}</div>
+        <h3 class="mt">Светильник</h3>
+        <div class="cols">${kv(r.lumRows)}${r.polar ? `<figure class="fig polarfig">${r.polar.svg}<figcaption>${r.polar.legend}</figcaption></figure>` : '<div></div>'}</div>
       </div>${foot(p.n)}</section>`;
     }
     if (p.kind === 'planes') {
@@ -189,7 +210,7 @@ export function buildReport(d) {
     return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
       <figure class="fig ill"><img src="${r.images.real}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Визуализация светораспределения</figcaption></figure>
       <figure class="fig ill"><img src="${r.images.falseColor}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Распределение освещенности в${NB}фиктивных цветах</figcaption></figure>
-      <figure class="fig scale">${colorScaleSvg(w)}<figcaption>Шкала фиктивных цветов, лк: у${NB}каждой отметки — нижняя граница ступени</figcaption></figure>
+      <figure class="fig scale">${colorScaleSvg(w)}<figcaption>Шкала фиктивных цветов, лк</figcaption></figure>
     </div>${foot(p.n)}</section>`;
   });
 
@@ -282,8 +303,10 @@ h3.plh span{font-size:8.5pt;font-weight:400;color:#6b6b6b}
 .fig svg,.fig img{display:block}
 .fig figcaption{font-size:7.5pt;line-height:1.4;color:#6b6b6b;margin-top:2.2mm;max-width:135mm;text-align:center}
 .fig.ill{margin-bottom:9mm}
-.fig.polarfig{margin:5mm 0 0}
-.fig.polarfig figcaption{max-width:70mm}
+.fig.polarfig{margin:0;justify-content:flex-start}
+.fig.polarfig figcaption{white-space:nowrap;max-width:none;margin-top:1mm}
+.fig figcaption svg{display:inline-block}
+h3.mt{margin-top:6mm}
 .plblock{margin-bottom:7mm}
 .plblock .fig{margin-bottom:3mm}
 .res{table-layout:fixed}
@@ -313,7 +336,14 @@ sub{font-size:.72em;line-height:0;vertical-align:-.25em}
 .title .tmeta dt{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:#7a7a7a;margin:0 0 1.6mm;font-weight:500}
 .title .tmeta dd{margin:0;font-size:9pt;line-height:1.45}
 .title .tfoot{position:absolute;left:${PAGE.left}mm;right:60mm;bottom:20mm;font-size:7pt;line-height:1.45;color:#7a7a7a}
-/* list of luminaires */
+/* list of luminaires, summary of results */
+.lum,.sumres{table-layout:fixed}
+.sumres th{font-size:7.5pt;font-weight:500;color:#555;text-align:center;padding:0 1mm 1.6mm;border-bottom:.5pt solid #141414;vertical-align:bottom}
+.sumres td{font-size:8.5pt;text-align:center;padding:1.6mm 1mm;border-bottom:.35pt solid #e2e2e2;white-space:nowrap;vertical-align:middle}
+.sumres th:first-child,.sumres td[rowspan]{text-align:left;padding-left:0;white-space:normal}
+.sumres td[rowspan],.sumres tr.last td{border-bottom:.35pt solid #9a9a9a}
+.sumres .mk{width:2.4mm;height:2.4mm;vertical-align:-.2mm}
+.note{font-size:7.5pt;color:#6b6b6b;margin:2.5mm 0 0}
 .lum th{font-size:7.5pt;font-weight:500;color:#555;text-align:left;padding:0 3mm 1.6mm 0;border-bottom:.5pt solid #141414;vertical-align:bottom}
 .lum td{font-size:8.5pt;padding:2mm 3mm 2mm 0;border-bottom:.35pt solid #cfcfcf;vertical-align:top;line-height:1.35}
 .lum td span{color:#6b6b6b;font-size:7.5pt}

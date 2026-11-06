@@ -98,17 +98,19 @@ export function planBox(L, W, n, withGrid = true) {
  */
 export function roomPlanSvg(d) {
   const box = planBox(d.L, d.W, d.n, true);
-  const T = transform(d.L, d.W, d.n, box.left, box.top);
+  const fw = Math.max(d.frameW ?? box.w, box.w), dx = (fw - box.w) / 2;
+  const T = transform(d.L, d.W, d.n, box.left + dx, box.top);
   const x0 = T.x(0), x1 = T.x(d.L), y0 = T.y(0), y1 = T.y(d.W);
   let axes = '';
   for (const x of d.xs) axes += `<path d="M${r2(T.x(x))} ${r2(y1 - 2)}V${r2(y0 + 2)}"/>`;
   for (const y of d.ys) axes += `<path d="M${r2(x0 - 2)} ${r2(T.y(y))}H${r2(x1 + 2)}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="plan" width="${r2(box.w)}mm" height="${r2(box.h)}mm" viewBox="0 0 ${r2(box.w)} ${r2(box.h)}">` +
+  const mark = d.frameW ? `<text x="${r2(fw)}" y="${r2(y0 + 12 - 0.9)}" text-anchor="end" font-size="${r2(7 * PT)}" fill="#141414">М\u00a01:${d.n}</text>` : scaleMark(box, d.n);
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="plan" width="${r2(fw)}mm" height="${r2(box.h)}mm" viewBox="0 0 ${r2(fw)} ${r2(box.h)}">` +
     `<g fill="none" stroke="#8a8a8a" stroke-width="0.13" stroke-dasharray="4 0.8 0.5 0.8">${axes}</g>` +
     luminaires(T, d, { fill: 'none', glow: 'none' }) +
     `<rect x="${r2(x0)}" y="${r2(y1)}" width="${r2(x1 - x0)}" height="${r2(y0 - y1)}" fill="none" stroke="#141414" stroke-width="0.5"/>` +
     dimensions(T, d.L, d.W, [chain([0, ...d.xs, d.L]), chain([0, ...d.ys, d.W])]) +
-    scaleMark(box, d.n) + '</svg>';
+    mark + '</svg>';
 }
 
 /**
@@ -124,7 +126,7 @@ export function isolinePlanSvg(d, id = 'p') {
   const fs = 6.2 * PT, ls = 5.6 * PT; // GOST numbers, isoline labels
   // isolines
   let lines = '';
-  const labels = [];
+  const labels = [], spare = new Map(); // spare: dense candidates of every level, for a level left without a label
   for (const { level, lines: ls_ } of d.sets) {
     for (const { pts, closed } of ls_) {
       const n = pts.length / 2, sp = new Float64Array(pts.length);
@@ -136,7 +138,15 @@ export function isolinePlanSvg(d, id = 'p') {
       }
       if (closed) path += 'Z';
       lines += `<path d="${path}"/>`;
-      for (const p of labelPlaces(sp, closed, 55, 16)) labels.push({ ...p, text: fmtLux(level) });
+      for (const p of labelPlaces(sp, closed, 55, 16)) labels.push({ ...p, level, text: fmtLux(level) });
+      const dense = labelPlaces(sp, closed, 6, 0);
+      if (!dense.length && n >= 2) { // a tiny line: its first segment, upright
+        let a = Math.atan2(sp[3] - sp[1], sp[2] - sp[0]);
+        if (a > Math.PI / 2) a -= Math.PI; else if (a <= -Math.PI / 2) a += Math.PI;
+        dense.push({ x: (sp[0] + sp[2]) / 2, y: (sp[1] + sp[3]) / 2, angle: a });
+      }
+      if (!spare.has(level)) spare.set(level, []);
+      for (const p of dense) spare.get(level).push({ ...p, level, text: fmtLux(level) });
     }
   }
   // GOST points: thinned to a step that keeps the numbers apart
@@ -157,9 +167,20 @@ export function isolinePlanSvg(d, id = 'p') {
     }
   }
   let lab = '';
+  const hits = (l, dx = 6, dy = 3.2) => taken.reduce((a, [x, y]) => a + (Math.abs(x - l.x) < dx && Math.abs(y - l.y) < dy ? 1 : 0), 0);
+  const put = [], labelled = new Set();
   for (const l of labels) {
-    if (taken.some(([a, b]) => Math.abs(a - l.x) < 6 && Math.abs(b - l.y) < 3.2)) continue;
-    taken.push([l.x, l.y]);
+    if (hits(l)) continue;
+    taken.push([l.x, l.y]); put.push(l); labelled.add(l.level);
+  }
+  // every isoline value appears at least once: a level without a label takes its least crowded spot
+  for (const [level, cands] of spare) {
+    if (labelled.has(level) || !cands.length) continue;
+    let best = cands[0], bh = Infinity;
+    for (const c of cands) { const h = hits(c, 5, 2.6); if (h < bh) { bh = h; best = c; if (!h) break; } }
+    taken.push([best.x, best.y]); put.push(best); labelled.add(level);
+  }
+  for (const l of put) {
     const w = l.text.length * ls * 0.58 + 1.4;
     lab += `<g transform="translate(${r2(l.x)} ${r2(l.y)}) rotate(${r2(l.angle * 180 / Math.PI)})"><rect x="${r2(-w / 2)}" y="${r2(-ls * 0.62)}" width="${r2(w)}" height="${r2(ls * 1.24)}" fill="#fff"/><text y="${r2(ls * 0.36)}">${l.text}</text></g>`;
   }
@@ -194,18 +215,38 @@ export function colorScaleSvg(w = 165) {
     `<g fill="#141414" font-size="${r2(fs)}" style="font-variant-numeric:tabular-nums">${text}</g></svg>`;
 }
 
+/** A round step for the rings of a diagram: 1, 2, 2,5 or 5 × 10^k, not less than x. */
+export function niceStep(x) {
+  if (!(x > 0)) return 1;
+  const e = 10 ** Math.floor(Math.log10(x));
+  return [1, 2, 2.5, 5, 10].map((m) => m * e).find((v) => v >= x - 1e-12);
+}
+
 /**
- * Polar diagram of the luminous intensity, cd/klm: C0–C180 solid, C90–C270 dashed, rings with
- * their values. `c` — lidcCurves(phot, R) of photui.js (paths around 0,0 with radius R).
+ * Polar diagram of the luminous intensity, cd/klm: C0–C180 solid, C90–C270 dashed. The rings go in a
+ * round step (niceStep) and are labelled; the curves are drawn to the same scale, so the outer ring
+ * (outer, cd/klm) is not the peak. `c` — lidcCurves(phot, R · peak / outer) of photui.js.
  */
-export function polarSvg(c, R, size = 46) {
+export function polarSvg(c, R, outer, step, size = 50) {
   const s = size / (2 * R + 14), lab = 6 * PT / s;
-  const ring = (k) => Math.round(c.max * (k + 1) / c.rings.length);
-  let text = '';
-  c.rings.forEach((r, k) => { text += `<text x="1.2" y="${r2(-r - 0.8)}">${ring(k)}</text>`; });
+  let rings = '', text = '', spokes = '';
+  for (let v = step; v <= outer + 1e-9; v += step) {
+    const r = R * v / outer;
+    rings += `<circle r="${r2(r)}"/>`;
+    text += `<text x="1.2" y="${r2(-r - 0.8)}">${String(Number(v.toFixed(2))).replace('.', ',')}</text>`;
+  }
+  for (let g = 0; g <= 180; g += 30) {
+    for (const side of g === 0 || g === 180 ? [1] : [1, -1]) spokes += `M0 0L${r2(side * R * Math.sin(g * Math.PI / 180))} ${r2(R * Math.cos(g * Math.PI / 180))}`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" class="polar" width="${r2(size)}mm" height="${r2(size)}mm" viewBox="${-R - 7} ${-R - 7} ${2 * R + 14} ${2 * R + 14}">` +
-    `<g fill="none" stroke="#bdbdbd" stroke-width="${r2(0.15 / s)}">${c.rings.map((r) => `<circle r="${r2(r)}"/>`).join('')}<path d="${c.spokes}"/></g>` +
+    `<g fill="none" stroke="#bdbdbd" stroke-width="${r2(0.15 / s)}">${rings}<path d="${spokes}"/></g>` +
     `<path d="${c.c90}" fill="none" stroke="#141414" stroke-width="${r2(0.22 / s)}" stroke-dasharray="${r2(1 / s)} ${r2(0.6 / s)}"/>` +
     `<path d="${c.c0}" fill="none" stroke="#141414" stroke-width="${r2(0.35 / s)}"/>` +
     `<g fill="#6b6b6b" font-size="${r2(lab)}" style="font-variant-numeric:tabular-nums">${text}</g></svg>`;
+}
+
+/** Legend of the polar diagram: «— C0–180  - - - C90–270 · Imax = … кд/клм». */
+export function polarLegend(peak) {
+  const line = (dash) => `<svg width="6mm" height="2mm" viewBox="0 0 6 2" style="vertical-align:.2mm"><path d="M0 1H6" stroke="#141414" stroke-width="${dash ? 0.22 : 0.35}"${dash ? ' stroke-dasharray="1 0.6"' : ''}/></svg>`;
+  return `${line(false)}\u00a0C0–180 ${line(true)}\u00a0C90–270 · I<sub>max</sub>\u00a0=\u00a0${Math.round(peak).toLocaleString('ru-RU').replace(/\s/g, '\u202f')}\u00a0кд/клм`;
 }

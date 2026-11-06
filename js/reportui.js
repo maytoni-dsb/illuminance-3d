@@ -12,10 +12,17 @@ import { LEVELS } from './colorscale.js';
 import { levelStatus } from './workplane.js';
 import { normSource } from './norms.js';
 import { lidcCurves } from './photui.js';
-import { polarSvg } from './reportsvg.js';
+import { polarSvg, polarLegend, niceStep } from './reportsvg.js';
 import { createPhotometry } from './photometry.js';
 
 const POLAR_R = 52;
+
+/** The polar diagram of a room's luminaire with its legend: rings in a round step, cd/klm. */
+export function polarOf(phot) {
+  const peak = lidcCurves(phot, POLAR_R).max;
+  const step = niceStep(peak / 4), outer = Math.ceil(peak / step - 1e-9) * step;
+  return { svg: polarSvg(lidcCurves(phot, POLAR_R * peak / outer), POLAR_R, outer, step), legend: polarLegend(peak), peak };
+}
 import { formatNumber } from './ui.js';
 
 const NB = ' ';
@@ -32,10 +39,7 @@ const zKey = (z) => z.toFixed(3);
 export function summaryRows(v, file, norm = null, zc = null) {
   const t = file?.table ?? null;
   const roomRows = [
-    ['Длина', `${n2(v.L)}${NB}м`],
-    ['Ширина', `${n2(v.W)}${NB}м`],
-    ['Высота', `${n2(v.H)}${NB}м`],
-    ['Площадь пола', `${formatNumber(v.L * v.W, 2)}${NB}м²`],
+    ['Длина × ширина × высота', `${n2(v.L)}${NB}×${NB}${n2(v.W)}${NB}×${NB}${n2(v.H)}${NB}м`],
     ['Отражение: потолок / стены / пол', `${formatNumber(v.rhoC, 2)} / ${formatNumber(v.rhoW, 2)} / ${formatNumber(v.rhoF, 2)}`],
     ['Норма', esc(normSource(norm))],
     ['Освещенность Ē', `${formatNumber(v.En, 0)}${NB}лк ${planeName(v.hwp).replace('-', '\u2011')}`],
@@ -68,12 +72,21 @@ export function summaryRows(v, file, norm = null, zc = null) {
   return { roomRows, lumRows };
 }
 
+/**
+ * Lamp of a luminaire for a replaceable lamp (the lamp set names a lamp article «LED / 7190» or a
+ * base such as GU10, E27); '' for built-in LEDs.
+ */
+export function lampKit(t, set = 0) {
+  const type = t?.lampSets?.[set]?.type?.trim() ?? '';
+  return /\/\s*\S|\b(E27|E14|E40|GU10|GU5[.,]3|GX53|GX70|G9|G4|R7s|G13|G5|2G11)\b/i.test(type) ? type : '';
+}
+
 /** The luminaire of a room for the list of luminaires. */
 export function lumOf(v, file) {
   const t = file?.table ?? null;
   return {
     maker: t?.manufacturer?.trim() || '', article: t ? (t.catalog || t.name || '').trim() || 'Светильник' : 'Без файла (косинусная КСС)',
-    flux: v.flux, power: t ? v.power : null, cct: t ? v.cct : null, count: v.nx * v.ny,
+    flux: v.flux, power: t ? v.power : null, cct: t ? v.cct : null, count: v.nx * v.ny, kit: lampKit(t, file?.set ?? 0),
   };
 }
 
@@ -100,7 +113,7 @@ export function prepareRoom(rd) {
   return {
     id: rd.id, name: rd.name?.trim() || 'Без названия', key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys,
     psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm, v.H - rd.params.hc), images: null,
-    polar: polarSvg(lidcCurves(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux }), POLAR_R), POLAR_R),
+    polar: polarOf(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux })),
   };
 }
 
@@ -194,7 +207,12 @@ export function initReport(o) {
       return `<li><div class="rn ${cls}${on ? '' : ' off'}"><input type="checkbox" data-node="${node}" aria-label="${esc(label)}"${on ? ' checked' : ''}>` +
         `<button type="button" data-go="${node}">${label}</button><small data-page="${node}"></small></div>${children ? `<ul>${children}</ul>` : ''}</li>`;
     };
-    o.tree.innerHTML = item(nodeId.title, 'Титульный лист') + item(nodeId.toc, 'Оглавление') + item(nodeId.lumlist, 'Перечень светильников') + rooms.map((r) =>
+    // a section in every room at once (illustrations off everywhere, say)
+    const all = (kind, label) => `<li><div class="rn"><input type="checkbox" data-all="${kind}" aria-label="${label} во всех помещениях"><span class="rl">${label}</span></div></li>`;
+    const allGroup = rooms.length > 1 ? `<li><div class="rn room"><span class="rl">Во всех помещениях</span></div><ul>${
+      all('summary', 'Сводная информация') + all('results', 'Результаты') + (rooms.some((r) => r.images) ? all('ill', 'Иллюстрации') : '')}</ul></li>` : '';
+    o.tree.innerHTML = item(nodeId.title, 'Титульный лист') + item(nodeId.toc, 'Оглавление') + item(nodeId.lumlist, 'Перечень светильников') +
+      item(nodeId.restable, 'Сводная таблица результатов') + allGroup + rooms.map((r) =>
       item(nodeId.room(r.id), esc(r.name), {
         cls: 'room',
         children: item(nodeId.summary(r.id), 'Сводная информация') +
@@ -207,9 +225,15 @@ export function initReport(o) {
       const n = pageOf(s.dataset.page) ?? tocPage(s.dataset.page);
       s.textContent = n ? `с. ${n}` : '';
     }
+    for (const box of o.tree.querySelectorAll('input[data-all]')) {
+      const ids = sectionIds(box.dataset.all);
+      const on = ids.filter((x) => !off.has(x)).length;
+      box.checked = on === ids.length; box.indeterminate = on > 0 && on < ids.length;
+    }
     for (const rn of o.tree.querySelectorAll('.rn')) {
       // a section of a room that is off is off too
-      const node = rn.querySelector('input').dataset.node;
+      const node = rn.querySelector('input')?.dataset.node;
+      if (!node) continue;
       const parentsOff = [...off].some((x) => node !== x && node.startsWith(`${x}/`));
       rn.classList.toggle('off', off.has(node) || parentsOff);
     }
@@ -228,7 +252,16 @@ export function initReport(o) {
     treePages();
   }
 
+  /** Node ids of one kind of section in every room. */
+  const sectionIds = (kind) => rooms.filter((r) => kind !== 'ill' || r.images).map((r) => nodeId[kind](r.id));
   o.tree.addEventListener('change', (e) => {
+    const kind = e.target.dataset.all;
+    if (kind) {
+      for (const id of sectionIds(kind)) if (e.target.checked) off.delete(id); else off.add(id);
+      for (const id of sectionIds(kind)) { const b = o.tree.querySelector(`input[data-node="${id}"]`); if (b) b.checked = e.target.checked; }
+      renderDoc();
+      return;
+    }
     const n = e.target.dataset.node;
     if (!n) return;
     if (e.target.checked) off.delete(n); else off.add(n);

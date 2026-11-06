@@ -3,8 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildReport, nodeId, typo, num, FRAME, lumTypes } from '../js/report.js';
-import { planScale, planBox, roomPlanSvg, isolinePlanSvg, colorScaleSvg } from '../js/reportsvg.js';
-import { prepareRoom, summaryRows } from '../js/reportui.js';
+import { planScale, planBox, roomPlanSvg, isolinePlanSvg, colorScaleSvg, niceStep } from '../js/reportsvg.js';
+import { prepareRoom, summaryRows, polarOf, lampKit } from '../js/reportui.js';
+import { fmtLux } from '../js/planview.js';
 import { createCalc } from '../js/calc.js';
 import { parsePhotometryFile, luminaireShape } from '../js/photfile.js';
 import { createPhotometry } from '../js/photometry.js';
@@ -27,13 +28,12 @@ test('pages, contents and page numbers', () => {
   const b = buildReport({ info: { name: 'Проект' }, rooms });
   // title, contents, then per room: summary, one page per plane, illustrations
   const per = rooms.map((r) => 1 + Math.ceil(r.planes.length / 2) + 1); // two planes a page
-  // title, contents, list of luminaires, then the rooms
-  assert.equal(b.pages.length, 3 + per[0] + per[1]);
-  assert.equal(b.toc[0].title, 'Перечень светильников');
-  assert.equal(b.toc[0].page, 3);
-  assert.equal(b.toc[1].page, 4);
-  assert.equal(b.toc[2].page, 4 + per[0]);
-  assert.deepEqual(b.toc[1].secs.map((s) => s.page), [4, 5, 5 + Math.ceil(rooms[0].planes.length / 2)]);
+  // title, contents, list of luminaires, summary of results, then the rooms
+  assert.equal(b.pages.length, 4 + per[0] + per[1]);
+  assert.deepEqual(b.toc.slice(0, 2).map((t) => [t.title, t.page]), [['Перечень светильников', 3], ['Сводная таблица результатов', 4]]);
+  assert.equal(b.toc[2].page, 5);
+  assert.equal(b.toc[3].page, 5 + per[0]);
+  assert.deepEqual(b.toc[2].secs.map((s) => s.page), [5, 6, 6 + Math.ceil(rooms[0].planes.length / 2)]);
   assert.ok(!/roomsub|hyphens:auto|Suisse/.test(b.html));
   assert.ok(!/ё/i.test(b.html)); // «е» throughout
   assert.equal((b.html.match(/class="rhl"/g) ?? []).length, b.pages.length - 1); // the logo on every page after the title
@@ -42,7 +42,7 @@ test('pages, contents and page numbers', () => {
 });
 
 test('switched-off nodes leave the report and the numbers follow', () => {
-  const off = new Set([nodeId.toc, nodeId.lumlist, nodeId.summary('a'), nodeId.room('b'), nodeId.plane('a', rooms[0].planes[0].key)]);
+  const off = new Set([nodeId.toc, nodeId.lumlist, nodeId.restable, nodeId.summary('a'), nodeId.room('b'), nodeId.plane('a', rooms[0].planes[0].key)]);
   const b = buildReport({ info: {}, rooms, include: (id) => !off.has(id) });
   assert.equal(b.pages.length, 1 + Math.ceil((rooms[0].planes.length - 1) / 2) + 1);
   assert.ok(!b.html.includes('Холл'));
@@ -50,13 +50,33 @@ test('switched-off nodes leave the report and the numbers follow', () => {
   assert.ok(b.html.includes('class="roomhead"')); // the room heading moves to its first page
 });
 
-test('list of luminaires: one line per type with the rooms', () => {
-  const t = lumTypes(rooms);
-  assert.equal(t.length, 1);
-  assert.equal(t[0].count, rooms.reduce((a, r) => a + r.xs.length * r.ys.length, 0));
-  assert.deepEqual(t[0].rooms.map((x) => x.name), ['Офис', 'Холл']);
+test('list of luminaires and summary of results: a line per room, Г-0,0 and Г-0,8', () => {
   const b = buildReport({ info: {}, rooms });
-  assert.ok(b.html.includes('class="lum"') && b.html.includes('Всего'));
+  const lum = b.html.slice(b.html.indexOf('class="lum"'), b.html.indexOf('</table>', b.html.indexOf('class="lum"')));
+  assert.equal((lum.match(/<tr>/g) ?? []).length, 1 + rooms.length); // header + rooms, no totals
+  assert.ok(lum.includes('Комплектация') && !b.html.includes('Всего'));
+  const res = b.html.slice(b.html.indexOf('class="sumres"'), b.html.indexOf('</table>', b.html.indexOf('class="sumres"')));
+  assert.equal((res.match(/>Г-0,0\*?</g) ?? []).length, rooms.length);
+  assert.equal((res.match(/>Г-0,8\*?</g) ?? []).length, rooms.length);
+});
+
+test('every isoline value is labelled at least once', () => {
+  const r = rooms[0];
+  for (const pl of r.planes) {
+    const svg = isolinePlanSvg({ ...r, n: 50, sets: pl.sets, gost: pl.gost });
+    const labels = [...svg.matchAll(/rotate\([^)]*\)"><rect[^>]*\/><text[^>]*>([^<]+)</g)].map((m) => m[1]);
+    for (const set of pl.sets) if (set.lines.length) assert.ok(labels.includes(fmtLux(set.level)), `${pl.name}: ${set.level}`);
+  }
+});
+
+test('polar diagram: rings in a round step, legend with Imax', () => {
+  assert.deepEqual([0.3, 7, 13, 240, 1100].map(niceStep), [0.5, 10, 20, 250, 2000]);
+  const p = polarOf(file.phot);
+  assert.match(p.legend, /C0–180.*C90–270.*I<sub>max<\/sub>\u00a0=\u00a0[\d\u202f]+\u00a0кд\/клм/);
+  const rings = [...p.svg.matchAll(/<text x="1.2"[^>]*>([\d,]+)</g)].map((m) => Number(m[1].replace(',', '.')));
+  const step = rings[0];
+  rings.forEach((v, k) => assert.ok(Math.abs(v - step * (k + 1)) < 1e-9));
+  assert.ok(rings.at(-1) >= p.peak && rings.at(-1) - step < p.peak);
 });
 
 test('typography of user text', () => {
@@ -86,13 +106,17 @@ test('plans: drafting scale that fits, valid SVG in millimetres', () => {
 
 test('summary tables', () => {
   const { roomRows, lumRows } = summaryRows({ ...v1 }, file);
-  assert.equal(roomRows.length, 9);
+  assert.equal(roomRows.length, 6);
+  assert.equal(Object.fromEntries(roomRows)['Длина × ширина × высота'], '6\u00a0×\u00a04\u00a0×\u00a03\u00a0м');
   assert.equal(Object.fromEntries(roomRows)['Норма'], 'Задано пользователем');
   assert.match(Object.fromEntries(roomRows)['Освещенность Ē'], /^200\u00a0лк Г\u20110,8$/);
   const lum = Object.fromEntries(lumRows);
   assert.match(lum['Производитель'], /MAYTONI/);
   assert.match(lum['Размеры'], /мм$/);
   assert.match(lum['Количество'], /=\u00a08\u00a0шт/);
+  assert.equal(lampKit({ lampSets: [{ type: 'LED / 7190' }] }), 'LED / 7190');
+  assert.equal(lampKit({ lampSets: [{ type: 'LED' }] }), '');
+  assert.equal(lampKit({ lampSets: [{ type: '1 x E27 max 60W' }] }), '1 x E27 max 60W');
   const none = Object.fromEntries(summaryRows({ ...v1, phot: 'cosine' }, null).lumRows);
   assert.equal(none['CRI'], '—');
 });
