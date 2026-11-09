@@ -40,11 +40,16 @@ export function summaryRows(v, file, norm = null, zc = null) {
   const t = file?.table ?? null;
   const roomRows = [
     ['Длина × ширина × высота', `${n2(v.L)}${NB}×${NB}${n2(v.W)}${NB}×${NB}${n2(v.H)}${NB}м`],
-    ['Отражение: потолок / стены / пол', `${formatNumber(v.rhoC, 2)} / ${formatNumber(v.rhoW, 2)} / ${formatNumber(v.rhoF, 2)}`],
-    ['Норма', esc(normSource(norm))],
+    ['Коэффициенты отражения<br><span class="sub">потолок / стены / пол</span>', `${formatNumber(v.rhoC, 2)} / ${formatNumber(v.rhoW, 2)} / ${formatNumber(v.rhoF, 2)}`],
+    ['Коэффициент эксплуатации MF', formatNumber(v.mf, 2)],
+  ];
+  // the norm: the document as the label, the row of its table as the value
+  const src = norm?.set === 'sp52' ? ['СП\u00a052.13330.2016 (табл.\u00a0Л.1)', `№\u00a0${esc(norm.ref)}`]
+    : norm?.set === 'en12464' ? ['EN\u00a012464-1:2021', `ref.\u00a0no.\u00a0${esc(norm.ref)}`] : null;
+  const normRows = [
+    src ? [src[0], `${src[1]}${norm.name ? `: ${esc(norm.name)}` : ''}`] : ['Норма', 'Задано пользователем'],
     ['Освещенность Ē', `${formatNumber(v.En, 0)}${NB}лк ${planeName(v.hwp).replace('-', '\u2011')}`],
     ['Равномерность U<sub>0</sub>', v.U0n != null ? `≥${NB}${formatNumber(v.U0n, 2)}` : 'не нормируется'],
-    ['Коэффициент эксплуатации MF', formatNumber(v.mf, 2)],
   ];
   const dash = '—';
   const mm = (x) => String(Math.round(x * 1000));
@@ -59,17 +64,16 @@ export function summaryRows(v, file, norm = null, zc = null) {
   const lumRows = [
     ['Производитель', t?.manufacturer?.trim() ? esc(t.manufacturer.trim()) : dash],
     ['Артикул', t ? esc((t.catalog || t.name || '').trim()) || dash : 'косинусная КСС, без файла'],
-    ['Размеры', size],
+    ['Количество', `${v.nx}${NB}×${NB}${v.ny}${NB}=${NB}${n}${NB}шт.`],
     ['Световой поток', `${formatNumber(v.flux, 0)}${NB}лм`],
     ['Цветовая температура', t && v.cct ? `${formatNumber(v.cct, 0)}${NB}K` : dash],
     ['Мощность', t && v.power ? `${formatNumber(v.power, 1)}${NB}Вт` : dash],
     ['CRI', cri ? formatNumber(cri, 0) : dash],
-    ['Количество', `${v.nx}${NB}×${NB}${v.ny}${NB}=${NB}${n}${NB}шт.`],
+    ['Размеры', size],
     ['Высота установки', `${n2(v.hm)}${NB}м`],
     ['Фотометрический центр', zc != null ? `на высоте ${n2(zc)}${NB}м` : dash],
-    ['Поворот', `${formatNumber(v.psi, 1)}°`],
   ];
-  return { roomRows, lumRows };
+  return { roomRows, normRows, lumRows };
 }
 
 /**
@@ -208,9 +212,12 @@ export function initReport(o) {
         `<button type="button" data-go="${node}">${label}</button><small data-page="${node}"></small></div>${children ? `<ul>${children}</ul>` : ''}</li>`;
     };
     // a section in every room at once (illustrations off everywhere, say)
-    const all = (kind, label) => `<li><div class="rn"><input type="checkbox" data-all="${kind}" aria-label="${label} во всех помещениях"><span class="rl">${label}</span></div></li>`;
-    const allGroup = rooms.length > 1 ? `<li><div class="rn room"><span class="rl">Во всех помещениях</span></div><ul>${
-      all('summary', 'Сводная информация') + all('results', 'Результаты') + (rooms.some((r) => r.images) ? all('ill', 'Иллюстрации') : '')}</ul></li>` : '';
+    const all = (kind, label, children = '') => `<li><div class="rn"><input type="checkbox" data-all="${kind}" aria-label="${label} во всех помещениях"><span class="rl">${label}</span></div>${children ? `<ul>${children}</ul>` : ''}</li>`;
+    const hasRef = rooms.some((r) => r.planes.some((q) => !q.normative));
+    const allGroup = rooms.length > 1 ? `<li><div class="rn room"><button type="button" class="tg" data-toggle="all" aria-expanded="${allOpen}" aria-label="Во всех помещениях"></button><span class="rl">Во всех помещениях</span></div><ul id="rtall"${allOpen ? '' : ' hidden'}>${
+      all('summary', 'Сводная информация') +
+      all('results', 'Результаты', hasRef ? all('normonly', 'Только нормируемые') : '') +
+      (rooms.some((r) => r.images) ? all('ill', 'Иллюстрации') : '')}</ul></li>` : '';
     o.tree.innerHTML = item(nodeId.title, 'Титульный лист') + item(nodeId.toc, 'Оглавление') + item(nodeId.lumlist, 'Перечень светильников') +
       item(nodeId.restable, 'Сводная таблица результатов') + allGroup + rooms.map((r) =>
       item(nodeId.room(r.id), esc(r.name), {
@@ -227,7 +234,8 @@ export function initReport(o) {
     }
     for (const box of o.tree.querySelectorAll('input[data-all]')) {
       const ids = sectionIds(box.dataset.all);
-      const on = ids.filter((x) => !off.has(x)).length;
+      let on = ids.filter((x) => !off.has(x)).length;
+      if (box.dataset.all === 'normonly') on = ids.length - on; // checked when the reference planes are off
       box.checked = on === ids.length; box.indeterminate = on > 0 && on < ids.length;
     }
     for (const rn of o.tree.querySelectorAll('.rn')) {
@@ -252,13 +260,18 @@ export function initReport(o) {
     treePages();
   }
 
-  /** Node ids of one kind of section in every room. */
-  const sectionIds = (kind) => rooms.filter((r) => kind !== 'ill' || r.images).map((r) => nodeId[kind](r.id));
+  /** Node ids of one kind of section in every room; «normonly» — the reference (non-normative) planes, off when checked. */
+  const sectionIds = (kind) => (kind === 'normonly'
+    ? rooms.flatMap((r) => r.planes.filter((q) => !q.normative).map((q) => nodeId.plane(r.id, q.key)))
+    : rooms.filter((r) => kind !== 'ill' || r.images).map((r) => nodeId[kind](r.id)));
+  let allOpen = false; // the group «Во всех помещениях» is collapsed at first
   o.tree.addEventListener('change', (e) => {
     const kind = e.target.dataset.all;
     if (kind) {
-      for (const id of sectionIds(kind)) if (e.target.checked) off.delete(id); else off.add(id);
-      for (const id of sectionIds(kind)) { const b = o.tree.querySelector(`input[data-node="${id}"]`); if (b) b.checked = e.target.checked; }
+      // «only normative»: checked switches the reference planes off
+      const on = kind === 'normonly' ? !e.target.checked : e.target.checked;
+      for (const id of sectionIds(kind)) if (on) off.delete(id); else off.add(id);
+      for (const id of sectionIds(kind)) { const b = o.tree.querySelector(`input[data-node="${id}"]`); if (b) b.checked = on; }
       renderDoc();
       return;
     }
@@ -268,6 +281,13 @@ export function initReport(o) {
     renderDoc();
   });
   o.tree.addEventListener('click', (e) => {
+    const t = e.target.closest('button[data-toggle]');
+    if (t) {
+      allOpen = !allOpen;
+      t.setAttribute('aria-expanded', String(allOpen));
+      o.tree.querySelector('#rtall').hidden = !allOpen;
+      return;
+    }
     const b = e.target.closest('button[data-go]');
     if (!b) return;
     const n = pageOf(b.dataset.go) ?? tocPage(b.dataset.go);

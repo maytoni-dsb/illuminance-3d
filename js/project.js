@@ -11,13 +11,35 @@ export const FILE_VERSION = 1;
 
 /** Fields of the stage «Проект» in their order on the page. */
 export const INFO_FIELDS = Object.freeze([
-  { key: 'name', label: 'Название проекта', kind: 'text', placeholder: 'Например, «Офис на Лесной, 3 этаж»' },
+  { key: 'name', label: 'Название проекта', kind: 'text', placeholder: 'Например, «Офис на Лесной, 3 этаж»', required: true },
   { key: 'description', label: 'Описание проекта', kind: 'area', placeholder: 'Что освещаем и для чего' },
-  { key: 'author', label: 'Исполнитель', kind: 'text', placeholder: 'Фамилия, имя; организация' },
-  { key: 'phone', label: 'Телефон', kind: 'tel', placeholder: '+7 900 000-00-00' },
-  { key: 'email', label: 'Эл. почта', kind: 'email', placeholder: 'name@example.com' },
-  { key: 'customer', label: 'Заказчик', kind: 'text', placeholder: 'Организация или частное лицо' },
+  { key: 'author', label: 'Исполнитель', kind: 'text', placeholder: 'Фамилия, имя; организация', required: true },
+  { key: 'phone', label: 'Телефон', kind: 'tel', placeholder: '+7 123 456 7890', required: true },
+  { key: 'email', label: 'Эл. почта', kind: 'email', placeholder: 'name@example.com', required: true },
+  { key: 'customer', label: 'Заказчик', kind: 'text', placeholder: 'Организация или частное лицо', required: true },
 ]);
+
+/**
+ * Phone in the mask «+7 123 456 7890». Takes what is typed or pasted: «+7 …», «8 (912) 345-67-89»,
+ * «9123456789» — the country code and separators are dropped, at most 10 digits are kept.
+ */
+export function formatPhone(raw) {
+  const s = String(raw ?? '').trim();
+  let d = s.startsWith('+7') ? s.slice(2).replace(/\D/g, '') : s.replace(/\D/g, '');
+  if (d.length === 11 && /^[78]/.test(d)) d = d.slice(1); // 8 912 … or 7 912 …, also typed after «+7»
+  d = d.slice(0, 10);
+  if (!d) return '';
+  return `+7 ${d.slice(0, 3)}${d.length > 3 ? ` ${d.slice(3, 6)}` : ''}${d.length > 6 ? ` ${d.slice(6)}` : ''}`;
+}
+
+/** Problems of the project information: { key: message } for required fields left empty or wrong. */
+export function infoErrors(info) {
+  const e = {};
+  for (const f of INFO_FIELDS) if (f.required && !String(info?.[f.key] ?? '').trim()) e[f.key] = 'Заполните поле';
+  if (!e.phone && !/^\+7 \d{3} \d{3} \d{4}$/.test(info.phone)) e.phone = 'Номер из 10 цифр после +7';
+  if (!e.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(info.email).trim())) e.email = 'Адрес вида name@example.com';
+  return e;
+}
 
 const emptyInfo = () => Object.fromEntries(INFO_FIELDS.map((f) => [f.key, '']));
 

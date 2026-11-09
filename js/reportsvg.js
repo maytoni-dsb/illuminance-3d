@@ -206,7 +206,7 @@ export function colorScaleSvg(w = 165) {
   for (let k = 0; k < n; k++) {
     boxes += `<rect x="${r2(k * cw)}" y="${r2(top)}" width="${r2(cw + 0.02)}" height="${h}" fill="${COLORS_HEX[k]}"/>`;
     const s = LEVELS[k].toLocaleString('ru-RU').replace(/\s/g, '\u202f'), x = k * cw, below = k % 2 === 0;
-    text += `<text x="${r2(x)}" y="${r2(below ? top + h + fs + 1.2 : top - 1.4)}" text-anchor="${k === 0 ? 'start' : 'middle'}">${esc(s)}</text>`;
+    text += `<text x="${r2(x + 0.35)}" y="${r2(below ? top + h + fs + 1.2 : top - 1.4)}">${esc(s)}</text>`; // from its tick
     ticks += `<path d="M${r2(x)} ${r2(below ? top + h : top - 0.9)}V${r2(below ? top + h + 0.9 : top)}"/>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" class="scale" width="${r2(w + 3)}mm" height="${r2(H)}mm" viewBox="0 0 ${r2(w + 3)} ${r2(H)}">` +

@@ -102,7 +102,7 @@ export function drawPlaneOnPlan(ctx, T, size, d) {
   ctx.beginPath(); ctx.rect(x0, y1, x1 - x0, y0 - y1); ctx.clip();
   ctx.strokeStyle = 'rgba(20,20,20,.72)';
   ctx.lineWidth = 1;
-  const labels = [];
+  const labels = [], spare = new Map(); // dense candidates of every level (each drawn value gets a label)
   for (const { level, lines } of d.sets) {
     for (const { pts, closed } of lines) {
       const n = pts.length / 2;
@@ -115,7 +115,8 @@ export function drawPlaneOnPlan(ctx, T, size, d) {
       }
       if (closed) ctx.closePath();
       ctx.stroke();
-      for (const p of labelPlaces(sp, closed, LABEL_SPACING, LABEL_MIN)) labels.push({ ...p, text: fmtLux(level) });
+      for (const p of labelPlaces(sp, closed, LABEL_SPACING, LABEL_MIN)) labels.push({ ...p, level, text: fmtLux(level) });
+      addSpare(spare, level, denseCandidates(sp, closed, 14));
     }
   }
 
@@ -140,10 +141,15 @@ export function drawPlaneOnPlan(ctx, T, size, d) {
   }
 
   ctx.font = `500 10.5px ${FONT}`;
+  const onScreen = (l) => l.x >= 0 && l.x <= size.w && l.y >= 0 && l.y <= size.h && l.x >= x0 && l.x <= x1 && l.y >= y1 && l.y <= y0;
+  const put = [], labelled = new Set();
   for (const l of labels) {
-    if (l.x < 0 || l.x > size.w || l.y < 0 || l.y > size.h) continue;
+    if (!onScreen(l)) continue;
     if (taken.some(([a, b]) => Math.abs(a - l.x) < 26 && Math.abs(b - l.y) < 14)) continue;
-    taken.push([l.x, l.y]);
+    taken.push([l.x, l.y]); put.push(l); labelled.add(l.level);
+  }
+  for (const l of missingLabels(spare, labelled, taken, onScreen, 26, 14)) { taken.push([l.x, l.y]); put.push({ ...l, text: fmtLux(l.level) }); }
+  for (const l of put) {
     ctx.save();
     ctx.translate(l.x, l.y); ctx.rotate(l.angle);
     const w = ctx.measureText(l.text).width + 6;
@@ -154,6 +160,37 @@ export function drawPlaneOnPlan(ctx, T, size, d) {
     ctx.restore();
   }
   ctx.restore();
+}
+
+/** Label candidates every `step` along a line (any length), with the readable angle. */
+export function denseCandidates(pts, closed, step) {
+  const c = labelPlaces(pts, closed, step, 0);
+  if (c.length || pts.length < 4) return c;
+  let a = Math.atan2(pts[3] - pts[1], pts[2] - pts[0]);
+  if (a > Math.PI / 2) a -= Math.PI; else if (a <= -Math.PI / 2) a += Math.PI;
+  return [{ x: (pts[0] + pts[2]) / 2, y: (pts[1] + pts[3]) / 2, angle: a }];
+}
+function addSpare(spare, level, cands) {
+  if (!spare.has(level)) spare.set(level, []);
+  for (const c of cands) spare.get(level).push({ ...c, level });
+}
+/**
+ * For every level that has visible candidates but no label yet: its least crowded candidate
+ * (crowding — labels and numbers already within dx × dy).
+ */
+export function missingLabels(spare, labelled, taken, visible, dx, dy) {
+  const out = [];
+  for (const [level, cands] of spare) {
+    if (labelled.has(level)) continue;
+    let best = null, bh = Infinity;
+    for (const c of cands) {
+      if (!visible(c)) continue;
+      const h = taken.reduce((a, [x, y]) => a + (Math.abs(x - c.x) < dx && Math.abs(y - c.y) < dy ? 1 : 0), 0) + out.reduce((a, o) => a + (Math.abs(o.x - c.x) < dx && Math.abs(o.y - c.y) < dy ? 1 : 0), 0);
+      if (h < bh) { bh = h; best = c; if (!h) break; }
+    }
+    if (best) { out.push(best); labelled.add(level); }
+  }
+  return out;
 }
 
 /**
@@ -176,18 +213,27 @@ export function drawPlane3D(ctx, project, size, d) {
     halo(ctx, fmtLux(g.values[k]), p[0], p[1] - 8);
   }
   ctx.font = `500 10px ${FONT}`;
+  const shown = (p) => p && p[0] >= 0 && p[0] <= size.w && p[1] >= 0 && p[1] <= size.h;
+  const put = [], labelled = new Set(), spare = new Map();
   for (const { level, lines } of d.sets) {
     for (const { pts, closed } of lines) {
       for (const q of labelPlaces(pts, closed, LABEL_SPACING_3D, LABEL_MIN_3D)) {
         const p = project(q.x, q.y, d.z);
-        if (!p || p[0] < 0 || p[0] > size.w || p[1] < 0 || p[1] > size.h) continue;
+        if (!shown(p)) continue;
         if (taken.some(([a, b]) => Math.abs(a - p[0]) < 24 && Math.abs(b - p[1]) < 12)) continue;
-        taken.push(p);
-        const text = fmtLux(level), w = ctx.measureText(text).width + 6;
-        ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(p[0] - w / 2, p[1] - 7, w, 14);
-        ctx.fillStyle = '#222'; ctx.fillText(text, p[0], p[1] + 0.5);
+        taken.push(p); put.push({ x: p[0], y: p[1], level }); labelled.add(level);
       }
+      // dense candidates on the screen, for a value left without a label
+      const c = [];
+      for (const q of denseCandidates(pts, closed, LABEL_SPACING_3D / 8)) { const p = project(q.x, q.y, d.z); if (shown(p)) c.push({ x: p[0], y: p[1] }); }
+      addSpare(spare, level, c);
     }
+  }
+  for (const l of missingLabels(spare, labelled, taken, () => true, 24, 12)) { taken.push([l.x, l.y]); put.push(l); }
+  for (const l of put) {
+    const text = fmtLux(l.level), w = ctx.measureText(text).width + 6;
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(l.x - w / 2, l.y - 7, w, 14);
+    ctx.fillStyle = '#222'; ctx.fillText(text, l.x, l.y + 0.5);
   }
   ctx.restore();
 }

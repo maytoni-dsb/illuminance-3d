@@ -163,7 +163,7 @@ export function buildReport(d) {
       const rows = part.map((r) => {
         const planes = [0, 0.8].map((z) => r.planes.find((q) => Math.abs(q.z - z) < 1e-6)).filter(Boolean);
         return planes.map((pl, k) => { const st = pl.stats; return `<tr${k === planes.length - 1 ? ' class="last"' : ''}>${k === 0 ? `<td rowspan="${planes.length}">${typo(r.name)}</td>` : ''}
-          <td class="c">${pl.name}${pl.normative ? '*' : ''}</td><td>${lux(st.avg)}${pl.norm ? `${MARK[pl.norm.status]}${NB}(${num(pl.norm.En)})` : ''}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td>
+          <td class="c">${pl.name}${pl.normative ? '' : '*'}</td><td>${lux(st.avg)}${pl.norm ? `${MARK[pl.norm.status]}${NB}(${num(pl.norm.En)})` : ''}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td>
           <td>${num(st.u0, 2)}${u0Mark(pl)}</td><td>${num(st.minMax, 2)}</td></tr>`; }).join('');
       }).join('');
       return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Сводная таблица результатов' : '')}<div class="frame">
@@ -171,7 +171,7 @@ export function buildReport(d) {
         <table class="sumres"><colgroup><col style="width:22%"><col style="width:10%"><col><col><col><col><col></colgroup>
         <thead><tr><th>Помещение</th><th class="c">Поверхность</th><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
         <tbody>${rows}</tbody></table>
-        <p class="note">* Нормируемая поверхность; в скобках — норма.</p>
+        <p class="note">* Для справки.<br>В${NB}скобках — целевое значение характеристики.</p>
       </div>${foot(p.n)}</section>`;
     }
     const r = p.r;
@@ -182,10 +182,12 @@ export function buildReport(d) {
       const n = planScale(r.L, r.W, FRAME.w - 17, 82 - 17);
       return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
         <figure class="fig plan">${roomPlanSvg({ ...r, n, frameW: FRAME.w })}</figure>
-        <h3>Помещение</h3>
-        <div class="cols">${kv(r.roomRows.slice(0, Math.ceil(r.roomRows.length / 2)))}${kv(r.roomRows.slice(Math.ceil(r.roomRows.length / 2)))}</div>
-        <h3 class="mt">Светильник</h3>
-        <div class="cols">${kv(r.lumRows)}${r.polar ? `<figure class="fig polarfig">${r.polar.svg}<figcaption>${r.polar.legend}</figcaption></figure>` : '<div></div>'}</div>
+        <div class="cols quad">
+          <div><h3>Помещение</h3>${kv(r.roomRows)}</div>
+          <div><h3>Нормативные показатели освещения</h3>${kv(r.normRows ?? [])}</div>
+          <div><h3>Светильник</h3>${kv(r.lumRows)}</div>
+          ${r.polar ? `<figure class="fig polarfig">${r.polar.svg}<figcaption>${r.polar.legend}</figcaption></figure>` : '<div></div>'}
+        </div>
       </div>${foot(p.n)}</section>`;
     }
     if (p.kind === 'planes') {
@@ -216,7 +218,7 @@ export function buildReport(d) {
 
   const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(project)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>${CSS}</style></head><body>${pages.join('\n')}
 <script>${FIT}</script></body></html>`.replace(/ё/g, 'е').replace(/Ё/g, 'Е'); // «е» throughout the report
   return { html, pages: plan.map((p) => ({ node: p.node, pnodes: p.pnodes ?? [], n: p.n })), toc };
@@ -277,7 +279,7 @@ const CSS = `
 @page{size:A4;margin:0}
 *{box-sizing:border-box}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;color:#141414;font-family:Jost,"Helvetica Neue",Arial,sans-serif;
+body{margin:0;color:#141414;font-family:Inter,"Helvetica Neue",Arial,sans-serif;
   font-size:9.5pt;line-height:1.45;font-kerning:normal;font-feature-settings:"kern","liga";hyphens:manual;-webkit-hyphens:manual;overflow-wrap:normal;text-rendering:optimizeLegibility}
 .page{position:relative;width:210mm;height:297mm;overflow:hidden;background:#fff;break-after:page;page-break-after:always}
 .page:last-child{break-after:auto;page-break-after:auto}
@@ -307,6 +309,9 @@ h3.plh span{font-size:8.5pt;font-weight:400;color:#6b6b6b}
 .fig.polarfig figcaption{white-space:nowrap;max-width:none;margin-top:1mm}
 .fig figcaption svg{display:inline-block}
 h3.mt{margin-top:6mm}
+.cols.quad{row-gap:7mm;align-items:start}
+.cols.quad .polarfig{margin-top:6mm;align-items:center}
+.kv th .sub{color:#8a8a8a}
 .plblock{margin-bottom:7mm}
 .plblock .fig{margin-bottom:3mm}
 .res{table-layout:fixed}
@@ -341,6 +346,7 @@ sub{font-size:.72em;line-height:0;vertical-align:-.25em}
 .sumres th{font-size:7.5pt;font-weight:500;color:#555;text-align:center;padding:0 1mm 1.6mm;border-bottom:.5pt solid #141414;vertical-align:bottom}
 .sumres td{font-size:8.5pt;text-align:center;padding:1.6mm 1mm;border-bottom:.35pt solid #e2e2e2;white-space:nowrap;vertical-align:middle}
 .sumres th:first-child,.sumres td[rowspan]{text-align:left;padding-left:0;white-space:normal}
+.sumres td[rowspan]{vertical-align:top}
 .sumres td[rowspan],.sumres tr.last td{border-bottom:.35pt solid #9a9a9a}
 .sumres .mk{width:2.4mm;height:2.4mm;vertical-align:-.2mm}
 .note{font-size:7.5pt;color:#6b6b6b;margin:2.5mm 0 0}

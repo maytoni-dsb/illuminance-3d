@@ -105,11 +105,14 @@ test('plans: drafting scale that fits, valid SVG in millimetres', () => {
 });
 
 test('summary tables', () => {
-  const { roomRows, lumRows } = summaryRows({ ...v1 }, file);
-  assert.equal(roomRows.length, 6);
+  const { roomRows, normRows, lumRows } = summaryRows({ ...v1 }, file);
+  assert.equal(roomRows.length, 3);
   assert.equal(Object.fromEntries(roomRows)['Длина × ширина × высота'], '6\u00a0×\u00a04\u00a0×\u00a03\u00a0м');
-  assert.equal(Object.fromEntries(roomRows)['Норма'], 'Задано пользователем');
-  assert.match(Object.fromEntries(roomRows)['Освещенность Ē'], /^200\u00a0лк Г\u20110,8$/);
+  assert.equal(Object.fromEntries(normRows)['Норма'], 'Задано пользователем');
+  assert.match(Object.fromEntries(normRows)['Освещенность Ē'], /^200\u00a0лк Г\u20110,8$/);
+  const sp = summaryRows({ ...v1 }, file, { set: 'sp52', ref: '155', name: 'Площади для посетителей в зале обслуживания' }).normRows[0];
+  assert.deepEqual(sp, ['СП\u00a052.13330.2016 (табл.\u00a0Л.1)', '№\u00a0155: Площади для посетителей в зале обслуживания']);
+  assert.deepEqual(lumRows.map((r) => r[0]), ['Производитель', 'Артикул', 'Количество', 'Световой поток', 'Цветовая температура', 'Мощность', 'CRI', 'Размеры', 'Высота установки', 'Фотометрический центр']);
   const lum = Object.fromEntries(lumRows);
   assert.match(lum['Производитель'], /MAYTONI/);
   assert.match(lum['Размеры'], /мм$/);

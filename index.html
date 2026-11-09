@@ -34,11 +34,11 @@
       "./js/photfile.js": "./js/photfile.js?v=129f4189",
       "./js/photometry.js": "./js/photometry.js?v=e2442d68",
       "./js/photui.js": "./js/photui.js?v=aa6da0c9",
-      "./js/planview.js": "./js/planview.js?v=54dee309",
-      "./js/project.js": "./js/project.js?v=3cd1a0fd",
-      "./js/report.js": "./js/report.js?v=eb219a58",
-      "./js/reportsvg.js": "./js/reportsvg.js?v=d12ccce0",
-      "./js/reportui.js": "./js/reportui.js?v=a42de686",
+      "./js/planview.js": "./js/planview.js?v=56bab4c2",
+      "./js/project.js": "./js/project.js?v=be8ed69d",
+      "./js/report.js": "./js/report.js?v=09109567",
+      "./js/reportsvg.js": "./js/reportsvg.js?v=46cf5191",
+      "./js/reportui.js": "./js/reportui.js?v=f2161a14",
       "./js/solver.js": "./js/solver.js?v=99673fc0",
       "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
       "./js/ui.js": "./js/ui.js?v=61be1c16",
@@ -436,6 +436,10 @@
     .tfld textarea{min-height:92px;resize:vertical;line-height:1.45;font-family:inherit}
     .tfld input:hover,.tfld textarea:hover{border-color:var(--line)}
     .tfld input:focus,.tfld textarea:focus{outline:none;border-color:var(--accent)}
+    .tfld .req{color:var(--err)}
+    .tfld.bad input{border-color:var(--err)}
+    .tfld .ferr{font-size:11px;color:var(--err);line-height:1.3}
+    #infomsg{font-size:13px}
     .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
     .tgrid .wide{grid-column:1/-1}
     .gsfoot{display:flex;align-items:center;gap:12px;padding:16px 36px 22px;border-top:1px solid var(--rule);margin-top:18px}
@@ -457,14 +461,14 @@
 
     /* split pill of the view: show / hide the plane | choose it */
     .vsplit{display:flex;height:34px;border-radius:999px;border:1px solid var(--rule);background:var(--card)}
-    .vsplit button{height:100%;border:0;background:none;color:var(--ink2);display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+    .vsplit > button{height:100%;border:0;background:none;color:var(--ink2);display:inline-flex;align-items:center;gap:6px;cursor:pointer;
       font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
     .vsplit .vsl{padding:0 9px 0 11px;border-radius:999px 0 0 999px}
     .vsplit .vsr{padding:0 11px 0 9px;gap:7px;border-radius:0 999px 999px 0;border-left:1px solid var(--rule)}
-    .vsplit button:hover{color:var(--ink);background:var(--soft)}
+    .vsplit > button:hover{color:var(--ink);background:var(--soft)}
     .vsplit.on{background:var(--sel);border-color:var(--sel)}
-    .vsplit.on button{color:var(--on-sel);font-weight:600}
-    .vsplit.on button:hover{background:color-mix(in srgb,var(--on-sel) 12%,transparent);color:var(--on-sel)}
+    .vsplit.on > button{color:var(--on-sel);font-weight:600}
+    .vsplit.on > button:hover{background:color-mix(in srgb,var(--on-sel) 12%,transparent);color:var(--on-sel)}
     .vsplit.on .vsr{border-left-color:color-mix(in srgb,var(--on-sel) 30%,transparent)}
     .vsplit .vsl:disabled{color:var(--muted);cursor:default;background:none}
     .vsplit:hover{border-color:var(--ink)}
@@ -484,6 +488,10 @@
     .rtree .rn.room button{font-weight:600}
     .rtree .rn .rl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .rtree .rn.room .rl{font-weight:600}
+    .rtree .rn .tg{flex:none !important;width:18px;height:18px;padding:0;border:0;background:none;cursor:pointer;color:var(--ink3);display:inline-flex;align-items:center;justify-content:center}
+    .rtree .rn .tg::before{content:"";border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .12s}
+    .rtree .rn .tg[aria-expanded="true"]::before{transform:rotate(90deg)}
+    .rtree .rn .tgsp{width:18px;flex:none}
     .rtree .rn small{color:var(--ink3);font-variant-numeric:tabular-nums}
     .rtree .rn.off button{color:var(--muted)}
     .rprev{position:relative;overflow:hidden;background:var(--soft)}
@@ -557,7 +565,8 @@
     <section class="gscard pcard" aria-label="Проект">
       <div class="pbody">
         <div class="gshd"><span class="gskick">Шаг 1 из 3</span><h1>Проект</h1>
-          <p>Эти сведения попадут на титульный лист отчета. Их можно заполнить и позже.</p></div>
+          <p>Эти сведения попадут на титульный лист отчета. Поля со звездочкой нужны для документации; считать помещения можно и без них.</p></div>
+        <div class="gsmsg err" id="infomsg" role="alert" hidden>Заполните обязательные поля — без них документация не формируется.</div>
         <div class="tgrid" id="infofields"></div>
       </div>
       <div class="gsfoot">
@@ -755,7 +764,7 @@
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry, luminaireGrid } from './js/photometry.js';
-  import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS } from './js/project.js';
+  import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors } from './js/project.js';
   import { hotkeyAction } from './js/hotkeys.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
@@ -1322,18 +1331,44 @@
   function renderInfo() {
     const wide = new Set(['name', 'description', 'author', 'customer']);
     $('#infofields').innerHTML = INFO_FIELDS.map((f) => `<div class="tfld${wide.has(f.key) ? ' wide' : ''}" id="pi-${f.key}">
-      <label for="in-pi-${f.key}">${f.label}</label>${f.kind === 'area'
+      <label for="in-pi-${f.key}">${f.label}${f.required ? '<span class="req" aria-hidden="true"> *</span>' : ''}</label>${f.kind === 'area'
         ? `<textarea id="in-pi-${f.key}" data-k="${f.key}" placeholder="${f.placeholder}" rows="4"></textarea>`
-        : `<input id="in-pi-${f.key}" data-k="${f.key}" type="${f.kind === 'text' ? 'text' : f.kind}" placeholder="${f.placeholder}" autocomplete="off">`}</div>`).join('');
+        : `<input id="in-pi-${f.key}" data-k="${f.key}" type="${f.kind === 'text' ? 'text' : f.kind}" placeholder="${f.placeholder}" autocomplete="off"${f.required ? ' required aria-required="true"' : ''}${f.kind === 'tel' ? ' inputmode="tel"' : ''}>`}
+      <span class="ferr" hidden></span></div>`).join('');
     fillInfo();
   }
+  const infoTouched = new Set();
+  let infoForce = false;
+  /** Marks the required fields of the project that are empty or wrong (after leaving them, or always after an attempt to open the documentation). */
+  function showInfoErrors() {
+    const e = infoErrors(project.info);
+    for (const f of INFO_FIELDS) {
+      const w = $(`#pi-${f.key}`), msg = (infoForce || infoTouched.has(f.key)) ? e[f.key] : null;
+      w.classList.toggle('bad', !!msg);
+      const fe = w.querySelector('.ferr'); fe.textContent = msg ?? ''; fe.hidden = !msg;
+    }
+    if (!Object.keys(e).length) $('#infomsg').hidden = true;
+    return e;
+  }
+  $('#infofields').addEventListener('focusout', (e) => { const k = e.target.dataset?.k; if (k) { infoTouched.add(k); showInfoErrors(); } });
   function fillInfo() {
+    if (project.info.phone) project.info.phone = formatPhone(project.info.phone);
     for (const f of INFO_FIELDS) $(`#in-pi-${f.key}`).value = project.info[f.key] ?? '';
   }
   $('#infofields').addEventListener('input', (e) => {
     const k = e.target.dataset.k;
     if (!k) return;
+    if (k === 'phone') {
+      // the mask «+7 123 456 7890»: keep the caret after the same digit
+      const el = e.target, before = el.value.slice(0, el.selectionStart ?? el.value.length);
+      const nd = (before.startsWith('+7') ? before.slice(2) : before).replace(/\D/g, '').length;
+      el.value = formatPhone(el.value);
+      let at = el.value.length;
+      if (nd >= 0) { let c = 0; for (let i = 3; i < el.value.length; i++) if (/\d/.test(el.value[i]) && ++c === nd) { at = i + 1; break; } if (nd === 0) at = Math.min(3, el.value.length); }
+      try { el.setSelectionRange(at, at); } catch (err) { /* not focused */ }
+    }
     project.info[k] = e.target.value;
+    if (infoForce || infoTouched.has(k)) showInfoErrors();
     report.invalidate('info');
     autosave();
   });
@@ -1449,6 +1484,12 @@
 
   /** Shows a stage: 1 — project, 2 — rooms, 3 — results (the report). */
   function setStage(n) {
+    // the documentation needs the project information; the calculation does not
+    if (n === 3 && Object.keys(infoErrors(project.info)).length) {
+      infoForce = true;
+      n = 1;
+      queueMicrotask(() => { showInfoErrors(); $('#infomsg').hidden = false; $('#infofields .tfld.bad input')?.focus(); });
+    }
     stage = n;
     document.body.dataset.stage = String(n);
     for (const k of [1, 2, 3]) $(`#stage${k}`).hidden = k !== n;
@@ -1477,6 +1518,7 @@
   }
   function useProject(p, stageAfter) {
     project = p;
+    infoTouched.clear(); infoForce = false; $('#infomsg').hidden = true;
     roomResults.clear();
     fillInfo();
     loadRoom(activeRoom());
@@ -1570,6 +1612,7 @@
         rworker = new Worker(import.meta.resolve('./js/worker.js'), { type: 'module' });
         rworker.onmessage = (e) => {
           const m = e.data;
+          if (m.type === 'ready') return; // started; jobs answer with their id
           if (m.id == null) { rworker.terminate(); rworker = null; rejectAll(m.message ?? 'worker'); return; }
           const j = rjobs.get(m.id); if (!j) return;
           rjobs.delete(m.id);

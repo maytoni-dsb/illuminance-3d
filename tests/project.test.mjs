@@ -1,7 +1,8 @@
 // Stage 7: project model, project file, hot keys, decimal comma.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createProject, createRoomState, nextRoomName, serializeProject, parseProject, projectFileName, FILE_FORMAT } from '../js/project.js';
+import { createProject, createRoomState, nextRoomName, serializeProject, parseProject, projectFileName, FILE_FORMAT, formatPhone, infoErrors } from '../js/project.js';
+import { missingLabels, denseCandidates } from '../js/planview.js';
 import { hotkeyAction, HOTKEYS } from '../js/hotkeys.js';
 import { toComma, DEFAULTS } from '../js/ui.js';
 import { HELP } from '../js/help.js';
@@ -69,4 +70,32 @@ test('decimal comma and help for every field', () => {
   for (const k of ['stage1', 'stage2', 'stage3', 'room', 'refl', 'norm', 'grid', 'file', 'results', 'view']) {
     assert.ok(HELP[k] && !/будет добавлен/.test(HELP[k].text), k);
   }
+});
+
+test('phone mask «+7 123 456 7890»: typed or pasted in any common form', () => {
+  for (const x of ['+7 912 345 6789', '+79123456789', '8 (912) 345-67-89', '9123456789', '7-912-345-67-89', '+7 (912) 345-67-89 доб.'])
+    assert.equal(formatPhone(x), '+7 912 345 6789', x);
+  assert.deepEqual(['', '9', '+7 91', '+7 9123', '+7 912 3456'].map(formatPhone), ['', '+7 9', '+7 91', '+7 912 3', '+7 912 345 6']);
+  assert.equal(formatPhone('+7 912 345 67890000'), '+7 912 345 6789');
+  assert.equal(formatPhone('+7 891 234 56789'), '+7 912 345 6789'); // «89123456789» typed digit by digit
+});
+
+test('required project information: all but the description', () => {
+  const ok = { name: 'Офис', description: '', author: 'А. Б.', phone: '+7 912 345 6789', email: 'a@b.ru', customer: 'ООО' };
+  assert.deepEqual(infoErrors(ok), {});
+  assert.deepEqual(Object.keys(infoErrors({})).sort(), ['author', 'customer', 'email', 'name', 'phone']);
+  assert.ok(infoErrors({ ...ok, phone: '+7 912 345' }).phone);
+  assert.ok(infoErrors({ ...ok, email: 'a@b' }).email);
+});
+
+test('on-screen isolines: a value left without a label gets its least crowded spot', () => {
+  const pts = new Float64Array([0, 0, 100, 0, 200, 0]);
+  const spare = new Map([[300, denseCandidates(pts, false, 14).map((c) => ({ ...c, level: 300 }))]]);
+  const taken = [[100, 0]];
+  const out = missingLabels(spare, new Set(), taken, () => true, 26, 14);
+  assert.equal(out.length, 1);
+  assert.ok(Math.abs(out[0].x - 100) >= 26);
+  assert.equal(missingLabels(spare, new Set([300]), taken, () => true, 26, 14).length, 0);
+  assert.equal(missingLabels(spare, new Set(), taken, () => false, 26, 14).length, 0); // not on the screen: nothing
+  assert.equal(denseCandidates(new Float64Array([0, 0, 3, 4]), false, 14).length, 1); // a tiny line still has a spot
 });
