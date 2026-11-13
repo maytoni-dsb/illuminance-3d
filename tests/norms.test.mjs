@@ -1,4 +1,4 @@
-// Stage 7: the codifier of norms — data read from СП 52.13330.2016 (Л.1) and EN 12464-1:2021 (9–61).
+// Stage 7: the codifier of norms — data read from SP 52.13330.2016 (table L.1) and EN 12464-1:2021 (9–61).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NORM_SETS, rowOf, searchNorms, normFromRow, normMatches, normSource, applicable } from '../js/norms.js';
@@ -8,7 +8,7 @@ const [sp, en] = NORM_SETS;
 const all = (set) => set.sections.flatMap((s) => s.rows.map(rowOf));
 
 test('sets, sections and rows are complete and sane', () => {
-  assert.equal(sp.sections.length, 26); // headings of table Л.1 (with medical subsections)
+  assert.equal(sp.sections.length, 26); // headings of table L.1 (with medical subsections)
   assert.deepEqual(en.sections.map((s) => Number(s.title.match(/^Table (\d+)/)[1])), Array.from({ length: 53 }, (_, k) => k + 9));
   for (const set of NORM_SETS) {
     const rows = all(set);
@@ -17,7 +17,9 @@ test('sets, sections and rows are complete and sane', () => {
     for (const r of rows) {
       assert.ok(r.E > 0 && r.E <= 5000, `${set.id} ${r.ref} E`);
       assert.ok(r.U0 == null || (r.U0 >= 0.1 && r.U0 <= 1), `${set.id} ${r.ref} U0`);
-      assert.ok(r.z == null || r.z === 0 || r.z === 0.8 || r.plane.startsWith('Г'), `${set.id} ${r.ref} plane`);
+      // plane codes (stage 8): H-<height> for horizontal planes with z, V or V-<height> for vertical ones
+      const m = /^(H|V)(?:-(\d+\.\d+))?$/.exec(r.plane);
+      assert.ok(m && (m[1] === 'H' ? Number(m[2]) === r.z : r.z == null), `${set.id} ${r.ref} plane ${r.plane}`);
       assert.ok(r.name.length > 2 && !/\d{3} \d|- - -/.test(r.name), `${set.id} ${r.ref} name: ${r.name}`);
       if (set.id === 'en12464') { assert.ok(!refs.has(r.ref), r.ref); refs.add(r.ref); }
     }
@@ -40,7 +42,7 @@ test('known rows', () => {
   assert.equal(e['10.7'].note, '4 000 K ≤ Tcp ≤ 5 000 K');
 });
 
-test('search: words in any order, ё = е, numbers', () => {
+test('search: words in any order, letters with diacritics folded, numbers', () => {
   const r = searchNorms(sp, 'жилые КОМНАТЫ');
   assert.ok(r.some((s) => s.rows.some((x) => x.ref === '190')));
   assert.equal(searchNorms(sp, '196а').flatMap((s) => s.rows)[0].ref, '196а');
@@ -52,7 +54,7 @@ test('search: words in any order, ё = е, numbers', () => {
 test('a chosen row fills the form and names its source; editing makes it the user\'s', () => {
   const row = all(sp).find((r) => r.ref === '1');
   const n = normFromRow(sp, row);
-  // no-break spaces keep «СП 52…», «табл. Л.1», «№ 1» together
+  // no-break spaces keep the document, its table and the row number together
   assert.equal(n.source, 'СП\u00a052.13330.2016, табл.\u00a0Л.1, №\u00a01');
   assert.equal(normSource(n), `Установлено по СП\u00a052.13330.2016, табл.\u00a0Л.1, №\u00a01: ${row.name}`);
   const e = normFromRow(en, all(en).find((r) => r.ref === '12.1'));

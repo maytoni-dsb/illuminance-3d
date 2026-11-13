@@ -1,19 +1,17 @@
-// Stage 5 acceptance checks shown on the page ("Критерии этапа 5"): photometric files.
+// Stage 5 acceptance checks shown on the page (panel "Stage 5 criteria"): photometric files.
 // Pure module, no DOM. The library-wide check is scripts/check-library.mjs; tests/photfile.test.mjs
 // covers the parsers with synthetic files of every symmetry.
-// Check names and details are user-facing and therefore in Russian.
+// Check names and details come from the dictionaries (chk.s5.*).
 
 import { expandPlanes, mirrorC } from './photometry.js';
 import { gaussLegendre01 } from './direct.js';
+import { t, sci, decimal } from './i18n.js';
 
-function exp(x) {
-  if (x === 0) return '0';
-  const [m, e] = x.toExponential(1).split('e');
-  return `${m.replace('.', ',')}·10<sup>${e.replace('-', '−').replace('+', '')}</sup>`;
-}
-const pct = (x) => `${(100 * x).toFixed(3).replace('.', ',')} %`;
-const lm = (x) => `${x.toFixed(1).replace('.', ',')} лм`;
-const SYM = { rot: 'вращения', quad: 'две плоскости', half0: 'плоскость C0–C180', half90: 'плоскость C90–C270', none: 'нет' };
+const exp = (x) => sci(x, 1);
+const pct = (x) => `${(100 * x).toFixed(3).replace('.', decimal())} %`;
+const lm = (x) => `${x.toFixed(1).replace('.', decimal())} ${t('unit.lm')}`;
+/** Symmetry of a file in words: chk.s5.sym.<rot|quad|half0|half90|none>. */
+const symName = (s) => t(`chk.s5.sym.${s}`);
 
 /**
  * @param {import('./geometry.js').Room} room
@@ -30,15 +28,16 @@ export function stage5Checks(room, lums, phot, E, table) {
   if (table.ratedFlux) {
     const dev = phot.tableFlux / table.ratedFlux - 1;
     out.push({
-      name: 'Поток по КСС совпадает с паспортным (1 %)',
+      name: t('chk.s5.rated'),
       ok: Math.abs(dev) <= 0.01,
-      detail: `интеграл КСС ${lm(phot.tableFlux)}, в файле ${lm(table.ratedFlux)}, отличие ${pct(dev)}` + (phot.scale !== 1 ? `; в расчете поток ${lm(phot.flux)} (КСС × ${phot.scale.toFixed(4).replace('.', ',')})` : ''),
+      detail: t('chk.s5.ratedDetail', { a: lm(phot.tableFlux), b: lm(table.ratedFlux), x: pct(dev) }) +
+        (phot.scale !== 1 ? t('chk.s5.scaled', { a: lm(phot.flux), k: phot.scale.toFixed(4).replace('.', decimal()) }) : ''),
     });
   } else {
     out.push({
-      name: 'Поток по КСС совпадает с паспортным (1 %)',
+      name: t('chk.s5.rated'),
       ok: true,
-      detail: `в файле IES поток светильника не указан (${table.absolute ? 'абсолютная фотометрия' : `указан поток ламп ${lm(table.lampFlux)}`}); поток светильника — интеграл КСС, ${lm(phot.tableFlux)}`,
+      detail: t('chk.s5.iesDetail', { why: table.absolute ? t('chk.s5.absolute') : t('chk.s5.lamps', { a: lm(table.lampFlux) }), a: lm(phot.tableFlux) }),
     });
   }
 
@@ -61,9 +60,9 @@ export function stage5Checks(room, lums, phot, E, table) {
     }
   }
   out.push({
-    name: 'КСС проходит через табличные значения',
+    name: t('chk.s5.through'),
     ok: worst <= 1e-12,
-    detail: `${table.C.length} плоскостей в файле, ${planes.length} после развертки (симметрия: ${SYM[table.sym]}), ${nG} углов γ: наибольшее отличие ${exp(worst)} от I<sub>max</sub>`,
+    detail: t('chk.s5.throughDetail', { c: table.C.length, p: planes.length, s: symName(table.sym), g: nG, x: exp(worst) }),
   });
 
   // 3. The closed-form flux of the interpolant against Gauss quadrature over every cell
@@ -85,18 +84,21 @@ export function stage5Checks(room, lums, phot, E, table) {
   }
   const qerr = Math.abs(quad / phot.flux - 1);
   out.push({
-    name: 'Поток интерполянта в замкнутом виде',
+    name: t('chk.s5.closed'),
     ok: qerr <= 1e-10,
-    detail: `формула ${lm(phot.flux)}, квадратура Гаусса 6 × 6 по ячейкам таблицы: отличие ${exp(qerr)}; вниз ${lm(phot.fluxDown)}, вверх ${lm(phot.fluxUp)}`,
+    detail: t('chk.s5.closedDetail', { a: lm(phot.flux), x: exp(qerr), d: lm(phot.fluxDown), u: lm(phot.fluxUp) }),
   });
 
   // 4. Every luminaire puts its whole flux on the faces (adaptive cubature, control 1e-3)
   const per = E.stats?.perLum ?? [];
   const w = per.reduce((m, x) => Math.max(m, Math.abs(x)), 0);
   out.push({
-    name: 'Поток каждого светильника на грани (10⁻³)',
+    name: t('chk.s5.each'),
     ok: per.length > 0 && w <= 1e-3,
-    detail: `${E.stats?.luminaires ?? per.length} светильников (проинтегрировано ${per.length}, остальные — зеркально): наибольшее |ΣE·A / Φ − 1| = ${exp(w)}; ${Math.round((E.stats?.evals ?? 0) / Math.max(1, room.N * lums.length))} вычислений КСС на пару элемент–светильник, глубина ${E.stats?.depth ?? '—'}, повторов ${E.stats?.retries ?? '—'}`,
+    detail: t('chk.s5.eachDetail', {
+      n: E.stats?.luminaires ?? per.length, k: per.length, x: exp(w),
+      e: Math.round((E.stats?.evals ?? 0) / Math.max(1, room.N * lums.length)), d: E.stats?.depth ?? '—', r: E.stats?.retries ?? '—',
+    }),
   });
   return out;
 }

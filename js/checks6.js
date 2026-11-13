@@ -1,17 +1,15 @@
-// Stage 6 acceptance checks shown on the page ("Критерии этапа 6"): plans of the planes.
+// Stage 6 acceptance checks shown on the page (panel "Stage 6 criteria"): plans of the planes.
 // Pure module, no DOM. The page runs them on the plan it shows (maintained values, E = MF · E₀);
 // tests/plan.test.mjs runs them on several rooms.
-// Check names and details are user-facing and therefore in Russian.
+// Check names and details come from the dictionaries (chk.s6.*).
 
 import { bilinear } from './workplane.js';
 import { levelIndex, LEVELS } from './colorscale.js';
+import { t, sci, decimal, group } from './i18n.js';
 
-const pct = (x) => `${(100 * x).toFixed(2).replace('.', ',')} %`;
-function exp(x) {
-  if (x === 0) return '0';
-  const [m, e] = x.toExponential(1).split('e');
-  return `${m.replace('.', ',')}·10<sup>${e.replace('-', '−').replace('+', '')}</sup>`;
-}
+const pct = (x) => `${(100 * x).toFixed(2).replace('.', decimal())} %`;
+const exp = (x) => sci(x, 1);
+const f1 = (x) => x.toFixed(1).replace('.', decimal());
 
 /**
  * Isolines against the colors of the plan. Every vertex of an isoline lies on a cell edge; there
@@ -82,18 +80,18 @@ export function stage6Checks(plan, sets, mf, stats) {
   const scaled = { grid: plan.grid, E: plan.E.map((v) => mf * v) };
   const a = isolineAudit(scaled, sets);
   out.push({
-    name: 'Изолинии проходят по границам цветов',
+    name: t('chk.s6.iso'),
     ok: a.vertices > 0 ? a.onLevel === a.vertices && a.colorsDiffer === a.vertices && a.maxMid < 0.05 : true,
     detail: a.vertices > 0
-      ? `${a.vertices.toLocaleString('ru-RU')} вершин на ребрах ячеек: на уровне — ${a.onLevel.toLocaleString('ru-RU')}, цвет по обе стороны разный — ${a.colorsDiffer.toLocaleString('ru-RU')}; середины отрезков отстоят от границы цвета не больше ${exp(a.maxMid)} ячейки`
-      : 'на плане нет изолиний (освещенность в пределах одного уровня шкалы)',
+      ? t('chk.s6.isoDetail', { v: group(a.vertices), l: group(a.onLevel), c: group(a.colorsDiffer), x: exp(a.maxMid) })
+      : t('chk.s6.isoNone'),
   });
 
   const m = nodeMean(plan), dev = m / stats.avg - 1;
   out.push({
-    name: 'Ē плана совпадает с Ē в результатах (0,5 %)',
+    name: t('chk.s6.mean'),
     ok: Math.abs(dev) <= 0.005,
-    detail: `по узлам вспомогательной сетки ${(mf * m).toFixed(1).replace('.', ',')} лк, по ячейкам ${(mf * stats.avg).toFixed(1).replace('.', ',')} лк, отличие ${pct(dev)}`,
+    detail: t('chk.s6.meanDetail', { a: f1(mf * m), b: f1(mf * stats.avg), x: pct(dev) }),
   });
 
   // the reflected part between the mesh vertices is interpolated: compare with the exact sum at
@@ -105,9 +103,9 @@ export function stage6Checks(plan, sets, mf, stats) {
     if (g.E[k] > 0) worst = Math.max(worst, Math.abs(r - g.Eref[k]) / g.E[k]);
   }
   out.push({
-    name: 'Отраженная между вершинами сетки: интерполяция против точного расчета (1 %)',
+    name: t('chk.s6.interp'),
     ok: worst <= 0.01,
-    detail: `в ${g.E.length} точках сетки ГОСТ наибольшее отличие ${pct(worst)} от полной освещенности`,
+    detail: t('chk.s6.interpDetail', { n: g.E.length, x: pct(worst) }),
   });
   return out;
 }

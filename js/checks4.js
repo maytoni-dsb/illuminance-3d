@@ -1,21 +1,18 @@
-// Stage 4 acceptance checks shown on the page ("Критерии этапа 4"). Pure module, no DOM.
+// Stage 4 acceptance checks shown on the page (panel "Stage 4 criteria"). Pure module, no DOM.
 // The same criteria are verified more thoroughly by tests/radiosity.test.mjs (MATLAB comparison
 // included). The fourth criterion (exposure does not change with rotation) needs the 3D view and is
-// checked by view3d.js. Check names and details are user-facing and therefore in Russian.
+// checked by view3d.js. Check names and details come from the dictionaries (chk.s4.*).
 
 import { fromGlobalIndex } from './geometry.js';
+import { t, sci, decimal } from './i18n.js';
 import { elementToElement } from './formfactor.js';
 import { kernelF, rowSums } from './kernel.js';
 import { SOLVER_EPS } from './solver.js';
 
-/** 3.1e-15 → "3,1·10<sup>−15</sup>" (decimal comma for the Russian UI; the panel uses innerHTML). */
-function exp(x) {
-  if (x === 0) return '0';
-  if (!Number.isFinite(x)) return '∞';
-  const [m, e] = Math.abs(x).toExponential(1).split('e');
-  return `${m.replace('.', ',')}·10<sup>${e.replace('-', '−').replace('+', '')}</sup>`;
-}
-const pct = (x) => `${(100 * x).toFixed(2).replace('.', ',')} %`;
+/** 3.1e-15 → "3.1·10<sup>−15</sup>" of |x| with the decimal separator of the language (innerHTML). */
+const exp = (x) => (Number.isFinite(x) ? sci(Math.abs(x), 1) : '∞');
+const pct = (x) => `${(100 * x).toFixed(2).replace('.', decimal())} %`;
+const f1 = (x) => x.toFixed(1).replace('.', decimal());
 
 /** Deterministic pseudo-random numbers in [0, 1) (mulberry32), so the panel is reproducible. */
 function rng(seed) {
@@ -52,32 +49,32 @@ export function stage4Checks(kernel, res, pairs = 300) {
   let rs = 0;
   for (const s of rowSums(kernel)) rs = Math.max(rs, Math.abs(s - 1));
   out.push({
-    name: 'Ядро совпадает с прямым расчетом F',
+    name: t('chk.s4.kernel'),
     ok: worst <= 1e-9 && rs <= 1e-9,
-    detail: `${n} случайных пар разных граней: наибольшее относительное отличие ${exp(worst)}; max |ΣF<sub>ij</sub> − 1| = ${exp(rs)} при N = ${room.N}`,
+    detail: t('chk.s4.kernelDetail', { n, x: exp(worst), y: exp(rs), N: room.N }),
   });
 
   // 2. Energy balance
   const b = res.balance;
   out.push({
-    name: 'Энергобаланс в пределах 0,5 %',
+    name: t('chk.s4.balance'),
     ok: Math.abs(b.rel) <= 0.005,
-    detail: `поглощено Σ(1 − ρ)·E·A = ${Math.round(b.absorbed)} лм, поток светильников ${Math.round(b.emitted)} лм, отличие ${exp(b.rel)}`,
+    detail: t('chk.s4.balanceDetail', { a: Math.round(b.absorbed), e: Math.round(b.emitted), x: exp(b.rel) }),
   });
 
   // 3. Sumpner's estimate
   const sp = res.sumpner;
   out.push({
-    name: 'Отраженная освещенность близка к оценке Сампнера',
+    name: t('chk.s4.sumpner'),
     ok: Math.abs(sp.rel) <= 0.15,
-    detail: `средняя по граням ${sp.mean.toFixed(1).replace('.', ',')} лк, оценка Φ₁ / (A·(1 − ρ<sub>ср</sub>)) = ${sp.estimate.toFixed(1).replace('.', ',')} лк, отличие ${Number.isFinite(sp.rel) ? pct(sp.rel) : '—'} (допуск 15 %)`,
+    detail: t('chk.s4.sumpnerDetail', { a: f1(sp.mean), b: f1(sp.estimate), x: Number.isFinite(sp.rel) ? pct(sp.rel) : '—' }),
   });
 
   // Solver convergence (informational, part of the method)
   out.push({
-    name: 'Решатель сошелся',
+    name: t('chk.s4.solver'),
     ok: res.converged,
-    detail: `${res.iterations} итер. Гаусса–Зейделя с поправкой по граням; последнее изменение ${exp(res.change)} &lt; ε = ${exp(SOLVER_EPS)}`,
+    detail: t('chk.s4.solverDetail', { n: res.iterations, x: exp(res.change), e: exp(SOLVER_EPS) }),
   });
   return out;
 }

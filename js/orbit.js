@@ -92,7 +92,7 @@ export function anglesOf(v) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Orthographic plan view ("вид сверху"): the camera looks straight down, room +X to the right and
+// Orthographic plan view ("top view"): the camera looks straight down, room +X to the right and
 // room +Y up on screen (Three.js −Z up). State: centre of the view (cx, cz) and half the visible
 // height `half`, all in Three.js metres. Pan and zoom work as in the orbit; the first rotation
 // leaves the plan for the orbit, starting from straight above (planToOrbit).

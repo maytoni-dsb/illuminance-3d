@@ -1,5 +1,5 @@
 // False-color scale. Pure module: no DOM and no Three.js.
-// Spec, section "Фиктивные цвета" (false colors):
+// Spec, section "False colours":
 //   - a fixed scale of 27 levels (0…2000 lx), the same for all faces, planes and projects;
 //   - stepped colors: a value between levels k and k+1 gets color k, so the border between two
 //     colors coincides with an isoline; values below 0 get the first color, 2000 lx and above

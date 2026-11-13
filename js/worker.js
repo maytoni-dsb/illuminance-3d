@@ -3,7 +3,7 @@
 // Module version stamps inside a worker. Import maps do not apply in workers, so a static
 // `import './calc.js'` here (and calc.js's own `import './kernel.js'`, …) would load unstamped URLs
 // that the browser may serve from a stale cache — the very mix of old and new modules the stamps
-// prevent on the page (spec, "Метки версий модулей"). Therefore this file has NO static imports:
+// prevent on the page (spec, "Module version stamps"). Therefore this file has NO static imports:
 //   1. the page creates the worker from its stamped URL (import.meta.resolve('./js/worker.js'))
 //      and sends it the page's import map (absolute stamped URLs);
 //   2. the worker fetches every module it needs from its stamped URL, rewrites the relative
@@ -11,7 +11,7 @@
 //      imports the result. Every module is thus fetched by its stamped URL and evaluated once.
 // Relative imports between js/ modules must have the form `from './name.js'` (checked by the tests).
 //
-// Protocol (page → worker): { type: 'init', imports } then { type: 'run', id, params } and
+// Protocol (page → worker): { type: 'init', imports, lang } then { type: 'run', id, params } and
 // { type: 'plan', id, z } (field of the plan of a plane for the last run).
 // Worker → page: { type: 'ready' } | { type: 'result', id, result } | { type: 'plan', id, plan } |
 // { type: 'error', id, message }.
@@ -63,8 +63,12 @@ if (isWorker) {
     const m = e.data;
     if (m.type === 'init') {
       ready = (async () => {
-        const url = await loadModule('./calc.js', m.imports, new Map());
-        const mod = await import(url);
+        // the language of the page first: the checks of the stages write their texts in it (stage 8);
+        // the same cache, so calc.js and its modules share this instance of i18n.js
+        const cache = new Map();
+        const i18n = await import(await loadModule('./i18n.js', m.imports, cache));
+        if (m.lang) i18n.setLang(m.lang);
+        const mod = await import(await loadModule('./calc.js', m.imports, cache));
         calc = mod.createCalc();
       })();
       try { await ready; self.postMessage({ type: 'ready' }); } catch (err) {

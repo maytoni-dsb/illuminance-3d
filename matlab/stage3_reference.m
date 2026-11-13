@@ -9,19 +9,19 @@
 %   computed with integral2 of the point formula (independent of the form-factor route in JS):
 %     id  s(3)  flux  fUp  p0(3)  a(3)  b(3)  nA(3)  E              (19 columns, %.17g)
 %
-%   Photometry (spec, "Светильники"): fUp = 0 is the cosine model, fUp > 0 the direct-indirect one:
+%   Photometry (spec, "Luminaires"): fUp = 0 is the cosine model, fUp > 0 the direct-indirect one:
 %     I(gamma) = flux*(1-fUp)/pi*cos(gamma) for gamma < 90 deg, flux*fUp/pi*|cos(gamma)| above;
 %   gamma is measured from -Z. Both models are rotationally symmetric, so psi (rad) must not
 %   change E; it is stored so that JS recomputes exactly the same cases.
 %
-%   Point formula (spec, "Метод расчёта", item 1):  E = I(C, gamma) * cos(xi) / d^2, 0 if cos(xi) <= 0.
+%   Point formula (spec, "Calculation method", item 1):  E = I(C, gamma) * cos(xi) / d^2, 0 if cos(xi) <= 0.
 %   Also prints the largest difference between integral2 and the exact form-factor route
 %   E = sum_lobes flux_l * F(source, axis_l -> element) / A (ff_point_rect.m, stage 2).
 
 here = fileparts(mfilename('fullpath'));
 addpath(here);
 
-%% Room 6 x 4 x 3 m, faces as in the spec ("Система координат и грани"), automatic step
+%% Room 6 x 4 x 3 m, faces as in the spec ("Coordinate system and faces"), automatic step
 L = 6; W = 4; H = 3;
 faces = struct( ...
     'n',  {[0 0 1],  [0 0 -1], [0 1 0],  [0 -1 0], [1 0 0],  [-1 0 0]}, ...
@@ -45,7 +45,7 @@ lumsOf = @(hc) [reshape(repmat(((0:nx-1) + 0.5) * L / nx, 1, ny), [], 1), ...
                 reshape(repmat(((0:ny-1) + 0.5) * W / ny, nx, 1), [], 1), ...
                 repmat(H - hc, nx * ny, 1)];
 
-%% 1. Points: a 5 x 5 pattern on every face, the work plane Г-0,8 and an oblique receiver
+%% 1. Points: a 5 x 5 pattern on every face, the work plane at 0.8 m and an oblique receiver
 fr = [0.02 0.3 0.5 0.77 0.98];
 prow = zeros(0, 14);
 for c = 1:size(configs, 1)

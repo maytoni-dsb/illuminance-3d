@@ -1,6 +1,6 @@
 // Isolines of a field given at the nodes of a regular grid: marching squares, polylines, places
 // for the labels. Pure module: no DOM and no Three.js.
-// Spec, "Планы Г-0,0 и Г-0,8": isolines by marching squares on the auxiliary grid; their levels are
+// Spec, "Plans of the planes 0.0 and 0.8": isolines by marching squares on the auxiliary grid; their levels are
 // exactly the levels of the color scale, with the values written on the lines.
 //
 // Conventions shared with the colors of the plan (planview / view3d): the field inside a cell is the

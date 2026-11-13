@@ -1,7 +1,9 @@
 // Room geometry: faces, subdivision into elements, indexing.
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
 // SI units (m). Coordinate system and faces follow the spec, section
-// "Система координат и грани" (coordinate system and faces).
+// "Coordinate system and faces".
+
+import { t } from './i18n.js';
 
 /** Tolerance for size/step division: 1.1/0.1 = 11.000000000000002 must give 11, not 12. */
 const DIVISION_EPS = 1e-9;
@@ -29,15 +31,15 @@ export function autoStep(L, W, H, opts = AUTO_STEP) {
  * Face definitions 0…5. Face sizes refer to room edges ('L' | 'W' | 'H'),
  * so every face sharing an edge gets the same number of divisions along it.
  * origin(L, W, H) is the point (u = 0, v = 0).
- * `name` is a user-facing label and is therefore in Russian.
+ * `name` is the user-facing label in the current language (dictionary key face.<id>).
  */
 export const FACE_DEFS = Object.freeze([
-  { id: 0, name: 'Пол',         normal: [0, 0, 1],  u: [1, 0, 0], v: [0, 1, 0], uEdge: 'L', vEdge: 'W', origin: () => [0, 0, 0] },
-  { id: 1, name: 'Потолок',     normal: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0], uEdge: 'L', vEdge: 'W', origin: (L, W, H) => [0, 0, H] },
-  { id: 2, name: 'Стена y = 0', normal: [0, 1, 0],  u: [1, 0, 0], v: [0, 0, 1], uEdge: 'L', vEdge: 'H', origin: () => [0, 0, 0] },
-  { id: 3, name: 'Стена y = W', normal: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1], uEdge: 'L', vEdge: 'H', origin: (L, W) => [0, W, 0] },
-  { id: 4, name: 'Стена x = 0', normal: [1, 0, 0],  u: [0, 1, 0], v: [0, 0, 1], uEdge: 'W', vEdge: 'H', origin: () => [0, 0, 0] },
-  { id: 5, name: 'Стена x = L', normal: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], uEdge: 'W', vEdge: 'H', origin: (L) => [L, 0, 0] },
+  { id: 0, get name() { return t('face.0'); }, normal: [0, 0, 1],  u: [1, 0, 0], v: [0, 1, 0], uEdge: 'L', vEdge: 'W', origin: () => [0, 0, 0] },
+  { id: 1, get name() { return t('face.1'); }, normal: [0, 0, -1], u: [1, 0, 0], v: [0, 1, 0], uEdge: 'L', vEdge: 'W', origin: (L, W, H) => [0, 0, H] },
+  { id: 2, get name() { return t('face.2'); }, normal: [0, 1, 0],  u: [1, 0, 0], v: [0, 0, 1], uEdge: 'L', vEdge: 'H', origin: () => [0, 0, 0] },
+  { id: 3, get name() { return t('face.3'); }, normal: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1], uEdge: 'L', vEdge: 'H', origin: (L, W) => [0, W, 0] },
+  { id: 4, get name() { return t('face.4'); }, normal: [1, 0, 0],  u: [0, 1, 0], v: [0, 0, 1], uEdge: 'W', vEdge: 'H', origin: () => [0, 0, 0] },
+  { id: 5, get name() { return t('face.5'); }, normal: [-1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], uEdge: 'W', vEdge: 'H', origin: (L) => [L, 0, 0] },
 ]);
 
 /**

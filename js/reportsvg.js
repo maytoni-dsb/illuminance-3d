@@ -1,15 +1,16 @@
 // Vector drawings of the report (stage 7): the room plan with luminaires and dimensions, the plan of
 // a work plane with isolines and the numbers at the GOST points, the false-colour scale.
 // Pure module: returns SVG markup as strings, units are millimetres of the printed page, so the
-// plans are drawn to a drafting scale (М 1:n). No DOM: tested in Node.
+// plans are drawn to a drafting scale (1:n, marked rep.scaleMark). No DOM: tested in Node.
 // Text inherits the font of the report; sizes in mm (1 pt = 0.3528 mm).
 
 import { labelPlaces } from './isolines.js';
 import { LEVELS, COLORS_HEX } from './colorscale.js';
 import { fmtLux, fmtLen } from './planview.js';
+import { t, meta, formatNumber } from './i18n.js';
 
 const PT = 0.3528;
-/** Drafting scales, 1:n (ГОСТ 2.302). */
+/** Drafting scales, 1:n (GOST 2.302). */
 export const SCALES = Object.freeze([10, 15, 20, 25, 40, 50, 75, 100, 200, 400, 500, 800, 1000]);
 const r2 = (x) => Math.round(x * 100) / 100;
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -80,8 +81,8 @@ function dimensions(T, L, W, chains, font = 2.3) {
   return `<g fill="none" stroke="#141414" stroke-width="0.18">${g}</g><g fill="#141414" font-size="${font}" style="font-variant-numeric:tabular-nums">${t}</g>`;
 }
 
-/** «М 1:n» in the lower left corner of the drawing (on its field, not a caption). */
-const scaleMark = (box, n) => `<text x="0.3" y="${r2(box.h - 0.6)}" font-size="${r2(7 * PT)}" fill="#141414">М\u00a01:${n}</text>`;
+/** The scale mark (1:n with the prefix of the language) in the lower left corner of the drawing (on its field, not a caption). */
+const scaleMark = (box, n) => `<text x="0.3" y="${r2(box.h - 0.6)}" font-size="${r2(7 * PT)}" fill="#141414">${esc(t('rep.scaleMark', { n }))}</text>`;
 
 /** Shortened chain of a long grid (as on the view): first three and last two axes. */
 const chain = (vals) => (vals.length <= 9 ? vals : [vals[0], vals[1], vals[2], vals[vals.length - 2], vals[vals.length - 1]]);
@@ -104,7 +105,7 @@ export function roomPlanSvg(d) {
   let axes = '';
   for (const x of d.xs) axes += `<path d="M${r2(T.x(x))} ${r2(y1 - 2)}V${r2(y0 + 2)}"/>`;
   for (const y of d.ys) axes += `<path d="M${r2(x0 - 2)} ${r2(T.y(y))}H${r2(x1 + 2)}"/>`;
-  const mark = d.frameW ? `<text x="${r2(fw)}" y="${r2(y0 + 12 - 0.9)}" text-anchor="end" font-size="${r2(7 * PT)}" fill="#141414">М\u00a01:${d.n}</text>` : scaleMark(box, d.n);
+  const mark = d.frameW ? `<text x="${r2(fw)}" y="${r2(y0 + 12 - 0.9)}" text-anchor="end" font-size="${r2(7 * PT)}" fill="#141414">${esc(t('rep.scaleMark', { n: d.n }))}</text>` : scaleMark(box, d.n);
   return `<svg xmlns="http://www.w3.org/2000/svg" class="plan" width="${r2(fw)}mm" height="${r2(box.h)}mm" viewBox="0 0 ${r2(fw)} ${r2(box.h)}">` +
     `<g fill="none" stroke="#8a8a8a" stroke-width="0.13" stroke-dasharray="4 0.8 0.5 0.8">${axes}</g>` +
     luminaires(T, d, { fill: 'none', glow: 'none' }) +
@@ -205,7 +206,7 @@ export function colorScaleSvg(w = 165) {
   let boxes = '', text = '', ticks = '';
   for (let k = 0; k < n; k++) {
     boxes += `<rect x="${r2(k * cw)}" y="${r2(top)}" width="${r2(cw + 0.02)}" height="${h}" fill="${COLORS_HEX[k]}"/>`;
-    const s = LEVELS[k].toLocaleString('ru-RU').replace(/\s/g, '\u202f'), x = k * cw, below = k % 2 === 0;
+    const s = LEVELS[k].toLocaleString(meta().locale).replace(/\s/g, '\u202f'), x = k * cw, below = k % 2 === 0;
     text += `<text x="${r2(x + 0.35)}" y="${r2(below ? top + h + fs + 1.2 : top - 1.4)}">${esc(s)}</text>`; // from its tick
     ticks += `<path d="M${r2(x)} ${r2(below ? top + h : top - 0.9)}V${r2(below ? top + h + 0.9 : top)}"/>`;
   }
@@ -215,7 +216,7 @@ export function colorScaleSvg(w = 165) {
     `<g fill="#141414" font-size="${r2(fs)}" style="font-variant-numeric:tabular-nums">${text}</g></svg>`;
 }
 
-/** A round step for the rings of a diagram: 1, 2, 2,5 or 5 × 10^k, not less than x. */
+/** A round step for the rings of a diagram: 1, 2, 2.5 or 5 × 10^k, not less than x. */
 export function niceStep(x) {
   if (!(x > 0)) return 1;
   const e = 10 ** Math.floor(Math.log10(x));
@@ -233,7 +234,7 @@ export function polarSvg(c, R, outer, step, size = 50) {
   for (let v = step; v <= outer + 1e-9; v += step) {
     const r = R * v / outer;
     rings += `<circle r="${r2(r)}"/>`;
-    text += `<text x="1.2" y="${r2(-r - 0.8)}">${String(Number(v.toFixed(2))).replace('.', ',')}</text>`;
+    text += `<text x="1.2" y="${r2(-r - 0.8)}">${formatNumber(v, 2)}</text>`;
   }
   for (let g = 0; g <= 180; g += 30) {
     for (const side of g === 0 || g === 180 ? [1] : [1, -1]) spokes += `M0 0L${r2(side * R * Math.sin(g * Math.PI / 180))} ${r2(R * Math.cos(g * Math.PI / 180))}`;
@@ -245,8 +246,8 @@ export function polarSvg(c, R, outer, step, size = 50) {
     `<g fill="#6b6b6b" font-size="${r2(lab)}" style="font-variant-numeric:tabular-nums">${text}</g></svg>`;
 }
 
-/** Legend of the polar diagram: «— C0–180  - - - C90–270 · Imax = … кд/клм». */
+/** Legend of the polar diagram: "— C0–180  - - - C90–270 · Imax = … cd/klm" (units of the language). */
 export function polarLegend(peak) {
   const line = (dash) => `<svg width="6mm" height="2mm" viewBox="0 0 6 2" style="vertical-align:.2mm"><path d="M0 1H6" stroke="#141414" stroke-width="${dash ? 0.22 : 0.35}"${dash ? ' stroke-dasharray="1 0.6"' : ''}/></svg>`;
-  return `${line(false)}\u00a0C0–180 ${line(true)}\u00a0C90–270 · I<sub>max</sub>\u00a0=\u00a0${Math.round(peak).toLocaleString('ru-RU').replace(/\s/g, '\u202f')}\u00a0кд/клм`;
+  return `${line(false)}\u00a0C0–180 ${line(true)}\u00a0C90–270 · I<sub>max</sub>\u00a0=\u00a0${Math.round(peak).toLocaleString(meta().locale).replace(/\s/g, '\u202f')}\u00a0${t('unit.cdklm')}`;
 }

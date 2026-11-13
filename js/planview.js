@@ -4,16 +4,17 @@
 //     and for a shown plane its isolines with their values and the numbers at the GOST points;
 //   - in 3D: for a shown plane the numbers at the GOST points and the isoline values, projected
 //     (the isolines themselves are 3D lines of the view).
-// Colours of the plane are drawn by view3d from the same field. Spec, "Планы Г-0,0 и Г-0,8".
+// Colours of the plane are drawn by view3d from the same field. Spec, "Plans of the planes 0.0 and 0.8".
 
 import { labelPlaces } from './isolines.js';
+import { meta } from './i18n.js';
 
 const FONT = '"Suisse Intl","Helvetica Neue",Helvetica,Arial,sans-serif';
 /** Spacing of the isoline labels along a line: px on the plan, m in 3D. */
 const LABEL_SPACING = 240, LABEL_MIN = 70, LABEL_SPACING_3D = 1.6, LABEL_MIN_3D = 0.8;
 
 /** Illuminance as written on the plan: whole lux from 10 lx, one decimal below. */
-export const fmtLux = (v) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10).toLocaleString('ru-RU');
+export const fmtLux = (v) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10).toLocaleString(meta().locale);
 /** Length as written on the dimensions: whole millimetres, as on drawings (accepted 5 Nov 2026). */
 export const fmtLen = (v) => String(Math.round(v * 1000));
 

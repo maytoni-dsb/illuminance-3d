@@ -109,7 +109,7 @@ test('bilinear interpolation reproduces bilinear functions and clamps outside', 
 
 const base = { L: 6, W: 4, H: 3, nx: 3, ny: 2, flux: 4000, hc: 0, psi: 0, phot: 'directIndirect', fUp: 0.3, rho: [0.2, 0.7, 0.5, 0.5, 0.5, 0.5], hwp: 0.8, checks: false };
 
-test('plans: stage 6 checks pass; plan of Г-0,0 agrees with the floor', () => {
+test('plans: stage 6 checks pass; plan of the 0.0 m plane agrees with the floor', () => {
   for (const p of [base, { ...base, L: 10, W: 10, nx: 4, ny: 4, hc: 0.5, psi: 0.3 }, { ...base, L: 3, W: 7, H: 4.5, nx: 1, ny: 3, phot: 'cosine', hwp: 0 }]) {
     const calc = createCalc();
     const r = calc.run(p);

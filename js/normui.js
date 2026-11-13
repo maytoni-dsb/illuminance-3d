@@ -1,17 +1,28 @@
 // The codifier dialog (stage 7): a window in the middle of the page with the norms of the chosen set,
-// collapsible sections, search and a click on a row to apply it. User-facing strings are Russian.
+// collapsible sections, search and a click on a row to apply it. Strings: dictionaries (norms.*).
+// Stage 8: only the sets of the language (normSets); with one set the switch is hidden.
 
-import { NORM_SETS, searchNorms, normFromRow, applicable } from './norms.js';
-import { formatNumber } from './ui.js';
+import { normSets, searchNorms, normFromRow, applicable } from './norms.js';
+import { t, formatNumber, foldText, planeCode } from './i18n.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const STORE = 'lcalc.normset';
 
-/** Highlights the words of the query in already escaped text. */
-function mark(html, words) {
-  if (!words.length) return html;
-  const re = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/е/g, '[её]')).join('|')})`, 'gi');
-  return html.replace(/(<[^>]*>)|([^<]+)/g, (m, tag, text) => tag ?? text.replace(re, '<mark>$1</mark>'));
+/**
+ * Text with the words of the query marked, escaped. The search folds the text (diacritics,
+ * dashes), and so does the marking: foldText keeps the positions of the characters.
+ */
+function mark(text, words) {
+  const s = String(text ?? '');
+  if (!words.length) return esc(s);
+  const f = foldText(s), hit = new Uint8Array(s.length);
+  for (const w of words) for (let i = f.indexOf(w); i >= 0; i = f.indexOf(w, i + 1)) hit.fill(1, i, i + w.length);
+  let out = '', open = false;
+  for (let i = 0; i < s.length; i++) {
+    if (hit[i] && !open) { out += '<mark>'; open = true; } else if (!hit[i] && open) { out += '</mark>'; open = false; }
+    out += esc(s[i]);
+  }
+  return open ? `${out}</mark>` : out;
 }
 
 /**
@@ -20,35 +31,37 @@ function mark(html, words) {
  *           current: () => object|null, apply: (norm) => void }} o
  */
 export function initNormDialog(o) {
-  let setId = 'sp52';
+  const sets = normSets();
+  let setId = sets[0].id;
   try { setId = localStorage.getItem(STORE) || setId; } catch (e) { /* storage unavailable */ }
-  if (!NORM_SETS.some((s) => s.id === setId)) setId = 'sp52';
+  if (!sets.some((s) => s.id === setId)) setId = sets[0].id;
   let timer = 0, rows = new Map();
-  const setOf = () => NORM_SETS.find((s) => s.id === setId);
+  const setOf = () => sets.find((s) => s.id === setId);
 
-  o.set.innerHTML = NORM_SETS.map((s) => `<button type="button" data-set="${s.id}">${s.title}</button>`).join('');
+  o.set.innerHTML = sets.map((s) => `<button type="button" data-set="${s.id}">${s.title}</button>`).join('');
+  o.set.hidden = sets.length < 2;
 
   function render() {
     const set = setOf(), q = o.query.value.trim();
     for (const b of o.set.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.set === setId));
-    const words = q.toLowerCase().replace(/ё/g, 'е').split(/\s+/).filter(Boolean);
+    const words = foldText(q).split(/\s+/).filter(Boolean);
     const secs = searchNorms(set, q);
     const cur = o.current();
     rows = new Map();
     const total = secs.reduce((a, s) => a + s.rows.length, 0);
-    o.count.textContent = q ? (total ? `найдено: ${total}` : '') : `${total} строк`;
-    if (!secs.length) { o.body.innerHTML = `<div class="nempty">Ничего не найдено. Попробуйте другое слово${setId === 'en12464' ? ' — названия в EN 12464-1 на английском' : ''}.</div>`; return; }
+    o.count.textContent = q ? (total ? t('norms.found', { n: total }) : '') : t('norms.rows', { n: total });
+    if (!secs.length) { o.body.innerHTML = `<div class="nempty">${t(setId === 'en12464' ? 'norms.noneEn' : 'norms.none')}</div>`; return; }
     const openAll = !!q && total <= 120;
     o.body.innerHTML = secs.map((s, k) => {
       const has = cur && cur.set === setId && s.rows.some((r) => r.ref === cur.ref);
-      return `<details class="nsec"${openAll || has ? ' open' : ''}><summary>${mark(esc(s.title), words)}<small>${s.rows.length}</small></summary>
-        <table class="ntable"><thead><tr><th class="r">${set.refLabel}</th><th>${setId === 'sp52' ? 'Помещение, рабочее место' : 'Type of task / activity area'}</th>
-          <th class="p">Плоскость</th><th class="v">Ē, лк</th><th class="v">U₀</th></tr></thead><tbody>${s.rows.map((r, j) => {
+      return `<details class="nsec"${openAll || has ? ' open' : ''}><summary>${mark(s.title, words)}<small>${s.rows.length}</small></summary>
+        <table class="ntable"><thead><tr><th class="r">${set.refLabel}</th><th>${set.head}</th>
+          <th class="p">${t('norms.plane')}</th><th class="v">Ē, ${t('unit.lx')}</th><th class="v">U₀</th></tr></thead><tbody>${s.rows.map((r, j) => {
           const id = `${k}-${j}`; rows.set(id, r);
           const ok = applicable(r), sel = cur && cur.set === setId && cur.ref === r.ref;
-          const note = r.note ? `<small>${mark(esc(r.note), words)}</small>` : '';
-          return `<tr class="${ok ? 'nrow' : 'na'}${sel ? ' sel' : ''}" data-row="${id}"${ok ? ' tabindex="0"' : ' title="Вертикальная плоскость: в программе рассчитываются только горизонтальные"'}>
-            <td class="r">${mark(esc(r.ref), words)}</td><td>${mark(esc(r.name), words)}${note}</td><td class="p">${esc(r.plane)}</td>
+          const note = r.note ? `<small>${mark(r.note, words)}</small>` : '';
+          return `<tr class="${ok ? 'nrow' : 'na'}${sel ? ' sel' : ''}" data-row="${id}"${ok ? ' tabindex="0"' : ` title="${esc(t('norms.vertical'))}"`}>
+            <td class="r">${mark(r.ref, words)}</td><td>${mark(r.name, words)}${note}</td><td class="p">${esc(planeCode(r.plane))}</td>
             <td class="v"><b>${formatNumber(r.E, 0)}</b></td><td class="v">${r.U0 != null ? formatNumber(r.U0, 2) : '—'}</td></tr>`;
         }).join('')}</tbody></table></details>`;
     }).join('');
@@ -80,7 +93,7 @@ export function initNormDialog(o) {
   return {
     open() {
       const cur = o.current();
-      if (cur?.set) setId = cur.set;
+      if (cur?.set && sets.some((s) => s.id === cur.set)) setId = cur.set;
       o.query.value = '';
       render();
       o.dialog.showModal();

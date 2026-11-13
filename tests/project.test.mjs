@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createProject, createRoomState, nextRoomName, serializeProject, parseProject, projectFileName, FILE_FORMAT, formatPhone, infoErrors } from '../js/project.js';
 import { missingLabels, denseCandidates } from '../js/planview.js';
 import { hotkeyAction, HOTKEYS } from '../js/hotkeys.js';
-import { toComma, DEFAULTS } from '../js/ui.js';
+import { toDecimal, DEFAULTS } from '../js/ui.js';
 import { HELP } from '../js/help.js';
 import { PARAMS } from '../js/ui.js';
 import { INFO_FIELDS } from '../js/project.js';
@@ -59,12 +59,12 @@ test('hot keys', () => {
   assert.equal(hotkeyAction({ key: 'F2' }), 'plan');
   assert.equal(hotkeyAction({ key: 'F5', ctrlKey: true }), null); // Ctrl+F5 stays the browser's
   assert.equal(hotkeyAction({ key: 's', ctrlKey: true }), 'save');
-  assert.equal(hotkeyAction({ key: 'ы', metaKey: true }), 'save');
+  assert.equal(hotkeyAction({ key: 'x', code: 'KeyS', metaKey: true }), 'save'); // another keyboard layout
   assert.equal(hotkeyAction({ key: 'a' }), null);
 });
 
 test('decimal comma and help for every field', () => {
-  assert.equal(toComma('2.75'), '2,75');
+  assert.equal(toDecimal('2.75'), '2,75');
   for (const p of PARAMS) if (p.kind !== 'choice') assert.ok(HELP[`f:${p.key}`], p.key);
   for (const f of INFO_FIELDS) assert.ok(HELP[`f:${f.key}`], f.key);
   for (const k of ['stage1', 'stage2', 'stage3', 'room', 'refl', 'norm', 'grid', 'file', 'results', 'view']) {

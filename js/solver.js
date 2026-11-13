@@ -1,6 +1,6 @@
 // Radiosity solver: Gauss–Seidel gathering with a face-level coarse correction.
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Spec, section "Метод расчета", item 4:
+// Spec, section "Calculation method", item 4:
 //
 //   E_ind,i = Σ_j F_ij · M_j,   M_j = ρ_j · (E_dir,j + E_ind,j)
 //
@@ -26,7 +26,7 @@
 import { gatherElement } from './kernel.js';
 import { axisRect, rectToRect, elementRect } from './formfactor.js';
 
-/** Default solver accuracy ε (spec, "Входные параметры"; internal, not shown in the UI). */
+/** Default solver accuracy ε (spec, "Input parameters"; internal, not shown in the UI). */
 export const SOLVER_EPS = 1e-4;
 
 /** Exact element → face factors F_{j→F} (N × 6) and face → face factors F_FG (6 × 6), cached on the kernel. */

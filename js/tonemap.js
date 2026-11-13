@@ -1,7 +1,7 @@
 // Realistic view: luminance of the faces and Ward's exposure.
 // Pure module: no DOM and no Three.js. The same formulas run in the fragment shader of view3d.js
 // (displayValue there mirrors displayValue here; the tests check this module).
-// Spec, section "Реалистичный вид" (realistic view):
+// Spec, section "Realistic view":
 //   - luminance, not illuminance, is shown: L = ρ·E/π, cd/m², for Lambertian faces;
 //   - Ward's contrast-based scale factor (1994): the display contrast matches the perceived contrast
 //     of the real scene for an eye adapted to its mean luminance,

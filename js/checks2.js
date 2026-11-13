@@ -1,7 +1,8 @@
-// Stage 2 acceptance checks shown on the page ("Критерии этапа 2"). Pure module, no DOM.
+// Stage 2 acceptance checks shown on the page (panel "Stage 2 criteria"). Pure module, no DOM.
 // The same criteria are verified more thoroughly by tests/formfactor.test.mjs.
-// Check names and details are user-facing and therefore in Russian.
+// Check names and details come from the dictionaries (chk.s2.*).
 
+import { t, sci, planeName } from './i18n.js';
 import { pointToElements, pointToRect, coaxialRectangles, elementToElement } from './formfactor.js';
 
 const UP = [0, 0, 1];
@@ -37,12 +38,8 @@ function coaxialByQuadrature(s, n = 24) {
   return sum;
 }
 
-/** 3.1e-15 → "3,1·10<sup>−15</sup>" (decimal comma for the Russian UI; the panel uses innerHTML). */
-function exp(x) {
-  if (x === 0) return '0';
-  const [m, e] = x.toExponential(1).split('e');
-  return `${m.replace('.', ',')}·10<sup>${e.replace('-', '−').replace('+', '')}</sup>`;
-}
+/** 3.1e-15 → "3.1·10<sup>−15</sup>" with the decimal separator of the language (the panel uses innerHTML). */
+const exp = (x) => sci(x, 1);
 
 /**
  * @param {import('./geometry.js').Room} room
@@ -52,10 +49,10 @@ export function stage2Checks(room) {
   const { L, W } = room;
   const dL = room.d.L, dW = room.d.W;
   const points = [
-    ['центр пола', [L / 2, W / 2, 0]],
-    ['у стены', [dL / 2, W / 2, 0]],
-    ['в углу', [dL / 2, dW / 2, 0]],
-    ['Г-0,8, центр', [L / 2, W / 2, 0.8]],
+    [t('chk.s2.floorCentre'), [L / 2, W / 2, 0]],
+    [t('chk.s2.wall'), [dL / 2, W / 2, 0]],
+    [t('chk.s2.corner'), [dL / 2, dW / 2, 0]],
+    [t('chk.s2.planeCentre', { plane: planeName(0.8) }), [L / 2, W / 2, 0.8]],
   ];
   const F = new Float64Array(room.N);
   const out = points.map(([label, x]) => {
@@ -63,7 +60,7 @@ export function stage2Checks(room) {
     let s = 0;
     for (let k = 0; k < F.length; k++) s += F[k];
     const err = Math.abs(s - 1);
-    return { name: `ΣF = 1: ${label}`, ok: err <= TOL_SUM, detail: `|ΣF − 1| = ${exp(err)} по ${room.N} элементам` };
+    return { name: `ΣF = 1: ${label}`, ok: err <= TOL_SUM, detail: t('chk.s2.sumDetail', { err: exp(err), n: room.N }) };
   });
 
   // Element → element (exact kernel): row sums and reciprocity
@@ -73,9 +70,9 @@ export function stage2Checks(room) {
     return s;
   };
   const fl = room.faces[0];
-  for (const [label, f, i, j] of [['угловой элемент пола', 0, 0, 0], ['центральный элемент пола', 0, fl.nu >> 1, fl.nv >> 1]]) {
+  for (const [label, f, i, j] of [[t('chk.s2.cornerEl'), 0, 0, 0], [t('chk.s2.centreEl'), 0, fl.nu >> 1, fl.nv >> 1]]) {
     const err = Math.abs(rowSum(f, i, j) - 1);
-    out.push({ name: `ΣF<sub>ij</sub> = 1: ${label}`, ok: err <= 1e-9, detail: `|ΣF − 1| = ${exp(err)}, точные F элемент → элемент` });
+    out.push({ name: `ΣF<sub>ij</sub> = 1: ${label}`, ok: err <= 1e-9, detail: t('chk.s2.rowDetail', { err: exp(err) }) });
   }
   let recip = 0;
   for (const [f1, i1, j1, f2, i2, j2] of [[0, 0, 0, 2, 0, 0], [0, 0, 0, 4, 1, 0], [0, 2, 1, 1, 3, 2], [2, 1, 1, 5, 0, 2]]) {
@@ -83,7 +80,7 @@ export function stage2Checks(room) {
     const a = A1 * elementToElement(room, f1, i1, j1, f2, i2, j2), b = A2 * elementToElement(room, f2, i2, j2, f1, i1, j1);
     recip = Math.max(recip, Math.abs(a - b) / Math.max(a, b));
   }
-  out.push({ name: 'Взаимность A<sub>i</sub>F<sub>ij</sub> = A<sub>j</sub>F<sub>ji</sub>', ok: recip <= 1e-9, detail: `наибольшее относительное отличие ${exp(recip)}` });
+  out.push({ name: t('chk.s2.recip'), ok: recip <= 1e-9, detail: t('chk.s2.worst', { x: exp(recip) }) });
 
   // Coaxial squares: classic table values (side / distance → F)
   const table = [[0.5, 0.0686], [1, 0.1998], [2, 0.4153]];
@@ -94,9 +91,9 @@ export function stage2Checks(room) {
     okTable &&= Math.abs(Fq - Ft) <= 5e-5;
   }
   out.push({
-    name: 'Соосные квадраты: табличные значения',
+    name: t('chk.s2.coax'),
     ok: okTable && worst <= 1e-9,
-    detail: `0,0686 · 0,1998 · 0,4153; отличие от точной формулы ${exp(worst)}`,
+    detail: t('chk.s2.coaxDetail', { x: exp(worst) }),
   });
   return out;
 }

@@ -10,6 +10,7 @@ import {
 import { facePoint, faceVertexValues } from './geometry.js';
 import { LEVELS, COLORS } from './colorscale.js';
 import { SHOULDER } from './tonemap.js';
+import { t } from './i18n.js';
 
 /** Room → Three.js. */
 export const toThree = (p) => [p[0], p[2], -p[1]];
@@ -20,7 +21,7 @@ export const ROOM_TO_THREE = Object.freeze([
   [0, -1, 0],
 ]);
 
-/** Placeholder face colors by face number (stage 1); used in the "условные цвета" mode. */
+/** Placeholder face colors by face number (stage 1); used in the "placeholder colours" mode. */
 export const FACE_COLORS = Object.freeze(['#b9a27f', '#e8e4da', '#7fa6c9', '#9fbfd9', '#8fb98b', '#b5d3a8']);
 const AXIS_COLORS = { X: '#d0443a', Y: '#2e9b4a', Z: '#2f6fd6' };
 
@@ -906,7 +907,7 @@ export function createView(container, opts = {}) {
         if (!(dot(gn, normal) / len > 1 - 1e-6)) bad++;           // front side = face normal
       }
       const inward = dot(normal, sub(roomC, center)) > 0;          // normal points into the room
-      if (bad || !inward) { normalsOk = false; nDetail.push(`${face.name}: ${bad ? bad + ' треуг. не по нормали' : 'наружу'}`); }
+      if (bad || !inward) { normalsOk = false; nDetail.push(`${face.name}: ${bad ? t('chk.s1.badTris', { n: bad }) : t('chk.s1.outward')}`); }
 
       const tris = idx.length / 3;
       const FD = { 0: ['L', 'W'], 1: ['L', 'W'], 2: ['L', 'H'], 3: ['L', 'H'], 4: ['W', 'H'], 5: ['W', 'H'] }[face.id];
@@ -915,10 +916,10 @@ export function createView(container, opts = {}) {
         countOk = false; cDetail.push(`${face.name}: ${tris / 2} ≠ ${expected}`);
       }
     }
-    res.push({ name: 'Нормали всех граней направлены внутрь', ok: normalsOk, detail: normalsOk ? '6 из 6, по вершинам треугольников' : nDetail.join('; ') });
+    res.push({ name: t('chk.s1.normals'), ok: normalsOk, detail: normalsOk ? t('chk.s1.normalsOk') : nDetail.join('; ') });
     const total = faceParts.reduce((s, p) => s + p.mesh.geometry.index.count / 6, 0);
     res.push({
-      name: 'Число элементов совпадает с n_L, n_W, n_H',
+      name: t('chk.s1.count'),
       ok: countOk && total === room.N,
       detail: countOk ? `N = ${total} = 2·(n_L·n_W + n_L·n_H + n_W·n_H)` : cDetail.join('; '),
     });
@@ -935,7 +936,7 @@ export function createView(container, opts = {}) {
     const floorY = faceParts[0].center[1], ceilY = faceParts[1].center[1];
     const wallY0 = faceParts[2].center[2], wallYW = faceParts[3].center[2];
     if (det !== 1 || floorY !== 0 || Math.abs(ceilY - room.H) > 1e-6 || wallY0 !== 0 || Math.abs(wallYW + room.W) > 1e-6) axesOk = false;
-    res.push({ name: 'Оси в 3D соответствуют спецификации', ok: axesOk, detail: `X→+x, Y→−z, Z→+y; det = ${det}` });
+    res.push({ name: t('chk.s1.axes'), ok: axesOk, detail: `X→+x, Y→−z, Z→+y; det = ${det}` });
     return res;
   }
 

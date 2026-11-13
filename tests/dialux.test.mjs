@@ -22,7 +22,7 @@ const rel = (a, b) => Math.abs(a / b - 1);
 
 test('DIALux: Ē of the work plane and of the faces within 5 % (stage 6 criterion: 5–10 %)', () => {
   const wp = r.planes.find((p) => p.z === 0.8);
-  assert.ok(rel(mf * wp.stats.avg, ref.results.workplane.avg) < 0.05, `Г-0,8: ${mf * wp.stats.avg}`);
+  assert.ok(rel(mf * wp.stats.avg, ref.results.workplane.avg) < 0.05, `plane 0.8: ${mf * wp.stats.avg}`);
   const room = createRoom({ L, W, H, h: autoStep(L, W, H) });
   const fa = faceAverages(room, r.Edir.map((v, k) => v + r.Eind[k])).map((v) => mf * v);
   assert.ok(rel(fa[0], ref.results.floor.avg) < 0.05, `floor ${fa[0]}`);
@@ -31,7 +31,7 @@ test('DIALux: Ē of the work plane and of the faces within 5 % (stage 6 criterio
   for (const k of [4, 5]) assert.ok(rel(fa[k], (ref.results.walls.x[0] + ref.results.walls.x[1]) / 2) < 0.05, `wall ${k}: ${fa[k]}`);
 });
 
-test('DIALux: point values at the GOST grid of Г-0,8 within 5 %, E_max within 5 %', () => {
+test('DIALux: point values at the GOST grid of the 0.8 m plane within 5 %, E_max within 5 %', () => {
   const wp = r.planes.find((p) => p.z === 0.8);
   const g = wp.field.gost;
   assert.deepEqual([g.nx, g.ny], [9, 6]);

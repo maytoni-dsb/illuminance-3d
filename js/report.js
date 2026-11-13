@@ -5,10 +5,12 @@
 // contents is written: the title page, the contents, then for every room the summary (one page),
 // the results (one page per work plane) and the illustrations (one page). Plans are vector SVG drawn
 // to a drafting scale (reportsvg.js); 3D images come as data URLs rendered at 300 dpi.
-// User-facing text is Russian; typography: «quotes», em dashes, no-break spaces after short words
-// and between numbers and units, hyphenation by the browser (lang="ru").
+// Text comes from the dictionaries (rep.*) in the language of the page; typography by the rules of
+// the language (meta: quotes, units): quotes, em dashes, no-break spaces after short words and
+// between numbers and units; <html lang> of the language.
 
 import { roomPlanSvg, isolinePlanSvg, colorScaleSvg, planScale, planBox } from './reportsvg.js';
+import { t, meta, num as fmtNum, longDate, getLang } from './i18n.js';
 
 /** Page geometry, mm: A4 and the text frame. */
 export const PAGE = Object.freeze({ w: 210, h: 297, left: 25, right: 18, top: 24, bottom: 24 });
@@ -16,30 +18,32 @@ export const FRAME = Object.freeze({ w: PAGE.w - PAGE.left - PAGE.right, h: PAGE
 /** Illustrations: size on the page, mm, and pixels at 300 dpi. */
 export const ILL = Object.freeze({ w: FRAME.w, h: 90, px: Math.round(FRAME.w / 25.4 * 300), py: Math.round(90 / 25.4 * 300) });
 
-const NB = ' ', THIN = ' ';
+const NB = '\u00a0';
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
- * Typesetting of user text: escaped; straight quotes → «»; a spaced hyphen → em dash with a no-break
- * space before it; no-break spaces after one- and two-letter words and between a number and a unit.
+ * Typesetting of user text: escaped; straight quotes → the quotes of the language (« », “ ”, „ “);
+ * a spaced hyphen → em dash with a no-break space before it; no-break spaces after one- and
+ * two-letter words and between a number and a unit of the language.
  */
 export function typo(s) {
-  let t = esc(String(s ?? '').trim());
-  t = t.replace(/(^|[\s(\[—–-])&quot;/g, '$1«').replace(/&quot;/g, '»');
-  t = t.replace(/\s+[-–—]\s+/g, `${NB}— `);
-  t = t.replace(/(?<=^|[\s«(])([А-Яа-яЁёA-Za-z]{1,2})\s+/g, `$1${NB}`);
-  t = t.replace(/(\d)\s+(лк|лм|м|мм|см|Вт|К|шт\.?|%|°)(?=[\s.,;:)]|$)/g, `$1${NB}$2`);
-  return t;
+  const m = meta(), [qo, qc] = m.quotes;
+  const units = [...m.units].sort((a, b) => b.length - a.length).map(reEsc).join('|');
+  let x = esc(String(s ?? '').trim());
+  x = x.replace(/(^|[\s(\[—–-])&quot;/g, `$1${qo}`).replace(/&quot;/g, qc);
+  x = x.replace(/\s+[-–—]\s+/g, `${NB}— `);
+  x = x.replace(new RegExp(`(?<=^|[\\s${reEsc(qo)}(])(\\p{L}{1,2})\\s+`, 'gu'), `$1${NB}`);
+  x = x.replace(new RegExp(`(\\d)\\s+(${units})(?=[\\s.,;:)]|$)`, 'gu'), `$1${NB}$2`);
+  return x;
 }
 
-/** Number for the report: decimal comma, thin space between thousands, `digits` decimals at most. */
-export function num(x, digits = 0) {
-  if (!Number.isFinite(x)) return '—';
-  const v = Number(x.toFixed(digits));
-  const [i, f] = String(Math.abs(v)).split('.');
-  const int = i.length > 4 ? i.replace(/\B(?=(\d{3})+(?!\d))/g, THIN) : i;
-  return `${v < 0 ? '−' : ''}${int}${f ? `,${f}` : ''}`;
-}
+/**
+ * Number for the report: the decimal separator of the language, thousands grouped from five digits
+ * on, `digits` decimals at most (i18n.num).
+ */
+export const num = fmtNum;
 /** Illuminance as on the plans: whole lux from 10 lx, one decimal below. */
 export const lux = (v) => num(v, v >= 10 ? 0 : 1);
 
@@ -72,17 +76,17 @@ export function buildReport(d) {
   for (const r of d.rooms) {
     if (!inc(nodeId.room(r.id))) continue;
     const secs = [];
-    if (inc(nodeId.summary(r.id))) secs.push({ kind: 'summary', node: nodeId.summary(r.id), title: 'Сводная информация' });
+    if (inc(nodeId.summary(r.id))) secs.push({ kind: 'summary', node: nodeId.summary(r.id), title: t('rep.summary') });
     const planes = inc(nodeId.results(r.id)) ? r.planes.filter((p) => inc(nodeId.plane(r.id, p.key))) : [];
-    if (planes.length) secs.push({ kind: 'results', node: nodeId.results(r.id), title: 'Результаты', planes });
-    if (r.images && inc(nodeId.ill(r.id))) secs.push({ kind: 'ill', node: nodeId.ill(r.id), title: 'Иллюстрации' });
+    if (planes.length) secs.push({ kind: 'results', node: nodeId.results(r.id), title: t('rep.results'), planes });
+    if (r.images && inc(nodeId.ill(r.id))) secs.push({ kind: 'ill', node: nodeId.ill(r.id), title: t('rep.ill') });
     if (secs.length) roomsIn.push({ r, secs });
   }
   // contents: rooms and their sections; a page holds about 30 lines
   const tocLines = roomsIn.reduce((a, x) => a + 1 + x.secs.length, 0) + (inc(nodeId.lumlist) ? 1 : 0) + (inc(nodeId.restable) ? 1 : 0);
   const tocPages = inc(nodeId.toc) && roomsIn.length ? Math.max(1, Math.ceil(tocLines / 30)) : 0;
   for (let k = 0; k < tocPages; k++) plan.push({ kind: 'toc', node: nodeId.toc, part: k });
-  // list of luminaires (a line per room) and the summary of results (two lines per room: Г-0,0 and Г-0,8)
+  // list of luminaires (a line per room) and the summary of results (two lines per room: planes 0.0 and 0.8)
   const rIn = roomsIn.map((x) => x.r).filter((r) => r.lum);
   const LUM_ROWS = 20, RES_ROOMS = 13;
   const lumPages = inc(nodeId.lumlist) && rIn.length ? Math.ceil(rIn.length / LUM_ROWS) : 0;
@@ -105,31 +109,32 @@ export function buildReport(d) {
   plan.forEach((p, k) => { p.n = k + 1; });
   const pageOf = (node) => plan.find((p) => p.node === node || p.pnodes?.includes(node))?.n ?? null;
   const toc = roomsIn.map(({ r, secs }) => ({ node: nodeId.room(r.id), title: r.name, page: pageOf(secs[0].node), secs: secs.map((s) => ({ node: s.node, title: s.title, page: pageOf(s.node) })) }));
-  if (resPages) toc.unshift({ node: nodeId.restable, title: 'Сводная таблица результатов', page: pageOf(nodeId.restable), secs: [] });
-  if (lumPages) toc.unshift({ node: nodeId.lumlist, title: 'Перечень светильников', page: pageOf(nodeId.lumlist), secs: [] });
+  if (resPages) toc.unshift({ node: nodeId.restable, title: t('rep.restable'), page: pageOf(nodeId.restable), secs: [] });
+  if (lumPages) toc.unshift({ node: nodeId.lumlist, title: t('rep.lumlist'), page: pageOf(nodeId.lumlist), secs: [] });
 
   // ---- pages ----
-  const date = (d.date ?? new Date()).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = longDate(d.date ?? new Date());
+  const lx = t('unit.lx');
   const head = (mid) => `<div class="rh"><span class="rhp">${typo(project)}</span><span class="rhm">${typo(mid)}</span><span class="rhl">${MAYTONI}</span></div>`;
   const foot = (n) => `<div class="folio">${n}</div>`;
-  const roomHead = (r) => `<div class="roomhead"><div class="kick">Помещение</div><h1>${typo(r.name)}</h1></div>`;
+  const roomHead = (r) => `<div class="roomhead"><div class="kick">${t('rep.room')}</div><h1>${typo(r.name)}</h1></div>`;
   const kv = (rows) => `<table class="kv"><tbody>${rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join('')}</tbody></table>`;
 
   const pages = plan.map((p) => {
     const id = `pg-${p.n}`;
     if (p.kind === 'title') {
       const meta = [
-        ['Заказчик', typo(d.info.customer)],
-        ['Исполнитель', [typo(d.info.author), esc(d.info.phone), esc(d.info.email)].filter(Boolean).join('<br>')],
-        ['Дата', esc(date)],
+        [t('rep.customer'), typo(d.info.customer)],
+        [t('rep.author'), [typo(d.info.author), esc(d.info.phone), esc(d.info.email)].filter(Boolean).join('<br>')],
+        [t('rep.date'), esc(date)],
       ].filter(([, v]) => v);
       return `<section class="page title" id="${id}" data-node="${p.node}">
         <div class="logo">${MAYTONI}</div>
-        <div class="tblock"><div class="kick">Светотехнический расчет</div>
-          <h1 class="pname">${typo(d.info.name?.trim() || 'Проект без названия')}</h1>
+        <div class="tblock"><div class="kick">${t('rep.kind')}</div>
+          <h1 class="pname">${typo(d.info.name?.trim() || t('rep.untitled'))}</h1>
           ${d.info.description?.trim() ? `<p class="pdesc">${typo(d.info.description).replace(/\n+/g, '<br>')}</p>` : ''}</div>
         <dl class="tmeta">${meta.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
-        <div class="tfoot">Расчет выполнен в${NB}несертифицированном программном обеспечении и${NB}носит демонстрационный характер. MAYTONI не${NB}несет ответственности за${NB}расхождения между результатами этого расчета, фактической освещенностью и${NB}результатами расчетов в${NB}сертифицированном программном обеспечении.</div>
+        <div class="tfoot">${t('rep.disclaimer')}</div>
       </section>`;
     }
     if (p.kind === 'toc') {
@@ -142,8 +147,8 @@ export function buildReport(d) {
         const take = rows.filter(() => { const k = line++; return k >= lo && k < hi; });
         if (take.length) body += `<ol class="toc">${take.join('')}</ol>`;
       }
-      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Содержание' : '')}<div class="frame">
-        ${p.part === 0 ? '<h2 class="toch">Содержание</h2>' : ''}${body}</div>${foot(p.n)}</section>`;
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? t('rep.toc') : '')}<div class="frame">
+        ${p.part === 0 ? `<h2 class="toch">${t('rep.toc')}</h2>` : ''}${body}</div>${foot(p.n)}</section>`;
     }
     if (p.kind === 'lumlist') {
       const part = rIn.slice(p.part * LUM_ROWS, p.part * LUM_ROWS + LUM_ROWS);
@@ -151,10 +156,10 @@ export function buildReport(d) {
       const rows = part.map((r) => { const t = r.lum; return `<tr><td>${typo(r.name)}</td><td>${t.maker ? typo(t.maker) : dash}</td><td><b>${typo(t.article)}</b></td>
         <td class="n">${t.flux ? num(t.flux) : dash}</td><td class="n">${t.power ? num(t.power, 1) : dash}</td><td class="n">${t.cct ? num(t.cct) : dash}</td>
         <td>${t.kit ? typo(t.kit) : dash}</td><td class="n"><b>${t.count}</b></td></tr>`; }).join('');
-      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Перечень светильников' : '')}<div class="frame">
-        ${p.part === 0 ? '<h2 class="toch">Перечень светильников</h2>' : ''}
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? t('rep.lumlist') : '')}<div class="frame">
+        ${p.part === 0 ? `<h2 class="toch">${t('rep.lumlist')}</h2>` : ''}
         <table class="lum"><colgroup><col style="width:16%"><col style="width:13%"><col style="width:24%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:14%"><col style="width:10%"></colgroup>
-        <thead><tr><th>Помещение</th><th>Производитель</th><th>Артикул</th><th class="n">Φ, лм</th><th class="n">P, Вт</th><th class="n">T<sub>ц</sub>, K</th><th>Комплектация</th><th class="n">Кол-во, шт.</th></tr></thead>
+        <thead><tr><th>${t('rep.room')}</th><th>${t('rep.maker')}</th><th>${t('rep.article')}</th><th class="n">Φ, ${t('unit.lm')}</th><th class="n">P, ${t('unit.W')}</th><th class="n">${t('rep.cct')}, K</th><th>${t('rep.kit')}</th><th class="n">${t('rep.count')}</th></tr></thead>
         <tbody>${rows}</tbody></table>
       </div>${foot(p.n)}</section>`;
     }
@@ -166,12 +171,12 @@ export function buildReport(d) {
           <td class="c">${pl.name}${pl.normative ? '' : '*'}</td><td>${lux(st.avg)}${pl.norm ? `${MARK[pl.norm.status]}${NB}(${num(pl.norm.En)})` : ''}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td>
           <td>${num(st.u0, 2)}${u0Mark(pl)}</td><td>${num(st.minMax, 2)}</td></tr>`; }).join('');
       }).join('');
-      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? 'Сводная таблица результатов' : '')}<div class="frame">
-        ${p.part === 0 ? '<h2 class="toch">Сводная таблица результатов</h2>' : ''}
+      return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? t('rep.restable') : '')}<div class="frame">
+        ${p.part === 0 ? `<h2 class="toch">${t('rep.restable')}</h2>` : ''}
         <table class="sumres"><colgroup><col style="width:22%"><col style="width:10%"><col><col><col><col><col></colgroup>
-        <thead><tr><th>Помещение</th><th class="c">Поверхность</th><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
+        <thead><tr><th>${t('rep.room')}</th><th class="c">${t('rep.surface')}</th><th>Ē, ${lx}</th><th>E<sub>min</sub>, ${lx}</th><th>E<sub>max</sub>, ${lx}</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
         <tbody>${rows}</tbody></table>
-        <p class="note">* Для справки.<br>В${NB}скобках — целевое значение характеристики.</p>
+        <p class="note">${t('rep.refNote')}<br>${t('rep.targetNote')}</p>
       </div>${foot(p.n)}</section>`;
     }
     const r = p.r;
@@ -183,9 +188,9 @@ export function buildReport(d) {
       return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
         <figure class="fig plan">${roomPlanSvg({ ...r, n, frameW: FRAME.w })}</figure>
         <div class="cols quad">
-          <div><h3>Помещение</h3>${kv(r.roomRows)}</div>
-          <div><h3>Нормативные показатели освещения</h3>${kv(r.normRows ?? [])}</div>
-          <div><h3>Светильник</h3>${kv(r.lumRows)}</div>
+          <div><h3>${t('rep.room')}</h3>${kv(r.roomRows)}</div>
+          <div><h3>${t('rep.norms')}</h3>${kv(r.normRows ?? [])}</div>
+          <div><h3>${t('rep.lum')}</h3>${kv(r.lumRows)}</div>
           ${r.polar ? `<figure class="fig polarfig">${r.polar.svg}<figcaption>${r.polar.legend}</figcaption></figure>` : '<div></div>'}
         </div>
       </div>${foot(p.n)}</section>`;
@@ -198,9 +203,9 @@ export function buildReport(d) {
         const n = planScale(r.L, r.W, FRAME.w - 11, block - 9 - 24 - 10 - 11);
         const st = pl.stats;
         return `<div class="plblock" data-node="${p.pnodes[k]}">
-          <h3 class="plh">${pl.name}<span>${pl.normative ? 'нормируемая поверхность' : 'для справки'}${pl.z > 0 ? `, высота ${num(pl.z, 2)}${NB}м` : ', пол'}</span></h3>
+          <h3 class="plh">${pl.name}<span>${pl.normative ? t('rep.normative') : t('rep.reference')}${pl.z > 0 ? t('rep.height', { z: `${num(pl.z, 2)}${NB}${t('unit.m')}` }) : t('rep.floor')}</span></h3>
           <figure class="fig plan">${isolinePlanSvg({ ...r, n, sets: pl.sets, gost: pl.gost }, `p${p.n}-${k}`)}</figure>
-          <table class="res"><thead><tr><th>Ē, лк</th><th>E<sub>min</sub>, лк</th><th>E<sub>max</sub>, лк</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
+          <table class="res"><thead><tr><th>Ē, ${lx}</th><th>E<sub>min</sub>, ${lx}</th><th>E<sub>max</sub>, ${lx}</th><th>U<sub>0</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}Ē</th><th>U<sub>d</sub>${NB}=${NB}E<sub>min</sub>${NB}/${NB}E<sub>max</sub></th></tr></thead>
             <tbody><tr><td>${lux(st.avg)}${pl.norm ? `${MARK[pl.norm.status]}${NB}(${num(pl.norm.En)})` : ''}</td><td>${lux(st.min)}</td><td>${lux(st.max)}</td>
               <td>${num(st.u0, 2)}${u0Mark(pl)}</td><td>${num(st.minMax, 2)}</td></tr></tbody></table></div>`;
       }).join('');
@@ -210,18 +215,19 @@ export function buildReport(d) {
     const small = p.head;
     const w = small ? 146 : ILL.w, h = w * ILL.h / ILL.w;
     return `<section class="page" id="${id}" data-node="${p.node}">${head(mid)}<div class="frame">${top}${h2(p.sec)}
-      <figure class="fig ill"><img src="${r.images.real}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Визуализация светораспределения</figcaption></figure>
-      <figure class="fig ill"><img src="${r.images.falseColor}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>Распределение освещенности в${NB}фиктивных цветах</figcaption></figure>
-      <figure class="fig scale">${colorScaleSvg(w)}<figcaption>Шкала фиктивных цветов, лк</figcaption></figure>
+      <figure class="fig ill"><img src="${r.images.real}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>${t('rep.illReal')}</figcaption></figure>
+      <figure class="fig ill"><img src="${r.images.falseColor}" style="width:${w}mm;height:${h.toFixed(2)}mm" alt=""><figcaption>${t('rep.illFalse')}</figcaption></figure>
+      <figure class="fig scale">${colorScaleSvg(w)}<figcaption>${t('rep.scale')}</figcaption></figure>
     </div>${foot(p.n)}</section>`;
   });
 
-  const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(project)}</title>
+  const html = `<!doctype html><html lang="${getLang()}"><head><meta charset="utf-8"><title>${esc(project)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>${CSS}</style></head><body>${pages.join('\n')}
-<script>${FIT}</script></body></html>`.replace(/ё/g, 'е').replace(/Ё/g, 'Е'); // «е» throughout the report
-  return { html, pages: plan.map((p) => ({ node: p.node, pnodes: p.pnodes ?? [], n: p.n })), toc };
+<script>${FIT}</script></body></html>`;
+  const fix = meta().reportText; // a last pass of the language (ru: no letter yo)
+  return { html: fix ? fix(html) : html, pages: plan.map((p) => ({ node: p.node, pnodes: p.pnodes ?? [], n: p.n })), toc };
 }
 
 /**
@@ -248,28 +254,12 @@ const MARK = {
   low: `${NB}<svg class="mk" viewBox="0 0 14 14"><path d="M3.5 3.5 10.5 10.5M10.5 3.5 3.5 10.5" fill="none" stroke="#eb3d00" stroke-width="2" stroke-linecap="round"/></svg>`,
   high: `${NB}<svg class="mk" viewBox="0 0 14 14"><path d="M7 1.6 13 12.2H1z" fill="#e8a400"/><path d="M7 5.4v3.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="10.4" r=".85" fill="#fff"/></svg>`,
 };
-/** U₀ of a normative plane: against the norm when it is set, else a warning below 0,3. */
+/** U₀ of a normative plane: against the norm when it is set, else a warning below 0.3. */
 function u0Mark(pl) {
   if (!pl.norm) return '';
   const u = pl.stats.u0, U = pl.norm.U0n;
   if (U != null) return `${MARK[u < U - 1e-9 ? 'low' : 'ok']}${NB}(${num(U, 2)})`;
   return u < 0.3 - 1e-9 ? MARK.high : '';
-}
-
-function plural(n, one, few, many) {
-  const a = n % 10, b = n % 100;
-  return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many;
-}
-
-/** The verdict under the normative plane. */
-function normText(norm, st) {
-  const parts = [];
-  if (norm.status === 'low') parts.push(`Ē${NB}=${NB}${lux(st.avg)}${NB}лк ниже нормы E<sub>н</sub>${NB}=${NB}${num(norm.En)}${NB}лк.`);
-  else if (norm.status === 'high') parts.push(`Норма E<sub>н</sub>${NB}=${NB}${num(norm.En)}${NB}лк выполнена; Ē выше следующей ступени шкалы освещённостей.`);
-  else parts.push(`Норма E<sub>н</sub>${NB}=${NB}${num(norm.En)}${NB}лк выполнена.`);
-  if (norm.u0Low) parts.push(`Равномерность U<sub>0</sub>${NB}=${NB}${num(st.u0, 2)} меньше нормы ${num(norm.U0n, 2)}.`);
-  else if (norm.U0n != null) parts.push(`Равномерность U<sub>0</sub>${NB}=${NB}${num(st.u0, 2)} не меньше нормы ${num(norm.U0n, 2)}.`);
-  return parts.join(' ');
 }
 
 /** Screen preview: pages on a grey desk, scaled to the frame width; print: pages as they are. */

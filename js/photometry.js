@@ -1,6 +1,6 @@
 // Luminaire photometry and layout.
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Spec, section "Светильники" (luminaires):
+// Spec, section "Luminaires":
 //   - C-γ system, γ = 0 points down (−Z), γ = π up (+Z);
 //   - C is measured from the luminaire's C0 plane, counterclockwise when viewed from above;
 //     the C0 plane is turned by ψ from +X (counterclockwise viewed from above);
@@ -17,11 +17,8 @@
 const INV_PI = 1 / Math.PI;
 const TWO_PI = 2 * Math.PI;
 
-/** Photometry models available in the UI before stage 5. Labels are user-facing (Russian). */
-export const MODELS = Object.freeze({
-  cosine: 'косинусная',
-  directIndirect: 'прямо-отраженная',
-});
+/** Photometry models without a file: 'cosine' and 'directIndirect' (no labels: the UI names them). */
+export const MODELS = Object.freeze(['cosine', 'directIndirect']);
 
 /**
  * Creates a photometric model.

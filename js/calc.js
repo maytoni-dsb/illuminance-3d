@@ -1,7 +1,7 @@
 // The whole calculation for one set of inputs: kernel (cached per geometry), direct component,
 // solver and the stage checks. Pure module: no DOM and no Three.js; the Web Worker (worker.js)
 // runs it in the browser, the tests run it in Node.
-// Spec, section "Метод расчета", item 5 (recalculation):
+// Spec, section "Calculation method", item 5 (recalculation):
 //   room size or step changed  → kernel, then E_dir and the solver;
 //   luminaires or ρ changed    → E_dir (if the luminaires changed) and the solver only.
 // The maintenance factor is not an input here: results are initial values E₀, MF is applied by
@@ -136,7 +136,7 @@ export function createCalc() {
 
   /**
    * Field of the plan of the plane at height z for the last run (workplane.planeField): values at
-   * the nodes of the auxiliary grid and at the GOST points, E₀. Spec, "Планы Г-0,0 и Г-0,8".
+   * the nodes of the auxiliary grid and at the GOST points, E₀. Spec, "Plans of the planes 0.0 and 0.8".
    */
   function plan(z) {
     if (!last) throw new Error('plan: no calculation yet');

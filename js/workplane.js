@@ -1,6 +1,6 @@
 // Horizontal work planes: calculation grid, illuminance at the grid points and the indices
 // Ē, E_min, E_max, U₀ = E_min / Ē. Pure module: no DOM and no Three.js.
-// Spec, section "Результаты и рабочая плоскость":
+// Spec, section "Results and the work plane":
 //   - the planes are transparent and take no part in the radiosity; at a point x of a plane
 //     (normal up) the illuminance is gathered from the luminaires and from every face element:
 //       E(x) = E_dir(x) + Σ_j F(dx → A_j) · M_j ,   M_j = ρ_j (E_dir,j + E_ind,j)
@@ -232,7 +232,7 @@ export function cellStats(E) {
 
 // ---------------------------------------------------------------------------------------------
 // Plans of the planes (stage 6): a field of POINT values for the colors and the isolines.
-// Spec, "Планы Г-0,0 и Г-0,8": isolines by marching squares on an auxiliary grid with a step of
+// Spec, "Plans of the planes 0.0 and 0.8": isolines by marching squares on an auxiliary grid with a step of
 // 0.1 m; numbers at the points of the GOST grid. The field E(x) = E_dir(x) + E_ref(x) is built as:
 //   direct    — the exact point formula (direct.js) at every node of the auxiliary grid;
 //   reflected — exact point values Σ_j F(x → element j) · M_j at the VERTICES of the floor mesh,

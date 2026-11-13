@@ -17,7 +17,7 @@ here = fileparts(mfilename('fullpath'));
 rows = zeros(0, 20);
 addcase = @(rows, x, n, p0, a, b, nA) [rows; size(rows, 1) + 1, x(:).', n(:).', p0(:).', a(:).', b(:).', nA(:).', ff_point_rect(x, n, p0, a, b, nA)];
 
-%% 1. Whole faces of the default room 6 x 4 x 3 m (spec, "Система координат и грани")
+%% 1. Whole faces of the default room 6 x 4 x 3 m (spec, "Coordinate system and faces")
 L = 6; W = 4; H = 3;
 faces = struct( ...
     'n',  {[0 0 1],  [0 0 -1], [0 1 0],  [0 -1 0], [1 0 0],  [-1 0 0]}, ...
@@ -44,7 +44,7 @@ for p = 1:size(points, 1)
     end
 end
 
-%% 2. Elements of the default room at the automatic step (spec, "Разбиение граней")
+%% 2. Elements of the default room at the automatic step (spec, "Subdivision of faces")
 S = 2 * (L*W + L*H + W*H);
 h = min(1, max(0.1, sqrt(S / 4000)));
 nd = @(s) max(1, ceil(s / h - 1e-9));

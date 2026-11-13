@@ -217,7 +217,7 @@ test('elementDirect: the floor receives Φ·F(source → floor) from a single do
 });
 
 // ---------------------------------------------------------------------------------------------
-// MATLAB reference values (spec: "Эталоны в MATLAB")
+// MATLAB reference values (spec: "MATLAB references")
 
 const fixture = (name) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const readRows = (file) => readFileSync(file, 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('%')).map((l) => l.trim().split(/\s+/).map(Number));

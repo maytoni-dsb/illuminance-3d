@@ -97,7 +97,7 @@ test('Σ F = 1 from element centres of every face (all receivers of a closed roo
   }
 });
 
-test('Σ F = 1 on work planes Г-0,0 and Г-0,8 (walls are clipped at the horizon)', () => {
+test('Σ F = 1 on work planes 0.0 and 0.8 m (walls are clipped at the horizon)', () => {
   for (const [L, W, H] of [[6, 4, 3], [10, 10, 3], [3, 3, 2]]) {
     const room = roomOf(L, W, H);
     for (const z of [0, 0.8]) {
@@ -173,7 +173,7 @@ test('F = 0 for the own face and for elements behind the receiver', () => {
   const x = [1.3, 2.2, 0];
   assert.equal(pointToFace(room, 0, x, UP), 0);
   for (let i = 0; i < room.faces[0].nu; i += 5) assert.equal(pointToElement(room, 0, i, 3, x, UP), 0);
-  // The floor is entirely below the work plane Г-0,8
+  // The floor is entirely below the work plane at 0.8 m
   assert.equal(pointToFace(room, 0, [3, 2, 0.8], UP), 0);
   // Receiver facing away from the ceiling sees nothing of it
   assert.equal(pointToFace(room, 1, [3, 2, 1], [0, 0, -1]), 0);
@@ -187,7 +187,7 @@ test('emitter side: a rectangle seen from behind gives F = 0', () => {
   assert.ok(pointToRect([0.5, 0.5, 0], UP, p0, a, b) > 0);
 });
 
-test('horizon clipping: a wall seen from Г-0,8 equals its part above the plane', () => {
+test('horizon clipping: a wall seen from the 0.8 m plane equals its part above the plane', () => {
   const room = roomOf(6, 4, 3);
   const x = [2.1, 1.3, 0.8];
   // Wall y = 0 (face 2): u = +X, v = +Z, origin (0, 0, 0)
@@ -255,7 +255,7 @@ test('criterion: agreement with the MATLAB reference within 1e-9', { skip: !exis
   console.log(`MATLAB reference: ${rows.length} cases, max |ΔF| = ${worst.toExponential(2)}`);
 });
 
-test('page panel "Критерии этапа 2" passes for default and extreme rooms', async () => {
+test('page panel "Stage 2 criteria" passes for default and extreme rooms', async () => {
   const { stage2Checks } = await import('../js/checks2.js');
   for (const [L, W, H] of [[6, 4, 3], [1, 1, 2], [50, 50, 20], [1, 50, 20]]) {
     for (const c of stage2Checks(roomOf(L, W, H))) assert.ok(c.ok, `${L}×${W}×${H}: ${c.name} — ${c.detail}`);

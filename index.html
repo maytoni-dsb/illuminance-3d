@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Расчет освещения</title>
+  <title data-i18n="app.title"></title>
   <script>
     // Apply the saved theme before first paint to avoid a flash.
     try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
@@ -12,45 +12,49 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=2679c794",
-      "./js/checks2.js": "./js/checks2.js?v=bec00f91",
-      "./js/checks3.js": "./js/checks3.js?v=25f5d271",
-      "./js/checks4.js": "./js/checks4.js?v=319a6c07",
-      "./js/checks5.js": "./js/checks5.js?v=45861304",
-      "./js/checks6.js": "./js/checks6.js?v=2f563f54",
-      "./js/colorscale.js": "./js/colorscale.js?v=85c6fa84",
-      "./js/direct.js": "./js/direct.js?v=1a4f96d9",
-      "./js/estimate.js": "./js/estimate.js?v=8262379e",
-      "./js/formfactor.js": "./js/formfactor.js?v=3dd6f26a",
-      "./js/geometry.js": "./js/geometry.js?v=ba3a8196",
-      "./js/help.js": "./js/help.js?v=3ff7d87c",
-      "./js/hotkeys.js": "./js/hotkeys.js?v=e9422ea3",
-      "./js/isolines.js": "./js/isolines.js?v=ea7b03a7",
-      "./js/kernel.js": "./js/kernel.js?v=aed0ec7d",
-      "./js/norms-data.js": "./js/norms-data.js?v=3d3548ce",
-      "./js/norms.js": "./js/norms.js?v=0a40315e",
-      "./js/normui.js": "./js/normui.js?v=00298582",
-      "./js/orbit.js": "./js/orbit.js?v=f18e28f2",
-      "./js/photfile.js": "./js/photfile.js?v=129f4189",
-      "./js/photometry.js": "./js/photometry.js?v=e2442d68",
-      "./js/photui.js": "./js/photui.js?v=aa6da0c9",
-      "./js/planview.js": "./js/planview.js?v=56bab4c2",
-      "./js/project.js": "./js/project.js?v=be8ed69d",
-      "./js/report.js": "./js/report.js?v=09109567",
-      "./js/reportsvg.js": "./js/reportsvg.js?v=46cf5191",
-      "./js/reportui.js": "./js/reportui.js?v=f2161a14",
-      "./js/solver.js": "./js/solver.js?v=99673fc0",
-      "./js/tonemap.js": "./js/tonemap.js?v=95e62797",
-      "./js/ui.js": "./js/ui.js?v=61be1c16",
-      "./js/view3d.js": "./js/view3d.js?v=67dfcc65",
-      "./js/worker.js": "./js/worker.js?v=bf308824",
-      "./js/workplane.js": "./js/workplane.js?v=6db5b51d"
+      "./js/calc.js": "./js/calc.js?v=6dcec3eb",
+      "./js/checks2.js": "./js/checks2.js?v=6c5f10f2",
+      "./js/checks3.js": "./js/checks3.js?v=2413caec",
+      "./js/checks4.js": "./js/checks4.js?v=a4a67988",
+      "./js/checks5.js": "./js/checks5.js?v=1b712ff6",
+      "./js/checks6.js": "./js/checks6.js?v=b10cab3b",
+      "./js/colorscale.js": "./js/colorscale.js?v=07318c6f",
+      "./js/direct.js": "./js/direct.js?v=fa03c255",
+      "./js/estimate.js": "./js/estimate.js?v=8e837379",
+      "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
+      "./js/geometry.js": "./js/geometry.js?v=6e4af43c",
+      "./js/help.js": "./js/help.js?v=070403f0",
+      "./js/hotkeys.js": "./js/hotkeys.js?v=82950a0c",
+      "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
+      "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
+      "./js/kernel.js": "./js/kernel.js?v=fe245a95",
+      "./js/lang-de.js": "./js/lang-de.js?v=783120e7",
+      "./js/lang-en.js": "./js/lang-en.js?v=3552cc79",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=54c8f453",
+      "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
+      "./js/norms.js": "./js/norms.js?v=e013f781",
+      "./js/normui.js": "./js/normui.js?v=0bd551f6",
+      "./js/orbit.js": "./js/orbit.js?v=502539fe",
+      "./js/photfile.js": "./js/photfile.js?v=9c000eea",
+      "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
+      "./js/photui.js": "./js/photui.js?v=834ff87e",
+      "./js/planview.js": "./js/planview.js?v=6c83bff0",
+      "./js/project.js": "./js/project.js?v=f514817c",
+      "./js/report.js": "./js/report.js?v=5784e9bc",
+      "./js/reportsvg.js": "./js/reportsvg.js?v=8b0d8a9f",
+      "./js/reportui.js": "./js/reportui.js?v=de8256d5",
+      "./js/solver.js": "./js/solver.js?v=76236421",
+      "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
+      "./js/ui.js": "./js/ui.js?v=590120e9",
+      "./js/view3d.js": "./js/view3d.js?v=d2a8696e",
+      "./js/worker.js": "./js/worker.js?v=a2071819",
+      "./js/workplane.js": "./js/workplane.js?v=614fbbed"
     }
   }
   </script>
   <style>
     /* Design tokens and components follow the Maytoni design system
-       (pages "Оценочный расчет освещения" and "Maytoni Track Configurator"). */
+       (pages "Estimate of general lighting" and "Maytoni Track Configurator"). */
     *,*::before,*::after{box-sizing:border-box}
     [hidden]{display:none!important}
     :root{
@@ -344,7 +348,7 @@
     .gssplit.cur:hover{background:var(--sel)}
     .gssplit.cur button:hover{background:color-mix(in srgb,var(--on-sel) 12%,transparent)}
     .gssplit .gsc{margin-left:0;opacity:.85}
-    /* norms: «Выбрать», source line, codifier dialog */
+    /* norms: the "Choose" button, source line, codifier dialog */
     .fsub .gslink{margin-left:auto;font-weight:500}
     .normsrc{font-size:11.5px;color:var(--ink3);margin-top:-2px;line-height:1.35}
     .fgrid[data-group="norm"]{align-items:end}
@@ -405,6 +409,9 @@
     .vmroom:hover .vmdel,.vmroom .vmdel:focus-visible{opacity:1}
     .vmenu .vmroom .vmdel:hover{color:var(--err);background:var(--soft)}
     .sbtools{display:flex;align-items:center;gap:8px;flex:none}
+    /* language switch (stage 8): RU | EN | DE, the choice reloads the page */
+    .seg.langsw{padding:2px}
+    .seg.langsw button{height:30px;padding:0 10px;font-size:12px;letter-spacing:.02em}
     .sbbtn{height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);
       font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
     .sbbtn:hover{border-color:var(--ink)}
@@ -439,6 +446,12 @@
     .tfld .req{color:var(--err)}
     .tfld.bad input{border-color:var(--err)}
     .tfld .ferr{font-size:11px;color:var(--err);line-height:1.3}
+    /* phone: the country code (stage 8) before the number when the language offers several */
+    .phonew{display:flex;gap:6px}
+    .phonew input{flex:1;min-width:0}
+    .phonew select{height:36px;flex:none;border:1px solid var(--rule);border-radius:5px;padding:0 6px;font-size:14px;background:var(--card);color:var(--ink)}
+    .phonew select:focus{outline:none;border-color:var(--accent)}
+    .phonec:empty{display:none}
     #infomsg{font-size:13px}
     .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
     .tgrid .wide{grid-column:1/-1}
@@ -540,68 +553,69 @@
       <path d="M72.4,5.8c-4.5,0-8.1,3.6-8.1,8.1s3.6,8.1,8.1,8.1s8.1-3.6,8.1-8.1S76.8,5.8,72.4,5.8z M72.4,19.3c-2.9,0-5.1-2.4-5.1-5.3c0-3,2.2-5.3,5.1-5.3s5.1,2.4,5.1,5.3S75.2,19.3,72.4,19.3z"/>
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
-    <span class="apptitle">Расчет освещения<br>помещения</span>
-    <nav class="stnav" id="stnav" aria-label="Стадии">
-      <button type="button" class="gsst" data-s="1"><span class="gsn">1</span>Проект</button>
+    <span class="apptitle" data-i18n-html="app.appTitle"></span>
+    <nav class="stnav" id="stnav" data-i18n-attr="aria-label:app.stages">
+      <button type="button" class="gsst" data-s="1"><span class="gsn">1</span><span data-i18n="app.st1"></span></button>
       <span class="gsln" data-l="1"></span>
       <div class="stroomw">
         <div class="gsst gssplit" data-s="2">
-          <button type="button" class="gsl" id="stcalc"><span class="gsn">2</span>Расчет</button>
-          <button type="button" class="gsr" id="stroom" aria-haspopup="menu" aria-expanded="false" aria-label="Помещения"><span class="gsrn" id="stroomname">Помещение 1</span><span class="gsc"><svg viewBox="0 0 10 7" width="10" height="7" aria-hidden="true"><path d="M1 1h8L5 6z" fill="currentColor"/></svg></span></button>
+          <button type="button" class="gsl" id="stcalc"><span class="gsn">2</span><span data-i18n="app.st2"></span></button>
+          <button type="button" class="gsr" id="stroom" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="aria-label:app.rooms"><span class="gsrn" id="stroomname"></span><span class="gsc"><svg viewBox="0 0 10 7" width="10" height="7" aria-hidden="true"><path d="M1 1h8L5 6z" fill="currentColor"/></svg></span></button>
         </div>
         <div class="vmenu" id="roommenu" role="menu" hidden></div>
       </div>
       <span class="gsln" data-l="2"></span>
-      <button type="button" class="gsst" data-s="3"><span class="gsn">3</span>Документация</button>
+      <button type="button" class="gsst" data-s="3"><span class="gsn">3</span><span data-i18n="app.st3"></span></button>
     </nav>
     <div class="sbtools">
-      <button type="button" class="sbbtn tipr" id="savebtn" data-tip="Сохранить проект в файл" data-key="Ctrl+S"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5M4.8 7 8 10.2 11.2 7"/><path d="M2.5 11v2.5h11V11"/></svg>Сохранить</button>
-      <button type="button" class="sbbtn round tipr" id="apphelp" data-tip="Справка" data-key="F1" aria-label="Справка" aria-expanded="false">?</button>
-      <button type="button" class="themebtn tipr" id="themebtn" data-tip="Светлая или темная тема" aria-label="Переключить тему"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
+      <div class="seg langsw" id="langsw" role="group" data-i18n-attr="aria-label:app.lang"></div>
+      <button type="button" class="sbbtn tipr" id="savebtn" data-i18n-attr="data-tip:app.saveTip" data-key="Ctrl+S"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5M4.8 7 8 10.2 11.2 7"/><path d="M2.5 11v2.5h11V11"/></svg><span data-i18n="app.save"></span></button>
+      <button type="button" class="sbbtn round tipr" id="apphelp" data-i18n-attr="data-tip:help.title;aria-label:help.title" data-key="F1" aria-expanded="false">?</button>
+      <button type="button" class="themebtn tipr" id="themebtn" data-i18n-attr="data-tip:app.themeTip;aria-label:app.theme"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
     </div>
   </header>
 
   <main class="stage pstage" id="stage1" hidden>
-    <section class="gscard pcard" aria-label="Проект">
+    <section class="gscard pcard" data-i18n-attr="aria-label:app.st1">
       <div class="pbody">
-        <div class="gshd"><span class="gskick">Шаг 1 из 3</span><h1>Проект</h1>
-          <p>Эти сведения попадут на титульный лист отчета. Поля со звездочкой нужны для документации; считать помещения можно и без них.</p></div>
-        <div class="gsmsg err" id="infomsg" role="alert" hidden>Заполните обязательные поля — без них документация не формируется.</div>
+        <div class="gshd"><span class="gskick" data-i18n="app.step1"></span><h1 data-i18n="app.st1"></h1>
+          <p data-i18n="app.st1Lead"></p></div>
+        <div class="gsmsg err" id="infomsg" role="alert" hidden data-i18n="app.infoMsg"></div>
         <div class="tgrid" id="infofields"></div>
       </div>
       <div class="gsfoot">
-        <button type="button" class="gssec" id="openbtn">Открыть проект…</button>
-        <button type="button" class="gssec" id="newproj">Новый проект</button>
+        <button type="button" class="gssec" id="openbtn" data-i18n="app.open"></button>
+        <button type="button" class="gssec" id="newproj" data-i18n="app.newProject"></button>
         <input type="file" id="openfile" accept=".json,application/json" hidden>
         <span class="gsmsg" id="openmsg" role="status"></span>
-        <button type="button" class="gsgo" id="go2">Далее <span aria-hidden="true">→</span></button>
+        <button type="button" class="gsgo" id="go2"><span data-i18n="app.next"></span> <span aria-hidden="true">→</span></button>
       </div>
     </section>
   </main>
 
   <main class="stage work" id="stage2" hidden>
-    <section class="gscard side form" aria-label="Исходные данные">
+    <section class="gscard side form" data-i18n-attr="aria-label:app.inputs">
       <form id="form" autocomplete="off" onsubmit="return false">
         <div class="fsec">
-          <div class="shd">Помещение <button type="button" class="help" data-help="room" aria-label="Справка: размеры помещения" aria-expanded="false">?</button></div>
-          <div class="fld text wide" id="w-roomname"><label class="fl" for="roomname"><span class="t">Название</span></label>
+          <div class="shd"><span data-i18n="app.room"></span> <button type="button" class="help" data-help="room" data-i18n-attr="aria-label:app.helpRoom" aria-expanded="false">?</button></div>
+          <div class="fld text wide" id="w-roomname"><label class="fl" for="roomname"><span class="t" data-i18n="app.roomName"></span></label>
             <div class="ibox"><input id="roomname" autocomplete="off" spellcheck="false" maxlength="80"></div></div>
           <div class="fgrid" data-group="room" style="--cols:3"></div>
-          <div class="fsub">Коэффициенты отражения <button type="button" class="help" data-help="refl" aria-label="Справка: коэффициенты отражения" aria-expanded="false">?</button></div>
+          <div class="fsub"><span data-i18n="app.refl"></span> <button type="button" class="help" data-help="refl" data-i18n-attr="aria-label:app.helpRefl" aria-expanded="false">?</button></div>
           <div class="fgrid" data-group="refl" style="--cols:3"></div>
-          <div class="fsub">Нормы <button type="button" class="help" data-help="norm" aria-label="Справка: нормы освещения" aria-expanded="false">?</button>
-            <button type="button" class="gschipb sm" id="normpick" aria-haspopup="dialog">Выбрать</button></div>
+          <div class="fsub"><span data-i18n="app.norms"></span> <button type="button" class="help" data-help="norm" data-i18n-attr="aria-label:app.helpNorm" aria-expanded="false">?</button>
+            <button type="button" class="gschipb sm" id="normpick" aria-haspopup="dialog" data-i18n="app.choose"></button></div>
           <div class="fgrid" data-group="norm" style="--cols:2"></div>
           <div class="normsrc" id="normsrc"></div>
         </div>
         <div class="fsec">
-          <div class="shd">Светильник <button type="button" class="help" data-help="file" aria-label="Справка: фотометрический файл" aria-expanded="false">?</button></div>
+          <div class="shd"><span data-i18n="app.lum"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button></div>
           <div id="photfile"></div>
           <div class="pfcard" id="lumcard"></div>
           <div class="fld wide" id="lampsets" hidden></div>
           <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
-          <div class="fsub">Размещение <button type="button" class="help" data-help="grid" aria-label="Справка: размещение светильников" aria-expanded="false">?</button>
-            <button type="button" class="gschipb sm" id="suggest" title="Оценить количество светильников по коэффициенту использования и разместить их сеткой">Предложить</button></div>
+          <div class="fsub"><span data-i18n="app.grid"></span> <button type="button" class="help" data-help="grid" data-i18n-attr="aria-label:app.helpGrid" aria-expanded="false">?</button>
+            <button type="button" class="gschipb sm" id="suggest" data-i18n-attr="title:app.suggestTip" data-i18n="app.suggest"></button></div>
           <div class="fgrid" data-group="grid" style="--cols:2"></div>
           <div class="gshint" id="hmnote"></div>
           <div class="gshint" id="estnote" hidden></div>
@@ -610,46 +624,46 @@
 
     </section>
 
-    <section class="gscard viewcard" aria-label="3D-вид комнаты">
+    <section class="gscard viewcard" data-i18n-attr="aria-label:app.viewAria">
       <div id="view"></div>
-      <div class="vbusy" id="busy" hidden>Расчет…</div>
+      <div class="vbusy" id="busy" hidden></div>
       <div class="vtools">
         <div class="vmenuw vsplit">
-          <button type="button" class="vsl tipr" id="planeshow" aria-pressed="false" data-tip="Показать расчетную поверхность" data-key="F4">
+          <button type="button" class="vsl tipr" id="planeshow" aria-pressed="false" data-i18n-attr="data-tip:app.planeShow" data-key="F4">
             <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M4 13.5c0-3 2-5 4-5s4 2 4 5M6 13.5c0-1.6.9-2.8 2-2.8s2 1.2 2 2.8"/></svg></button>
-          <button type="button" class="vsr tipr" id="planebtn" aria-haspopup="menu" aria-expanded="false" aria-label="Выбрать расчетную поверхность" data-tip="Выбрать расчетную поверхность"><span id="planelabel">Г-0,0</span>
+          <button type="button" class="vsr tipr" id="planebtn" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="aria-label:app.planePick;data-tip:app.planePick"><span id="planelabel"></span>
             <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
           <div class="vmenu" id="planemenu" role="menu" hidden></div>
         </div>
-        <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" aria-label="Фиктивные цвета" data-tip="Фиктивные цвета" data-key="F9">
+        <button type="button" class="vbtn" id="falsecolors" aria-pressed="true" data-i18n-attr="aria-label:app.falseColors;data-tip:app.falseColors" data-key="F9">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="3.5" height="12" rx="1" fill="#0042ff"/><rect x="6.5" y="4" width="3.5" height="12" fill="#00ff00"/><rect x="10" y="4" width="3.5" height="12" fill="#ffff00"/><rect x="13.5" y="4" width="3.5" height="12" rx="1" fill="#ff0000"/></svg></button>
-        <button type="button" class="vbtn" id="plan" aria-pressed="false" aria-label="План" data-tip="Вид 2D (план)" data-key="F2">
+        <button type="button" class="vbtn" id="plan" aria-pressed="false" data-i18n-attr="aria-label:app.plan;data-tip:app.planTip" data-key="F2">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4.5" width="14" height="11" rx="1"/><g fill="currentColor" stroke="none"><rect x="5.6" y="7.2" width="2" height="2"/><rect x="9" y="7.2" width="2" height="2"/><rect x="12.4" y="7.2" width="2" height="2"/><rect x="5.6" y="10.8" width="2" height="2"/><rect x="9" y="10.8" width="2" height="2"/><rect x="12.4" y="10.8" width="2" height="2"/></g></svg></button>
-        <button type="button" class="vbtn" id="view3d" aria-pressed="true" aria-label="Вид 3D" data-tip="Вид 3D" data-key="F3">
+        <button type="button" class="vbtn" id="view3d" aria-pressed="true" data-i18n-attr="aria-label:app.view3d;data-tip:app.view3d" data-key="F3">
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M10 2.8 16.5 6.4v7.2L10 17.2 3.5 13.6V6.4z"/><path d="M3.5 6.4 10 10l6.5-3.6M10 10v7.2"/></svg></button>
-        <button type="button" class="vbtn" id="reset" aria-label="Исходный вид" data-tip="Исходный вид" data-key="F10">
+        <button type="button" class="vbtn" id="reset" data-i18n-attr="aria-label:app.reset;data-tip:app.reset" data-key="F10">
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
-        <button type="button" class="vbtn help" data-help="view" aria-label="Справка: управление видом" aria-expanded="false">?</button>
+        <button type="button" class="vbtn help" data-help="view" data-i18n-attr="aria-label:app.helpView" aria-expanded="false">?</button>
       </div>
       <div class="vtop"><div class="vstatus" id="hover"></div></div>
       <div class="vbottom">
-        <div class="legend" id="legend" aria-label="Шкала освещенности"><span class="lt">E, лк</span><ol></ol></div>
+        <div class="legend" id="legend" data-i18n-attr="aria-label:app.legend"><span class="lt" data-i18n="app.legendUnit"></span><ol></ol></div>
       </div>
     </section>
 
-    <section class="gscard side results" aria-label="Результаты">
+    <section class="gscard side results" data-i18n-attr="aria-label:app.results">
       <div class="fsec">
         <div class="calcbar">
-          <button type="button" class="gsbtn tipl" id="calc" data-tip="Рассчитать" data-key="F5" disabled>Рассчитать</button>
-          <label class="tgl" title="Пересчитывать при каждом изменении параметров"><input type="checkbox" id="auto" role="switch" checked> Автоматически</label>
+          <button type="button" class="gsbtn tipl" id="calc" data-i18n-attr="data-tip:app.calc" data-i18n="app.calc" data-key="F5" disabled></button>
+          <label class="tgl" data-i18n-attr="title:app.autoTip"><input type="checkbox" id="auto" role="switch" checked> <span data-i18n="app.auto"></span></label>
         </div>
-        <div class="shd">Результаты <button type="button" class="help" data-help="results" aria-label="Справка: результаты" aria-expanded="false">?</button></div>
+        <div class="shd"><span data-i18n="app.results"></span> <button type="button" class="help" data-help="results" data-i18n-attr="aria-label:app.helpResults" aria-expanded="false">?</button></div>
         <div class="planes" id="planes"></div>
         <div class="gshint" id="planenote"></div>
-        <div class="shd" style="font-size:13px;margin-top:4px">Освещенность граней</div>
+        <div class="shd" style="font-size:13px;margin-top:4px" data-i18n="app.faces"></div>
         <div id="facesbox">
           <table class="htable" id="results">
-            <thead><tr><th>Грань</th><th>E<sub>ср</sub>, лк</th><th>Прямая</th><th>Отраж.</th></tr></thead>
+            <thead><tr><th data-i18n="app.face"></th><th data-i18n-html="app.faceAvg"></th><th data-i18n="app.direct"></th><th data-i18n="app.reflShort"></th></tr></thead>
             <tbody></tbody>
           </table>
           <div class="gshint" id="mfnote"></div>
@@ -658,18 +672,18 @@
 
       <div class="fsec">
         <details class="dev" id="extra">
-          <summary>Дополнительные настройки</summary>
+          <summary data-i18n="app.extra"></summary>
           <div class="devbody">
-            <label class="range" for="stops"><span>Поправка экспозиции</span>
-              <input type="range" id="stops" min="-2" max="2" step="0.5" value="0"><output id="stopsout">0 ст.</output></label>
-            <div class="gshint">Для реалистичного вида: ±2 ступени от автоматической экспозиции.</div>
-            <div class="shd" style="font-size:13px;margin-top:6px">Карта на гранях</div>
-            <div class="gschips" role="radiogroup" aria-label="Карта на гранях" id="mapmode">
-              <button type="button" class="gschipb" role="radio" data-v="total" aria-pressed="true" aria-checked="true">Полная</button>
-              <button type="button" class="gschipb" role="radio" data-v="direct" aria-pressed="false" aria-checked="false">Прямая</button>
-              <button type="button" class="gschipb" role="radio" data-v="indirect" aria-pressed="false" aria-checked="false">Отраженная</button>
+            <label class="range" for="stops"><span data-i18n="app.exposure"></span>
+              <input type="range" id="stops" min="-2" max="2" step="0.5" value="0"><output id="stopsout"></output></label>
+            <div class="gshint" data-i18n="app.exposureHint"></div>
+            <div class="shd" style="font-size:13px;margin-top:6px" data-i18n="app.map"></div>
+            <div class="gschips" role="radiogroup" data-i18n-attr="aria-label:app.map" id="mapmode">
+              <button type="button" class="gschipb" role="radio" data-v="total" aria-pressed="true" aria-checked="true" data-i18n="app.mapTotal"></button>
+              <button type="button" class="gschipb" role="radio" data-v="direct" aria-pressed="false" aria-checked="false" data-i18n="app.mapDirect"></button>
+              <button type="button" class="gschipb" role="radio" data-v="indirect" aria-pressed="false" aria-checked="false" data-i18n="app.mapIndirect"></button>
             </div>
-            <div class="gshint">Кнопка у строки плоскости показывает ее изолинии и значения в точках сетки ГОСТ: на плане — на светлом фоне (с кнопкой «Фиктивные цвета» — в цвете), в 3D — полупрозрачным слоем. Без фиктивных цветов грани показываются в реалистичном виде: яркость L = ρE/π.</div>
+            <div class="gshint" data-i18n="app.mapHint"></div>
           </div>
         </details>
       </div>
@@ -677,52 +691,52 @@
       <!-- Developer details: mesh, view toggles and stage acceptance checks; collapsed by default. -->
       <div class="fsec">
         <details class="dev" id="dev">
-          <summary>Для разработчика</summary>
+          <summary data-i18n="app.dev"></summary>
           <div class="devbody">
-            <div class="shd">Разбиение</div>
+            <div class="shd" data-i18n="app.mesh"></div>
             <div class="gstech" id="mesh"></div>
             <table class="htable" id="faces">
-              <thead><tr><th>Грань</th><th>nu × nv</th><th>Элементов</th></tr></thead>
+              <thead><tr><th data-i18n="app.face"></th><th>nu × nv</th><th data-i18n="app.elements"></th></tr></thead>
               <tbody></tbody>
             </table>
-            <div class="shd">Время расчета</div>
+            <div class="shd" data-i18n="app.timing"></div>
             <div class="gstech" id="timing"></div>
-            <div class="shd">Вид</div>
+            <div class="shd" data-i18n="app.viewDev"></div>
             <div class="gschips">
-              <button type="button" class="gschipb" id="plain" aria-pressed="false">Условные цвета граней</button>
-              <button type="button" class="gschipb" id="grid" aria-pressed="false">Границы элементов</button>
-              <button type="button" class="gschipb" id="normals" aria-pressed="false">Нормали граней</button>
+              <button type="button" class="gschipb" id="plain" aria-pressed="false" data-i18n="app.plainColors"></button>
+              <button type="button" class="gschipb" id="grid" aria-pressed="false" data-i18n="app.edges"></button>
+              <button type="button" class="gschipb" id="normals" aria-pressed="false" data-i18n="app.normals"></button>
             </div>
-            <div class="shd">Критерии этапа 1</div>
+            <div class="shd" data-i18n="app.crit" data-i18n-n="1"></div>
             <ul class="checks" id="checks"></ul>
-            <div class="shd">Критерии этапа 2</div>
+            <div class="shd" data-i18n="app.crit" data-i18n-n="2"></div>
             <ul class="checks" id="checks2"></ul>
-            <div class="shd">Критерии этапа 3</div>
+            <div class="shd" data-i18n="app.crit" data-i18n-n="3"></div>
             <ul class="checks" id="checks3"></ul>
-            <div class="shd">Критерии этапа 4</div>
+            <div class="shd" data-i18n="app.crit" data-i18n-n="4"></div>
             <ul class="checks" id="checks4"></ul>
-            <div class="shd" id="checks5h" hidden>Критерии этапа 5</div>
+            <div class="shd" id="checks5h" hidden data-i18n="app.crit" data-i18n-n="5"></div>
             <ul class="checks" id="checks5" hidden></ul>
-            <div class="shd" id="checks6h" hidden>Критерии этапа 6</div>
+            <div class="shd" id="checks6h" hidden data-i18n="app.crit" data-i18n-n="6"></div>
             <ul class="checks" id="checks6" hidden></ul>
           </div>
         </details>
       </div>
       <div class="rfoot">
-        <button type="button" class="gssec" id="newroom">+ Новое помещение</button>
-        <button type="button" class="gsgo" id="go3">Далее <span aria-hidden="true">→</span></button>
+        <button type="button" class="gssec" id="newroom" data-i18n="app.newRoomPlus"></button>
+        <button type="button" class="gsgo" id="go3"><span data-i18n="app.next"></span> <span aria-hidden="true">→</span></button>
       </div>
     </section>
   </main>
 
   <dialog class="ndlg" id="normdlg" aria-labelledby="normtitle">
-    <div class="ndhead"><div class="gshd"><span class="gskick">Кодификатор</span><h1 id="normtitle">Нормы освещенности</h1>
-      <p>Нажмите строку — норма, рабочая поверхность и равномерность подставятся в помещение.</p></div>
-      <button type="button" class="ndclose" id="normclose" aria-label="Закрыть">×</button></div>
+    <div class="ndhead"><div class="gshd"><span class="gskick" data-i18n="app.codifier"></span><h1 id="normtitle" data-i18n="app.normsTitle"></h1>
+      <p data-i18n="app.normsLead"></p></div>
+      <button type="button" class="ndclose" id="normclose" data-i18n-attr="aria-label:app.close">×</button></div>
     <div class="ndbar">
-      <div class="seg" id="normset" role="group" aria-label="Нормы"></div>
+      <div class="seg" id="normset" role="group" data-i18n-attr="aria-label:app.norms"></div>
       <label class="nsearch"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
-        <input type="search" id="normq" placeholder="Поиск: помещение, номер, слово" autocomplete="off" spellcheck="false" aria-label="Поиск по нормам"></label>
+        <input type="search" id="normq" data-i18n-attr="placeholder:app.normsSearch;aria-label:app.normsSearchAria" autocomplete="off" spellcheck="false"></label>
       <span class="ncount" id="normcount"></span>
     </div>
     <div class="ndbody" id="normbody"></div>
@@ -730,20 +744,20 @@
   </dialog>
 
   <main class="stage rstage" id="stage3" hidden>
-    <section class="gscard rtreecard" aria-label="Состав отчета">
+    <section class="gscard rtreecard" data-i18n-attr="aria-label:app.reportTree">
       <div class="rtreebody">
-        <div class="gshd"><span class="gskick">Шаг 3 из 3</span><h1>Документация</h1>
-          <p>Отметьте разделы, которые войдут в отчет; нажмите на название, чтобы перейти к странице.</p></div>
+        <div class="gshd"><span class="gskick" data-i18n="app.step3"></span><h1 data-i18n="app.st3"></h1>
+          <p data-i18n="app.st3Lead"></p></div>
         <ul class="rtree" id="rtree"></ul>
       </div>
       <div class="gsfoot">
-        <button type="button" class="gsgo" id="pdfbtn" disabled><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6V2.5h7V6"/><rect x="2" y="6" width="12" height="5.5" rx="1"/><path d="M4.5 9.5h7v4h-7z"/></svg>Распечатать</button>
-        <span class="gsmsg" id="pdfnote">Чтобы получить файл, выберите в окне печати принтер «Сохранить как PDF».</span>
+        <button type="button" class="gsgo" id="pdfbtn" disabled><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6V2.5h7V6"/><rect x="2" y="6" width="12" height="5.5" rx="1"/><path d="M4.5 9.5h7v4h-7z"/></svg><span data-i18n="app.print"></span></button>
+        <span class="gsmsg" id="pdfnote" data-i18n="app.printNote"></span>
       </div>
     </section>
-    <section class="gscard rprev" aria-label="Предпросмотр отчета">
-      <div class="vbusy rbusy" id="rbusy" hidden>Подготовка отчета…</div>
-      <iframe id="preview" title="Предпросмотр отчета"></iframe>
+    <section class="gscard rprev" data-i18n-attr="aria-label:app.preview">
+      <div class="vbusy rbusy" id="rbusy" hidden></div>
+      <iframe id="preview" data-i18n-attr="title:app.preview"></iframe>
     </section>
   </main>
 </div>
@@ -764,14 +778,45 @@
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry, luminaireGrid } from './js/photometry.js';
-  import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors } from './js/project.js';
+  import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
   import { hotkeyAction } from './js/hotkeys.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
   import { initReport } from './js/reportui.js';
+  import { t, getLang, storeLang, DICTS, LANG_IDS, group, planeName, meta, sci } from './js/i18n.js';
 
   const $ = (s) => document.querySelector(s);
   const DEG = Math.PI / 180;
+
+  // ---- language (stage 8): static texts by data-i18n*, the switch of the top bar ----
+  /**
+   * Fills the elements marked data-i18n (text), data-i18n-html (markup) and
+   * data-i18n-attr="attr:key;attr:key" (attributes); data-i18n-n is the parameter n.
+   */
+  function applyI18n(root = document) {
+    const p = (el) => (el.dataset.i18nN != null ? { n: Number(el.dataset.i18nN) } : {});
+    for (const el of root.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n, p(el));
+    for (const el of root.querySelectorAll('[data-i18n-html]')) el.innerHTML = t(el.dataset.i18nHtml, p(el));
+    for (const el of root.querySelectorAll('[data-i18n-attr]')) {
+      for (const pair of el.dataset.i18nAttr.split(';')) {
+        const [a, k] = pair.split(':');
+        el.setAttribute(a.trim(), t(k.trim(), p(el)));
+      }
+    }
+  }
+  document.documentElement.lang = getLang();
+  applyI18n();
+  document.title = t('app.title');
+  $('#langsw').innerHTML = LANG_IDS.map((id) => `<button type="button" data-lang="${id}" aria-pressed="${id === getLang()}" lang="${id}" title="${DICTS[id].meta.name}">${DICTS[id].meta.label}</button>`).join('');
+  $('#langsw').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-lang]');
+    if (!b || b.dataset.lang === getLang()) return;
+    // the project is kept in this browser: save it now, then load the page in the other language
+    flushSave();
+    try { sessionStorage.setItem('lcalc.langStage', String(stage)); } catch (err) { /* storage unavailable */ }
+    storeLang(b.dataset.lang);
+    location.reload();
+  });
   let view = null, FACE_COLORS = [];
   try {
     const mod = await import('./js/view3d.js');
@@ -808,15 +853,15 @@
         if (!info) { pill.textContent = ''; return; }
         if (info.plane) {
           const d = planDraw;
-          pill.textContent = d ? `E = ${formatNumber(bilinear(d.values, d.ax, d.ay, d.L / d.ax, d.W / d.ay, info.x, info.y), 0)} лк` : '';
+          pill.textContent = d ? `E = ${formatNumber(bilinear(d.values, d.ax, d.ay, d.L / d.ax, d.W / d.ay, info.x, info.y), 0)} ${t('unit.lx')}` : '';
           return;
         }
         if (info.value == null || !shown) { pill.textContent = ''; return; }
-        pill.textContent = `E = ${formatNumber(shown.E[info.g], 0)} лк · L = ${formatNumber(shown.L[info.g], 1)} кд/м²`;
+        pill.textContent = `E = ${formatNumber(shown.E[info.g], 0)} ${t('unit.lx')} · L = ${formatNumber(shown.L[info.g], 1)} ${t('unit.cdm2')}`;
       },
     });
   } catch (e) {
-    $('#view').innerHTML = `<div class="fatal">Не удалось загрузить 3D-вид (Three.js с CDN): ${e.message}</div>`;
+    $('#view').innerHTML = `<div class="fatal">${t('app.view3dFail', { msg: e.message })}</div>`;
     console.error(e);
   }
 
@@ -824,12 +869,12 @@
   const MAJOR = new Set([0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000]);
   const KEY = new Set([0, 10, 100, 1000]);
   $('#legend ol').innerHTML = LEVELS.map((v, k) =>
-    `<li class="${MAJOR.has(v) ? 'maj' : ''}${KEY.has(v) ? ' key' : ''}" title="${v.toLocaleString('ru-RU')}${k + 1 < LEVELS.length ? `…${LEVELS[k + 1].toLocaleString('ru-RU')}` : ' и выше'} лк"><i style="background:${COLORS_HEX[k]}"></i><span>${v.toLocaleString('ru-RU')}</span></li>`).join('');
+    `<li class="${MAJOR.has(v) ? 'maj' : ''}${KEY.has(v) ? ' key' : ''}" title="${k + 1 < LEVELS.length ? `${group(v)}…${group(LEVELS[k + 1])}` : t('app.andAbove', { v: group(v) })} ${t('unit.lx')}"><i style="background:${COLORS_HEX[k]}"></i><span>${group(v)}</span></li>`).join('');
 
   const row = (label, value) => `<div class="gstrow"><span>${label}</span><b>${value}</b></div>`;
   const checkList = (list) => list.map((c) =>
     `<li class="${c.ok ? 'ok' : 'bad'}"><span>${c.name}</span><small>${c.detail}</small></li>`).join('');
-  const ms = (x) => `${formatNumber(x, 0)} мс`;
+  const ms = (x) => `${formatNumber(x, 0)} ${t('unit.ms')}`;
 
   // ---- calculation in a Web Worker (js/worker.js); main-thread fallback if workers fail ----
   // The worker gets the page's import map with absolute stamped URLs and loads every module by it.
@@ -853,11 +898,11 @@
       else if (m.type === 'error') {
         console.error(m.message);
         if (m.id == null) { useMainThread(m.message).then(() => { busy = false; flush(); }); return; }
-        busy = false; setBusy(`Ошибка расчета: ${m.message.split('\n')[0]}`, true); flush();
+        busy = false; setBusy(t('app.calcError', { msg: m.message.split('\n')[0] }), true); flush();
       }
     };
     worker.onerror = (e) => { e.preventDefault(); useMainThread(e.message).then(() => { busy = false; flush(); }); };
-    worker.postMessage({ type: 'init', imports });
+    worker.postMessage({ type: 'init', imports, lang: getLang() });
   } catch (e) {
     await useMainThread(e.message);
   }
@@ -879,10 +924,10 @@
     busy = true;
     const id = ++jobId;
     jobKeys.set(id, { key: paramsKey(params), roomId });
-    setBusy('Расчет…');
+    setBusy(t('app.busy'));
     if (worker) worker.postMessage({ type: 'run', id, params });
     else setTimeout(() => {   // let the busy pill paint first
-      try { onResult(id, mainCalc.run(params)); } catch (e) { busy = false; setBusy(`Ошибка расчета: ${e.message}`, true); console.error(e); }
+      try { onResult(id, mainCalc.run(params)); } catch (e) { busy = false; setBusy(t('app.calcError', { msg: e.message }), true); console.error(e); }
     }, 0);
   }
 
@@ -899,7 +944,7 @@
   let result = null;    // last result that matches the current room: { ...CalcResult, rho }
   let shown = null;     // what is displayed: { E, L } per element (maintained values)
   let mapMode = 'total', falseOn = true, faceColors = false, stops = 0;
-  // the "Фиктивные цвета" button: for the faces, and on the plan with a plane shown for that plane
+  // the false colours button: for the faces, and on the plan with a plane shown for that plane
   // (the plane starts without them)
   let planeColors = false;
   const buttonOnPlane = () => is2D && planeZ != null;
@@ -917,7 +962,7 @@
   let stage = 0;                 // 1 — project, 2 — rooms, 3 — results
   let switching = false;         // a room is being loaded into the form
   const roomResults = new Map(); // room id → { key, result } (the last result of every room)
-  /** Housing height of the loaded file, m (0 without a file): the photometric centre is that much below h_м. */
+  /** Housing height of the loaded file, m (0 without a file): the photometric centre is that much below h_m. */
   const housingOf = (v, file = photFile) => (v.phot === 'file' && file ? file.table.luminaire?.height || 0 : 0);
   /** Distance from the ceiling to the photometric centre for the calculation. */
   const hcOf = (v, file = photFile) => ceilingDrop(v.H, v.hm, housingOf(v, file));
@@ -925,9 +970,8 @@
   function showCentre(v) {
     const hh = housingOf(v), z = photometricHeight(v.hm, hh), el = $('#hmnote');
     const mm = (x) => String(Math.round(x * 1000));
-    el.innerHTML = `*Фотометрический центр на высоте ${formatNumber(z, 3)} м` +
-      (z <= v.hwp + 1e-9 ? ' — не выше рабочей поверхности' : '');
-    el.title = hh > 0 ? `На ${mm(hh)} мм ниже точки установки: высота корпуса из файла` : 'Совпадает с точкой установки';
+    el.innerHTML = t('app.centre', { z: formatNumber(z, 3) }) + (z <= v.hwp + 1e-9 ? t('app.centreLow') : '');
+    el.title = hh > 0 ? t('app.centreTip', { mm: mm(hh) }) : t('app.centreSame');
     el.classList.toggle('warn', z <= v.hwp + 1e-9);
   }
   function calcParams(v, fileOf = photFile) {
@@ -957,13 +1001,13 @@
       room = createRoom({ L: values.L, W: values.W, H: values.H, h });
       const f = (x) => formatNumber(x, 4);
       $('#mesh').innerHTML =
-        row('Шаг h (авто), м', f(h)) +
+        row(t('app.meshStep'), f(h)) +
         row('n<sub>L</sub> × n<sub>W</sub> × n<sub>H</sub>', `${room.n.L} × ${room.n.W} × ${room.n.H}`) +
-        row('Δ<sub>L</sub> · Δ<sub>W</sub> · Δ<sub>H</sub>, м', `${f(room.d.L)} · ${f(room.d.W)} · ${f(room.d.H)}`) +
-        row('Всего элементов N', room.N.toLocaleString('ru-RU'));
+        row(`Δ<sub>L</sub> · Δ<sub>W</sub> · Δ<sub>H</sub>, ${t('unit.m')}`, `${f(room.d.L)} · ${f(room.d.W)} · ${f(room.d.H)}`) +
+        row(t('app.meshN'), group(room.N));
       $('#faces tbody').innerHTML = room.faces.map((fc) =>
         `<tr><td><span class="sw" style="background:${FACE_COLORS[fc.id] ?? '#ccc'}"></span>${fc.id} · ${fc.name}</td>
-         <td>${fc.nu} × ${fc.nv}</td><td>${fc.count.toLocaleString('ru-RU')}</td></tr>`).join('');
+         <td>${fc.nu} × ${fc.nv}</td><td>${group(fc.count)}</td></tr>`).join('');
       const checks2 = stage2Checks(room);
       $('#checks2').innerHTML = checkList(checks2);
       window.__stage2 = { room, checks: checks2 };
@@ -986,7 +1030,7 @@
     }
     // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
     // The table itself is not part of the key: fileKey identifies it. Without the automatic update
-    // a change drops the result until "Рассчитать" is pressed.
+    // a change drops the result until "Calculate" is pressed.
     const p = calcParams(values);
     const key = paramsKey(p);
     // a result kept for this room (another room was shown meanwhile, or the report computed it)
@@ -1022,7 +1066,7 @@
     planDraw = null;
     view?.setValues(null); view?.setLuminance(null, 0); view?.setPlane(null);
     $('#planes').innerHTML = '';
-    $('#planenote').textContent = 'Параметры изменились. Нажмите «Рассчитать».';
+    $('#planenote').textContent = t('app.changed');
     $('#results tbody').innerHTML = ''; $('#mfnote').textContent = '';
     $('#checks6').hidden = $('#checks6h').hidden = true;
     renderPlaneMenu();
@@ -1051,20 +1095,20 @@
       if (planeZ != null && !zs.includes(zKey(planeZ))) planeZ = norm;
       render();
       $('#timing').innerHTML =
-        row('Ядро', r.reused.kernel ? 'из кэша' : `${ms(r.ms.kernel)} + поправка ${ms(r.ms.coarse)}`) +
-        row('Прямая составляющая', r.reused.direct ? 'из кэша' : `${ms(r.ms.direct)} · ${r.lums.length} св. × ${r.N.toLocaleString('ru-RU')} эл.` +
-          (r.directStats ? ` · ${Math.round(r.directStats.evals / (r.lums.length * r.N))} выч./пару` : '')) +
-        row('Решатель', `${ms(r.ms.solve)} · ${r.iterations} итер.`) +
-        row('Плоскости', ms(r.ms.planes)) +
-        row('Проверки этапов 3–4', ms(r.ms.checks));
+        row(t('app.tKernel'), r.reused.kernel ? t('app.cached') : t('app.tKernelDetail', { a: ms(r.ms.kernel), b: ms(r.ms.coarse) })) +
+        row(t('app.tDirect'), r.reused.direct ? t('app.cached') : t('app.tDirectDetail', { a: ms(r.ms.direct), l: r.lums.length, n: group(r.N) }) +
+          (r.directStats ? t('app.tEvals', { n: Math.round(r.directStats.evals / (r.lums.length * r.N)) }) : '')) +
+        row(t('app.tSolver'), t('app.tSolverDetail', { a: ms(r.ms.solve), n: r.iterations })) +
+        row(t('app.tPlanes'), ms(r.ms.planes)) +
+        row(t('app.tChecks'), ms(r.ms.checks));
       $('#checks3').innerHTML = r.checks3 ? checkList(r.checks3) : '';
       const c4 = [...(r.checks4 ?? [])];
       const ex = view?.exposureCheck();
       if (ex && r.checks4) {
         c4.splice(3, 0, {
-          name: 'Экспозиция не меняется при вращении',
+          name: t('chk.s4.exposure'),
           ok: ex.same,
-          detail: `${ex.views} ракурсов, сверху и снизу: m = ${ex.values[0].toExponential(3).replace('.', ',').replace(/e([-+])(\d+)/, (_, sg, d) => `·10<sup>${sg === '-' ? '−' : ''}${d}</sup>`)} во всех; L<sub>wa</sub> = ${formatNumber(shown.Lwa, 2)} кд/м² по всей комнате`,
+          detail: t('chk.s4.exposureDetail', { n: ex.views, m: sci(ex.values[0], 3), l: formatNumber(shown.Lwa, 2) }),
         });
       }
       $('#checks4').innerHTML = checkList(c4);
@@ -1079,16 +1123,15 @@
   /**
    * Work planes: a collapsed row per plane (Ē and U₀), details inside. The normative plane gets the
    * status marks: Ē against the required illuminance (red below it, green within its step of the
-   * scale, orange above) and U₀ (red below 0.3); the others are marked * "Для справки".
+   * scale, orange above) and U₀ (red below 0.3); the others are marked * (for reference).
    */
-  const planeName = (z) => `Г-${formatNumber(z, 2).includes(',') ? formatNumber(z, 2) : `${formatNumber(z, 2)},0`}`;
   const PLAN_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><path d="M4 13.5c0-3 2-5 4-5s4 2 4 5M6 13.5c0-1.6.9-2.8 2-2.8s2 1.2 2 2.8"/></svg>';
 
   function renderPlanes(mf) {
     const host = $('#planes');
     const open = new Set([...host.querySelectorAll('details[open]')].map((d) => d.dataset.z));
     const n0 = (x) => formatNumber(x, 0), n2 = (x) => formatNumber(x, 2);
-    const LABEL = { low: 'ниже нормы', ok: 'в пределах ступени шкалы', high: 'выше ступени шкалы' };
+    const LABEL = { low: t('app.levelLow'), ok: t('app.levelOk'), high: t('app.levelHigh') };
     // status marks: green tick, red cross, yellow warning (the final icons may change)
     const ICON = {
       ok: '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.4 5.6 10.4 11.5 3.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1104,22 +1147,22 @@
       const level = pl.normative ? levelStatus(avg, current.En) : null;
       // U₀: below the norm — red cross, at or above it — green tick; no norm: a warning below 0.3
       const uMark = !pl.normative ? null : current.U0n != null ? (u0 < current.U0n - 1e-9 ? 'low' : 'ok') : u0 < 0.3 - 1e-9 ? 'high' : null;
-      const uTitle = { low: `U₀ ниже нормы ${formatNumber(current.U0n ?? 0, 2)}`, ok: `U₀ не ниже нормы ${formatNumber(current.U0n ?? 0, 2)}`, high: 'Норма U₀ не задана; U₀ меньше 0,3' }[uMark];
+      const uTitle = { low: t('app.u0Low', { u: formatNumber(current.U0n ?? 0, 2) }), ok: t('app.u0Ok', { u: formatNumber(current.U0n ?? 0, 2) }), high: t('app.u0None') }[uMark];
       if (!pl.normative) ref = true;
       return `<details class="prow" data-z="${pl.z}"${open.has(String(pl.z)) ? ' open' : ''}>
         <summary><span class="pn">${name}${pl.normative ? '' : '*'}</span>
-          <span class="pv"><i>Ē</i> ${n0(avg)} лк${level ? ` ${mark(level, `${LABEL[level]}: Eн = ${current.En} лк`)}` : ''}</span>
+          <span class="pv"><i>Ē</i> ${n0(avg)} ${t('unit.lx')}${level ? ` ${mark(level, t('app.levelTitle', { what: LABEL[level], e: current.En }))}` : ''}</span>
           <span class="pv"><i>U₀</i> ${n2(u0)}${uMark ? ` ${mark(uMark, uTitle)}` : ''}</span>
-          <button type="button" class="pplan" data-z="${pl.z}" aria-pressed="${on}" aria-label="Изолинии ${name}" title="${name}: изолинии и значения в точках сетки ГОСТ — на плане и в 3D">${PLAN_ICON}</button></summary>
+          <button type="button" class="pplan" data-z="${pl.z}" aria-pressed="${on}" aria-label="${t('app.isoAria', { name })}" title="${t('app.isoTip', { name })}">${PLAN_ICON}</button></summary>
         <div class="gstech">
-          ${row('Ē', `${n0(avg)} лк`)}
-          ${row('E<sub>min</sub>', `${n0(min)} лк`)}
-          ${row('E<sub>max</sub>', `${n0(max)} лк`)}
+          ${row('Ē', `${n0(avg)} ${t('unit.lx')}`)}
+          ${row('E<sub>min</sub>', `${n0(min)} ${t('unit.lx')}`)}
+          ${row('E<sub>max</sub>', `${n0(max)} ${t('unit.lx')}`)}
           ${row('U<sub>0</sub> = E<sub>min</sub> / Ē', n2(u0))}
           ${row('U<sub>d</sub> = E<sub>min</sub> / E<sub>max</sub>', n2(st.minMax))}
         </div></details>`;
     }).join('');
-    $('#planenote').innerHTML = ref ? '* Для справки.' : '';
+    $('#planenote').innerHTML = ref ? t('rep.refNote') : '';
   }
 
   /**
@@ -1154,9 +1197,8 @@
     if ($('#dev').open) {
       const tot = Float64Array.from(f.E, (v) => mf * v);
       const c6 = stage6Checks(f, mapMode === 'total' ? sets : isolineSet(tot, ax, ay, dx, dy, LEVELS.slice(1)), mf, pl.stats);
-      c6.unshift({ name: `${planeName(f.z)}: поле плана`, ok: true,
-        detail: `вспомогательная сетка ${ax} × ${ay} (шаг ${formatNumber(dx, 3)} м), точки ГОСТ ${f.gost.nx} × ${f.gost.ny}; ` +
-          `отраженная ${ms(f.ms.reflected)}, прямая ${ms(f.ms.direct)}, ГОСТ ${ms(f.ms.gost)}` });
+      c6.unshift({ name: t('chk.s6.field', { plane: planeName(f.z) }), ok: true,
+        detail: t('chk.s6.fieldDetail', { ax, ay, dx: formatNumber(dx, 3), gx: f.gost.nx, gy: f.gost.ny, r: ms(f.ms.reflected), d: ms(f.ms.direct), g: ms(f.ms.gost) }) });
       $('#checks6').innerHTML = checkList(c6);
       $('#checks6').hidden = $('#checks6h').hidden = false;
       window.__stage6 = { plan: f, sets, checks: c6 };
@@ -1175,7 +1217,7 @@
     renderPlaneMenu();
     applyPlane();
   }
-  /** The menu of the view button "Расчетная поверхность": the same choice as the results rows. */
+  /** The menu of the view button "Work plane": the same choice as the results rows. */
   /** Plane of the left part of the pill: the last one chosen, else the normative one. */
   function planeChoice() {
     const planes = result ? result.planes : [];
@@ -1192,20 +1234,20 @@
     show.setAttribute('aria-pressed', String(planeZ != null));
     show.closest('.vsplit').classList.toggle('on', planeZ != null);
     show.disabled = !result;
-    $('#planelabel').textContent = zc != null ? planeName(zc) : 'Г-…';
-    show.dataset.tip = planeZ != null ? `Скрыть ${planeName(planeZ)}` : zc != null ? `Показать ${planeName(zc)}` : 'Расчетная поверхность';
+    $('#planelabel').textContent = zc != null ? planeName(zc) : `${meta().plane}-…`;
+    show.dataset.tip = planeZ != null ? t('app.hidePlane', { name: planeName(planeZ) }) : zc != null ? t('app.showPlane', { name: planeName(zc) }) : t('app.plane');
     const item = (z, label, note, on, dis = false) =>
       `<button type="button" role="menuitemradio" aria-checked="${on}" data-z="${z}"${dis ? ' disabled' : ''}><i>${on ? '✓' : ''}</i>${label}${note ? `<small>${note}</small>` : ''}</button>`;
     const planes = result ? result.planes : [];
-    $('#planemenu').innerHTML = '<div class="vmh">Расчетная поверхность</div>' + item('', 'Не показывать', '', planeZ == null) +
-      (planes.length ? planes.map((pl) => item(pl.z, planeName(pl.z), pl.normative ? 'нормируемая' : 'для справки',
+    $('#planemenu').innerHTML = `<div class="vmh">${t('app.plane')}</div>` + item('', t('app.noPlane'), '', planeZ == null) +
+      (planes.length ? planes.map((pl) => item(pl.z, planeName(pl.z), pl.normative ? t('app.normative') : t('rep.reference'),
         planeZ != null && zKey(planeZ) === zKey(pl.z))).join('')
-        : item('-', 'Нет результата расчета', '', false, true));
+        : item('-', t('app.noResult'), '', false, true));
   }
 
   /**
    * Preliminary estimate of the number of luminaires (js/estimate.js, the method of the page
-   * "Оценочный расчет освещения") and a grid with at least that many; the note says how many are
+   * "Estimate of general lighting") and a grid with at least that many; the note says how many are
    * enough when the grid holds more.
    */
   function suggestGrid() {
@@ -1216,20 +1258,18 @@
     try {
       e = estimate(meanCurve(phot), { L: v.L, W: v.W, H: v.H, hu: v.H - hcOf(v), hr: v.hwp, rp: v.rhoC, rc: v.rhoW, rr: v.rhoF, E: v.En, Ke: v.mf }, v.flux);
     } catch (err) {
-      note.textContent = 'Оценка невозможна: светильники должны быть выше рабочей поверхности.';
+      note.textContent = t('app.estNone');
       note.hidden = false; return;
     }
-    const n = (k) => `${k} ${k % 10 === 1 && k % 100 !== 11 ? 'светильник' : k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 12 || k % 100 > 14) ? 'светильника' : 'светильников'}`;
     const g = gridFor(e.N, v.L, v.W, 30, MAX_LUMINAIRES);
     if (e.N > MAX_LUMINAIRES || !g || g.n < e.N) {
       // a wrong flux in the file is the usual cause: say so and leave the grid as it is
-      note.innerHTML = `По предварительной оценке нужно ${n(e.N)} (расчетное ${formatNumber(e.raw, 1)}) — больше, чем можно разместить (не более ${MAX_LUMINAIRES}). ` +
-        `Проверьте световой поток светильника: ${formatNumber(v.flux, 0)} лм. Сетка не изменена.`;
+      note.innerHTML = t('app.estTooMany', { lums: t('app.lums', { n: e.N }), raw: formatNumber(e.raw, 1), max: MAX_LUMINAIRES, flux: formatNumber(v.flux, 0) });
       note.classList.add('warn'); note.hidden = false; return;
     }
     note.classList.remove('warn');
-    note.innerHTML = `*По предварительной оценке ${g.n > e.N ? 'достаточно' : 'нужно'}: ${e.N} шт.`;
-    note.title = `Расчетное ${formatNumber(e.raw, 1)}, u = ${formatNumber(e.u, 2)}; сетка ${g.nx} × ${g.ny} = ${g.n} шт.`;
+    note.innerHTML = t(g.n > e.N ? 'app.estEnough' : 'app.estNeed', { n: e.N });
+    note.title = t('app.estTip', { raw: formatNumber(e.raw, 1), u: formatNumber(e.u, 2), nx: g.nx, ny: g.ny, n: g.n });
     note.hidden = false;
     form.set({ nx: g.nx, ny: g.ny });
   }
@@ -1253,8 +1293,8 @@
     const n0 = (x) => formatNumber(x, 0);
     $('#results tbody').innerHTML = room.faces.map((fc) =>
       `<tr><td>${fc.name}</td><td><b>${n0(avg[fc.id])}</b></td><td>${n0(avgD[fc.id])}</td><td>${n0(avgI[fc.id])}</td></tr>`).join('');
-    $('#mfnote').innerHTML = `Поглощено ${formatNumber(mf * result.balance.absorbed, 0)} лм из ${formatNumber(mf * result.balance.emitted, 0)} лм.` +
-      (result.lost > 1e-6 * result.balance.emitted ? ` Поток вверх ${formatNumber(mf * result.lost, 0)} лм не учтен: светильник у потолка (свес 0).` : '');
+    $('#mfnote').innerHTML = t('app.absorbed', { a: formatNumber(mf * result.balance.absorbed, 0), b: formatNumber(mf * result.balance.emitted, 0) }) +
+      (result.lost > 1e-6 * result.balance.emitted ? t('app.lost', { a: formatNumber(mf * result.lost, 0) }) : '');
 
     renderPlanes(mf);
     renderPlaneMenu();
@@ -1318,22 +1358,25 @@
   /** Keeps the project in this browser (a convenience: everything works without it). */
   function autosave() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try { localStorage.setItem(STORE, serializeProject(project)); localStorage.setItem(`${STORE}.stage`, String(stage)); } catch (e) { /* full or blocked */ }
-    }, 400);
+    saveTimer = setTimeout(flushSave, 400);
+  }
+  /** Writes the project to this browser at once (before the page reloads in another language). */
+  function flushSave() {
+    clearTimeout(saveTimer);
+    try { localStorage.setItem(STORE, serializeProject(project)); localStorage.setItem(`${STORE}.stage`, String(stage)); } catch (e) { /* full or blocked */ }
   }
   function restoreProject() {
     try { const t = localStorage.getItem(STORE); if (t) return parseProject(t); } catch (e) { /* none or broken */ }
     return null;
   }
 
-  /** Fields of the stage «Проект». */
+  /** Fields of the stage "Project". */
   function renderInfo() {
     const wide = new Set(['name', 'description', 'author', 'customer']);
     $('#infofields').innerHTML = INFO_FIELDS.map((f) => `<div class="tfld${wide.has(f.key) ? ' wide' : ''}" id="pi-${f.key}">
       <label for="in-pi-${f.key}">${f.label}${f.required ? '<span class="req" aria-hidden="true"> *</span>' : ''}</label>${f.kind === 'area'
         ? `<textarea id="in-pi-${f.key}" data-k="${f.key}" placeholder="${f.placeholder}" rows="4"></textarea>`
-        : `<input id="in-pi-${f.key}" data-k="${f.key}" type="${f.kind === 'text' ? 'text' : f.kind}" placeholder="${f.placeholder}" autocomplete="off"${f.required ? ' required aria-required="true"' : ''}${f.kind === 'tel' ? ' inputmode="tel"' : ''}>`}
+        : `${f.kind === 'tel' ? '<div class="phonew"><span class="phonec" id="pi-phonecode"></span>' : ''}<input id="in-pi-${f.key}" data-k="${f.key}" type="${f.kind === 'text' ? 'text' : f.kind}" placeholder="${f.placeholder}" autocomplete="off"${f.required ? ' required aria-required="true"' : ''}${f.kind === 'tel' ? ' inputmode="tel"' : ''}>${f.kind === 'tel' ? '</div>' : ''}`}
       <span class="ferr" hidden></span></div>`).join('');
     fillInfo();
   }
@@ -1351,20 +1394,46 @@
     return e;
   }
   $('#infofields').addEventListener('focusout', (e) => { const k = e.target.dataset?.k; if (k) { infoTouched.add(k); showInfoErrors(); } });
+  // ---- phone: country codes of the language (+7; +44 and +49); a number with another code is
+  // shown as it is, and its code is offered too ----
+  const phoneOptions = () => [...new Set([...phoneCodes(), phoneCode(project.info.phone)].filter(Boolean))];
+  /** The country code chosen for the phone field. */
+  const curCode = () => $('#in-pi-phonecode')?.value || phoneCode(project.info.phone) || phoneCodes()[0];
+  function renderPhoneCode() {
+    const opts = phoneOptions(), code = phoneCode(project.info.phone) || phoneCodes()[0];
+    $('#pi-phonecode').innerHTML = opts.length < 2 ? '' : `<select id="in-pi-phonecode" aria-label="${t('info.phone.code')}">${
+      opts.map((c) => `<option value="${c}"${c === code ? ' selected' : ''}>${c}</option>`).join('')}</select>`;
+  }
   function fillInfo() {
     if (project.info.phone) project.info.phone = formatPhone(project.info.phone);
+    renderPhoneCode();
     for (const f of INFO_FIELDS) $(`#in-pi-${f.key}`).value = project.info[f.key] ?? '';
   }
+  $('#infofields').addEventListener('change', (e) => {
+    if (e.target.id !== 'in-pi-phonecode') return;
+    // another country: the digits of the number stay, the mask changes
+    const el = $('#in-pi-phone'), rest = el.value.replace(/^\+\d+\s*/, '');
+    el.value = rest ? formatPhone(rest, e.target.value) : '';
+    project.info.phone = el.value;
+    if (infoForce || infoTouched.has('phone')) showInfoErrors();
+    report.invalidate('info');
+    autosave();
+  });
   $('#infofields').addEventListener('input', (e) => {
     const k = e.target.dataset.k;
     if (!k) return;
     if (k === 'phone') {
-      // the mask «+7 123 456 7890»: keep the caret after the same digit
-      const el = e.target, before = el.value.slice(0, el.selectionStart ?? el.value.length);
-      const nd = (before.startsWith('+7') ? before.slice(2) : before).replace(/\D/g, '').length;
-      el.value = formatPhone(el.value);
+      // the mask of the country code (+7 123 456 7890, +44 20 7946 0958, +49 30 12345678): keep the
+      // caret after the same digit; a typed or pasted code of the list chooses that country
+      const el = e.target, typed = phoneCode(el.value), sel = $('#in-pi-phonecode');
+      const code = typed && phoneOptions().includes(typed) ? typed : curCode();
+      if (sel && sel.value !== code) sel.value = code;
+      const before = el.value.slice(0, el.selectionStart ?? el.value.length);
+      const nd = (before.startsWith(code) ? before.slice(code.length) : before).replace(/\D/g, '').length;
+      el.value = formatPhone(el.value, code);
+      const lead = code.length + 1;
       let at = el.value.length;
-      if (nd >= 0) { let c = 0; for (let i = 3; i < el.value.length; i++) if (/\d/.test(el.value[i]) && ++c === nd) { at = i + 1; break; } if (nd === 0) at = Math.min(3, el.value.length); }
+      if (nd >= 0) { let c = 0; for (let i = lead; i < el.value.length; i++) if (/\d/.test(el.value[i]) && ++c === nd) { at = i + 1; break; } if (nd === 0) at = Math.min(lead, el.value.length); }
       try { el.setSelectionRange(at, at); } catch (err) { /* not focused */ }
     }
     project.info[k] = e.target.value;
@@ -1429,7 +1498,7 @@
   function deleteRoom(id) {
     const r = project.rooms.find((x) => x.id === id);
     if (!r || project.rooms.length < 2) return;
-    if (!confirm(`Удалить помещение «${r.name}»? Его исходные данные пропадут.`)) return;
+    if (!confirm(t('app.delRoomConfirm', { name: r.name }))) return;
     const k = project.rooms.indexOf(r);
     project.rooms.splice(k, 1);
     roomResults.delete(id);
@@ -1443,13 +1512,13 @@
   /** The pill of the second stage: name of the active room; its menu lists the rooms. */
   function renderRoomNav() {
     const ar = activeRoom();
-    $('#stroomname').textContent = ar ? ar.name || 'Без названия' : '—';
+    $('#stroomname').textContent = ar ? ar.name || t('app.untitled') : '—';
     const many = project.rooms.length > 1;
-    $('#roommenu').innerHTML = '<div class="vmh">Помещения</div>' + project.rooms.map((r) => {
+    $('#roommenu').innerHTML = `<div class="vmh">${t('app.rooms')}</div>` + project.rooms.map((r) => {
       const on = r.id === project.active, v = r.values;
-      return `<div class="vmroom"><button type="button" role="menuitemradio" aria-checked="${on}" data-room="${r.id}"><i>${on ? '✓' : ''}</i>${esc(r.name || 'Без названия')}</button>` +
-        (many ? `<button type="button" class="vmdel" data-del="${r.id}" aria-label="Удалить ${esc(r.name || 'помещение')}" title="Удалить помещение">×</button>` : '') + '</div>';
-    }).join('') + '<div class="vmsep"></div><button type="button" class="vmadd" data-act="add"><i>+</i>Новое помещение</button>';
+      return `<div class="vmroom"><button type="button" role="menuitemradio" aria-checked="${on}" data-room="${r.id}"><i>${on ? '✓' : ''}</i>${esc(r.name || t('app.untitled'))}</button>` +
+        (many ? `<button type="button" class="vmdel" data-del="${r.id}" aria-label="${esc(t('app.delRoomAria', { name: r.name || t('rui.aRoom') }))}" title="${t('app.delRoom')}">×</button>` : '') + '</div>';
+    }).join('') + `<div class="vmsep"></div><button type="button" class="vmadd" data-act="add"><i>+</i>${t('app.newRoom')}</button>`;
   }
   const roomMenu = $('#roommenu'), roomBtn = $('#stroom');
   const closeRoomMenu = () => { roomMenu.hidden = true; roomBtn.setAttribute('aria-expanded', 'false'); };
@@ -1536,11 +1605,11 @@
       const p = parseProject(await f.text());
       useProject(p, 1);
       msg.classList.remove('err');
-      msg.textContent = `Открыт «${f.name}»: ${p.rooms.length} ${p.rooms.length === 1 ? 'помещение' : p.rooms.length < 5 ? 'помещения' : 'помещений'}.`;
+      msg.textContent = t('app.opened', { name: f.name, rooms: t('app.roomsN', { n: p.rooms.length }) });
     } catch (err) { msg.classList.add('err'); msg.textContent = err.message; }
   });
   $('#newproj').addEventListener('click', () => {
-    if (!confirm('Начать новый проект? Текущий пропадет, если не сохранен в файл.')) return;
+    if (!confirm(t('app.newConfirm'))) return;
     $('#openmsg').textContent = '';
     useProject(createProject(), 1);
   });
@@ -1553,7 +1622,10 @@
     renderRoomNav();
     let st = 1;
     try { st = Number(localStorage.getItem(`${STORE}.stage`)) || (saved ? 2 : 1); } catch (e) { /* storage unavailable */ }
-    setStage(st === 3 ? 2 : st);
+    // after a switch of the language the page comes back to the stage it was on, the documentation too
+    let back = 0;
+    try { back = Number(sessionStorage.getItem('lcalc.langStage')) || 0; sessionStorage.removeItem('lcalc.langStage'); } catch (e) { /* storage unavailable */ }
+    setStage(back || (st === 3 ? 2 : st));
   }
 
   // ---- norms: source line and the codifier ----
@@ -1619,7 +1691,7 @@
           if (m.type === 'result') j.resolve(m.result); else j.reject(new Error(m.message));
         };
         rworker.onerror = (e) => { e.preventDefault(); rworker?.terminate(); rworker = null; rejectAll(e.message); };
-        rworker.postMessage({ type: 'init', imports });
+        rworker.postMessage({ type: 'init', imports, lang: getLang() });
       } catch (e) { rworker = null; }
     }
     if (rworker) {
@@ -1681,9 +1753,10 @@
     if (!falseOn) { falseOn = true; applyColorMode(); }
     render();
   });
+  $('#stopsout').textContent = `0 ${t('unit.ev')}`;
   $('#stops').addEventListener('input', (e) => {
     stops = Number(e.target.value);
-    $('#stopsout').textContent = `${stops > 0 ? '+' : stops < 0 ? '−' : ''}${formatNumber(Math.abs(stops), 1)} ст.`;
+    $('#stopsout').textContent = `${stops > 0 ? '+' : stops < 0 ? '−' : ''}${formatNumber(Math.abs(stops), 1)} ${t('unit.ev')}`;
     view?.setExposureStops(stops);
   });
   $('#reset').addEventListener('click', () => view?.resetView());

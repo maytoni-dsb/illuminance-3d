@@ -4,7 +4,7 @@ function F = ff_point_rect(x, n, p0, a, b, nA)
 %   differential area at point x with unit normal n to the parallelogram with
 %   vertices p0, p0+a, p0+a+b, p0+b (all 3-vectors, metres).
 %
-%   Lambert's contour integral (spec, "Метод расчёта", item 2):
+%   Lambert's contour integral (spec, "Calculation method", item 2):
 %     F = 1/(2*pi) * | sum_k gamma_k * n . (r_k x r_k+1) / |r_k x r_k+1| |,
 %   r_k = p_k - x, gamma_k = atan2(|r_k x r_k+1|, r_k . r_k+1).
 %

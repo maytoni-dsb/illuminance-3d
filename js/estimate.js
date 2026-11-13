@@ -1,11 +1,11 @@
 // Preliminary estimate of the number of luminaires (utilisation factor method) and their grid.
 // Pure module: no DOM and no Three.js.
-// The method and the code follow the page "Оценочный расчет общего освещения" (project file
-// index.html, formulas 1–16 of "Формулы — rev2.pdf"): the intensity curve averaged over the C planes
+// The method and the code follow the page "Estimate of general lighting" (project file
+// index.html, formulas 1–16 of the formulas document, rev. 2): the intensity curve averaged over the C planes
 // at 0.5° steps, zonal fluxes by the trapezoid rule, the coefficients k_α of table 1 and
-//   N = E · S · Z / (u · K_э · Φ),  Z = 1.15.
+//   N = E · S · Z / (u · K_e · Φ),  Z = 1.15.
 // Symbols (page → here): a, b → L, W; H → H; h_u (mounting height) → H − h_c; h_r → work plane
-// height; ρ_п, ρ_с, ρ_р → ceiling, walls, floor; K_э → MF.
+// height; ρ_c, ρ_w, ρ_f (rp, rc, rr) → ceiling, walls, floor; K_e (Ke) → MF.
 
 const RAD = Math.PI / 180;
 export const Z = 1.15;

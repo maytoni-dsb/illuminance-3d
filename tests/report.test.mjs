@@ -35,7 +35,7 @@ test('pages, contents and page numbers', () => {
   assert.equal(b.toc[3].page, 5 + per[0]);
   assert.deepEqual(b.toc[2].secs.map((s) => s.page), [5, 6, 6 + Math.ceil(rooms[0].planes.length / 2)]);
   assert.ok(!/roomsub|hyphens:auto|Suisse/.test(b.html));
-  assert.ok(!/ё/i.test(b.html)); // «е» throughout
+  assert.ok(!/\u0451/i.test(b.html)); // the Russian report has no letter yo (U+0451)
   assert.equal((b.html.match(/class="rhl"/g) ?? []).length, b.pages.length - 1); // the logo on every page after the title
   for (let n = 1; n <= b.pages.length; n++) assert.ok(b.html.includes(`id="pg-${n}"`));
   assert.ok(b.html.includes('class="tt">Офис</span>'));
@@ -50,7 +50,7 @@ test('switched-off nodes leave the report and the numbers follow', () => {
   assert.ok(b.html.includes('class="roomhead"')); // the room heading moves to its first page
 });
 
-test('list of luminaires and summary of results: a line per room, Г-0,0 and Г-0,8', () => {
+test('list of luminaires and summary of results: a line per room, planes 0.0 and 0.8 m', () => {
   const b = buildReport({ info: {}, rooms });
   const lum = b.html.slice(b.html.indexOf('class="lum"'), b.html.indexOf('</table>', b.html.indexOf('class="lum"')));
   assert.equal((lum.match(/<tr>/g) ?? []).length, 1 + rooms.length); // header + rooms, no totals

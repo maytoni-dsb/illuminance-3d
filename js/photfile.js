@@ -1,6 +1,6 @@
 // Photometric data files: IES LM-63 (1986, 1991, 1995, 2002, 2019) and EULUMDAT (LDT).
 // Pure module: no DOM and no Three.js, so it runs in the browser, a Web Worker and Node.
-// Error and warning messages are user-facing and therefore in Russian.
+// Error and warning messages come from the dictionaries (pf.*); `what` arguments are keys of pf.what.
 //
 // Both formats are reduced to one table (`PhotTable`):
 //   C       — angles of the STORED C planes, rad, ascending;
@@ -12,7 +12,7 @@
 //             'half0'  planes 0…π, symmetric to the C0–C180 plane;
 //             'half90' planes π/2…3π/2, symmetric to the C90–C270 plane;
 //             'none'   planes over the whole circle.
-// Orientation (spec, "Светильники"): C counterclockwise viewed from above from the luminaire's C0
+// Orientation (spec, "Luminaires"): C counterclockwise viewed from above from the luminaire's C0
 // plane; IES horizontal angles are read as C angles as they are (0° along the luminaire length,
 // LM-63), and EULUMDAT C angles likewise; the luminaire length lies along C0–C180 in both formats.
 //
@@ -25,15 +25,20 @@
 // The flux of the model itself is the exact integral of the interpolated table (photometry.js).
 
 import { expandPlanes, tableFlux } from './photometry.js';
+import { t, formatNumber } from './i18n.js';
+
+const tr = t; // finish(t) names its table t
 
 const DEG = Math.PI / 180;
 const FT = 0.3048;
 
-/** A parse error with a user-facing (Russian) message. */
+/** A parse error with a user-facing message in the language of the page. */
 export class PhotometryFileError extends Error {
   constructor(message) { super(message); this.name = 'PhotometryFileError'; }
 }
 const fail = (msg) => { throw new PhotometryFileError(msg); };
+/** Name of a field of the file for the messages: a key of pf.what. */
+const what = (key) => t(`pf.what.${key}`);
 
 /**
  * Parses a photometric file; the format is recognised by its contents (the file name only helps
@@ -43,13 +48,13 @@ const fail = (msg) => { throw new PhotometryFileError(msg); };
  * @returns {PhotTable}
  */
 export function parsePhotometryFile(text, fileName = '') {
-  if (typeof text !== 'string' || !text.trim()) fail('Файл пустой');
+  if (typeof text !== 'string' || !text.trim()) fail(tr('pf.empty'));
   const t = text.replace(/^﻿/, '');
   const head = t.slice(0, 4000);
   const isIes = /^\s*IES/i.test(head) || /^\s*TILT\s*=/im.test(head);
   const ext = (fileName.match(/\.([^.]+)$/)?.[1] ?? '').toLowerCase();
   if (isIes) return parseIes(t, fileName);
-  if (ext === 'ies') fail('Файл .ies без строки TILT= — это не файл IES LM-63');
+  if (ext === 'ies') fail(tr('pf.iesNoTilt'));
   return parseLdt(t, fileName);
 }
 
@@ -79,72 +84,72 @@ export function parseIes(text, fileName = '') {
       else { kw[key] = kw[key] ? `${kw[key]} ${m[2]}` : m[2]; lastKey = key; }
     }
   }
-  if (k >= lines.length) fail('В файле IES нет строки TILT=');
+  if (k >= lines.length) fail(t('pf.iesTiltMissing'));
   const tilt = lines[k].trim().replace(/^TILT\s*=\s*/i, '').trim();
   const nums = lines.slice(k + 1).join(' ').split(/[\s,]+/).filter((x) => x !== '');
   let q = 0;
-  const next = (what) => {
-    if (q >= nums.length) fail(`Файл IES обрывается: не хватает данных (${what})`);
+  const next = (key) => {
+    if (q >= nums.length) fail(t('pf.iesShort', { what: what(key) }));
     const v = Number(nums[q++]);
-    if (!Number.isFinite(v)) fail(`В файле IES не число «${nums[q - 1]}» (${what})`);
+    if (!Number.isFinite(v)) fail(t('pf.iesNaN', { v: nums[q - 1], what: what(key) }));
     return v;
   };
   if (/^INCLUDE$/i.test(tilt)) {
-    next('TILT: геометрия лампы');
-    const n = Math.round(next('TILT: число углов'));
-    if (!(n >= 0 && n < 10000)) fail('TILT=INCLUDE: неверное число углов');
-    for (let i = 0; i < 2 * n; i++) next('TILT: углы и множители');
-    warnings.push('Наклон лампы (TILT=INCLUDE) не учитывается: светильник считается установленным как при измерении');
+    next('tiltGeom');
+    const n = Math.round(next('tiltN'));
+    if (!(n >= 0 && n < 10000)) fail(t('pf.tiltN'));
+    for (let i = 0; i < 2 * n; i++) next('tiltAngles');
+    warnings.push(t('pf.wTiltInclude'));
   } else if (!/^NONE$/i.test(tilt)) {
-    warnings.push(`Внешний файл наклона лампы (TILT=${tilt}) не учитывается`);
+    warnings.push(t('pf.wTiltFile', { tilt }));
   }
-  const nLamps = next('число ламп');
-  const lmPerLamp = next('поток лампы');
-  const mult = next('множитель силы света');
-  const nV = Math.round(next('число вертикальных углов'));
-  const nH = Math.round(next('число горизонтальных углов'));
-  const ptype = Math.round(next('тип фотометрии'));
-  const units = Math.round(next('единицы размеров'));
-  const w = next('ширина'), l = next('длина'), h = next('высота');
-  const ballast = next('коэффициент ПРА');
-  const blpf = next('второй коэффициент');
-  const watts = next('мощность');
-  if (ptype === 2 || ptype === 3) fail(`Фотометрия типа ${ptype === 2 ? 'B' : 'A'} не поддерживается, нужен тип C`);
-  if (ptype !== 1) fail(`Неизвестный тип фотометрии ${ptype}`);
-  if (!(nV >= 2 && nV <= 10000)) fail(`Неверное число вертикальных углов: ${nV}`);
-  if (!(nH >= 1 && nH <= 10000)) fail(`Неверное число горизонтальных углов: ${nH}`);
-  const V = Array.from({ length: nV }, () => next('вертикальные углы'));
-  const Hd = Array.from({ length: nH }, () => next('горизонтальные углы'));
+  const nLamps = next('nLamps');
+  const lmPerLamp = next('lampLumens');
+  const mult = next('multiplier');
+  const nV = Math.round(next('nV'));
+  const nH = Math.round(next('nH'));
+  const ptype = Math.round(next('ptype'));
+  const units = Math.round(next('units'));
+  const w = next('width'), l = next('length'), h = next('height');
+  const ballast = next('ballast');
+  const blpf = next('blpf');
+  const watts = next('watts');
+  if (ptype === 2 || ptype === 3) fail(t('pf.ptypeAB', { t: ptype === 2 ? 'B' : 'A' }));
+  if (ptype !== 1) fail(t('pf.ptype', { t: ptype }));
+  if (!(nV >= 2 && nV <= 10000)) fail(t('pf.nV', { n: nV }));
+  if (!(nH >= 1 && nH <= 10000)) fail(t('pf.nH', { n: nH }));
+  const V = Array.from({ length: nV }, () => next('vAngles'));
+  const Hd = Array.from({ length: nH }, () => next('hAngles'));
   const need = nV * nH, have = nums.length - q;
   if (have < need) {
-    fail(`В файле ${have} значений силы света вместо ${need} (${nH} плоскостей × ${nV} углов)` +
-      (have > 0 && have % nV === 0 ? `: данных хватает только на ${have / nV} плоскости` : ''));
+    fail(t('pf.count', { have, need, planes: nH, angles: nV }) +
+      (have > 0 && have % nV === 0 ? t('pf.countPart', { k: have / nV }) : ''));
   }
   const factor = mult * ballast * (blpf > 0 ? blpf : 1);
   const cd = new Float64Array(need);
   for (let i = 0; i < need; i++) {
-    const v = next('сила света');
+    const v = next('cd');
     cd[i] = v * factor;
   }
-  if (have > need) warnings.push(`После таблицы силы света в файле еще ${have - need} чисел; они пропущены`);
-  if (!(factor > 0)) fail('Множитель силы света должен быть больше нуля');
+  if (have > need) warnings.push(t('pf.extra', { n: have - need }));
+  if (!(factor > 0)) fail(t('pf.mult'));
 
-  checkAscending(V, 'вертикальные углы');
-  checkAscending(Hd, 'горизонтальные углы');
-  if (V[0] < -1e-9 || V[nV - 1] > 180 + 1e-9) fail('Вертикальные углы должны лежать в пределах 0…180°');
+  checkAscending(V, 'vAngles');
+  checkAscending(Hd, 'hAngles');
+  if (V[0] < -1e-9 || V[nV - 1] > 180 + 1e-9) fail(t('pf.vRange'));
   const h0 = Hd[0], h1 = Hd[nH - 1];
   let sym;
   if (nH === 1) {
-    if (Math.abs(h0) > 1e-9) fail(`Одна горизонтальная плоскость должна иметь угол 0°, а не ${h0}°`);
+    if (Math.abs(h0) > 1e-9) fail(t('pf.h0', { h: h0 }));
     sym = 'rot';
   } else if (Math.abs(h0) < 1e-9 && Math.abs(h1 - 90) < 1e-9) sym = 'quad';
   else if (Math.abs(h0) < 1e-9 && Math.abs(h1 - 180) < 1e-9) sym = 'half0';
   else if (Math.abs(h0 - 90) < 1e-9 && Math.abs(h1 - 270) < 1e-9) sym = 'half90';
   else if (h0 >= -1e-9 && h1 > 180 && h1 <= 360 + 1e-9) sym = 'none';
-  else fail(`Непонятный набор горизонтальных углов: ${h0}…${h1}°`);
+  else fail(t('pf.hSet', { a: h0, b: h1 }));
 
   const unit = units === 1 ? FT : 1;
-  if (units !== 1 && units !== 2) warnings.push(`Неизвестные единицы размеров (${units}); приняты метры`);
+  if (units !== 1 && units !== 2) warnings.push(t('pf.wUnits', { u: units }));
   const round = w < 0 || l < 0;
   const opening = {
     round,
@@ -193,44 +198,44 @@ const LDT_SYM = ['none', 'rot', 'half0', 'half90', 'quad'];
 export function parseLdt(text, fileName = '') {
   const lines = text.split(/\r\n|\r|\n/);
   const warnings = [];
-  const line = (n) => lines[n - 1] ?? fail(`Файл LDT обрывается на строке ${n}`);
-  const num = (n, what) => {
+  const line = (n) => lines[n - 1] ?? fail(t('pf.ldtEnd', { n }));
+  const num = (n, key) => {
     const s = line(n).trim().replace(',', '.');
     const v = Number(s);
-    if (s === '' || !Number.isFinite(v)) fail(`Строка ${n} файла LDT (${what}): не число «${line(n).trim()}»`);
+    if (s === '' || !Number.isFinite(v)) fail(t('pf.ldtNaN', { n, what: what(key), v: line(n).trim() }));
     return v;
   };
-  const int = (n, what) => {
-    const v = num(n, what);
-    if (!Number.isInteger(v)) fail(`Строка ${n} файла LDT (${what}): нужно целое число, а не ${v}`);
+  const int = (n, key) => {
+    const v = num(n, key);
+    if (!Number.isInteger(v)) fail(t('pf.ldtInt', { n, what: what(key), v }));
     return v;
   };
-  if (lines.length < 30) fail('Это не файл LDT (EULUMDAT): в нем меньше 30 строк');
-  let isym = int(3, 'симметрия Isym');
-  const Mc = int(4, 'число плоскостей C');
-  const Ng = int(6, 'число углов γ');
-  if (!(isym >= 0 && isym <= 4)) fail(`Неизвестная симметрия Isym = ${isym}`);
-  if (!(Mc >= 1 && Mc <= 3600)) fail(`Неверное число плоскостей C: ${Mc}`);
-  if (!(Ng >= 2 && Ng <= 3600)) fail(`Неверное число углов γ: ${Ng}`);
-  const mm = (n, what) => Math.abs(num(n, what)) / 1000;
-  const lumL = mm(13, 'длина светильника'), lumB = mm(14, 'ширина светильника'), lumH = mm(15, 'высота светильника');
-  const areaL = mm(16, 'длина светящей части'), areaB = mm(17, 'ширина светящей части');
-  const areaH = [18, 19, 20, 21].map((n) => mm(n, 'высота светящей части'));
-  const lorl = num(23, 'КПД светильника LORL');
-  const conv = num(24, 'коэффициент пересчета силы света');
-  const tilt = num(25, 'наклон при измерении');
-  const nSets = int(26, 'число наборов ламп');
-  if (!(nSets >= 1 && nSets <= 50)) fail(`Неверное число наборов ламп: ${nSets}`);
+  if (lines.length < 30) fail(t('pf.ldtLines'));
+  let isym = int(3, 'isym');
+  const Mc = int(4, 'nC');
+  const Ng = int(6, 'nG');
+  if (!(isym >= 0 && isym <= 4)) fail(t('pf.isym', { v: isym }));
+  if (!(Mc >= 1 && Mc <= 3600)) fail(t('pf.nC', { n: Mc }));
+  if (!(Ng >= 2 && Ng <= 3600)) fail(t('pf.nG', { n: Ng }));
+  const mm = (n, key) => Math.abs(num(n, key)) / 1000;
+  const lumL = mm(13, 'lumL'), lumB = mm(14, 'lumB'), lumH = mm(15, 'lumH');
+  const areaL = mm(16, 'areaL'), areaB = mm(17, 'areaB');
+  const areaH = [18, 19, 20, 21].map((n) => mm(n, 'areaH'));
+  const lorl = num(23, 'lorl');
+  const conv = num(24, 'conv');
+  const tilt = num(25, 'tilt');
+  const nSets = int(26, 'nSets');
+  if (!(nSets >= 1 && nSets <= 50)) fail(t('pf.nSets', { n: nSets }));
   // field 26a…26f of lamp set k (0-based): files write the sets one after another, six lines each
   // (line 26 + 6k + field + 1). The sets are alternative lamps for the same optics (one is used at
   // a time); the table is in cd/klm of the chosen set.
   const at = (field, k) => 26 + 6 * k + field + 1;
   const numOr = (n, what) => { const s = line(n).trim().replace(',', '.'); const v = Number(s); return s !== '' && Number.isFinite(v) ? v : null; };
   const lampSets = Array.from({ length: nSets }, (_, k) => {
-    const flux = num(at(2, k), 'поток ламп');
-    if (!(flux > 0)) fail(`Поток ламп набора ${k + 1} должен быть больше нуля, а не ${flux}`);
+    const flux = num(at(2, k), 'lampFlux');
+    if (!(flux > 0)) fail(t('pf.setFlux', { k: k + 1, v: flux }));
     return Object.freeze({
-      count: num(at(0, k), 'число ламп'),
+      count: num(at(0, k), 'nLamps'),
       type: line(at(1, k)).trim(),
       flux,
       cct: Number((line(at(3, k)).match(/\d+(?:[.,]\d+)?/) ?? [''])[0].replace(',', '.')) || null,
@@ -244,17 +249,17 @@ export function parseLdt(text, fileName = '') {
   const dataStart = 26 + 6 * nSets + 10 + 1; // after the 10 direct ratios
   const toks = lines.slice(dataStart - 1).join(' ').split(/\s+/).filter((x) => x !== '');
   let q = 0;
-  const next = (what) => {
-    if (q >= toks.length) fail(`Файл LDT обрывается: не хватает данных (${what})`);
+  const next = (key) => {
+    if (q >= toks.length) fail(t('pf.ldtShort', { what: what(key) }));
     const v = Number(toks[q++].replace(',', '.'));
-    if (!Number.isFinite(v)) fail(`В файле LDT не число «${toks[q - 1]}» (${what})`);
+    if (!Number.isFinite(v)) fail(t('pf.ldtNaN2', { v: toks[q - 1], what: what(key) }));
     return v;
   };
-  const Cd = Array.from({ length: Mc }, () => next('углы C'));
-  const Gd = Array.from({ length: Ng }, () => next('углы γ'));
+  const Cd = Array.from({ length: Mc }, () => next('cAngles'));
+  const Gd = Array.from({ length: Ng }, () => next('gAngles'));
 
   if (Mc === 1 && isym !== 1) {
-    warnings.push(`В файле одна плоскость C при симметрии Isym = ${isym}; принята симметрия вращения`);
+    warnings.push(t('pf.wOnePlane', { v: isym }));
     isym = 1;
   }
   // stored planes: Mc1…Mc2 (1-based) by the EULUMDAT formulas; Isym = 3 starts at C270 and wraps
@@ -263,26 +268,26 @@ export function parseLdt(text, fileName = '') {
   else if (isym === 1) idx = [0];
   else if (isym === 2 || isym === 4) {
     const d = isym === 2 ? 2 : 4;
-    if (Mc % d) fail(`Число плоскостей C = ${Mc} не делится на ${d} при симметрии Isym = ${isym}`);
+    if (Mc % d) fail(t('pf.mcDiv', { n: Mc, d, s: isym }));
     idx = range(0, Mc / d + 1);
   } else {
-    if (Mc % 4) fail(`Число плоскостей C = ${Mc} не делится на 4 при симметрии Isym = 3`);
+    if (Mc % 4) fail(t('pf.mcDiv', { n: Mc, d: 4, s: 3 }));
     const mc1 = 3 * Mc / 4; // 0-based
     idx = range(0, Mc / 2 + 1).map((i) => (mc1 + i) % Mc);
   }
   const nStored = idx.length;
   const need = nStored * Ng, have = toks.length - q;
-  if (have < need) fail(`В файле ${have} значений силы света вместо ${need} (${nStored} плоскостей × ${Ng} углов)`);
-  if (have > need) warnings.push(`После таблицы силы света в файле еще ${have - need} чисел; они пропущены`);
-  if (!(lampFlux > 0)) fail(`Поток ламп должен быть больше нуля, а не ${lampFlux}`);
+  if (have < need) fail(t('pf.count', { have, need, planes: nStored, angles: Ng }));
+  if (have > need) warnings.push(t('pf.extra', { n: have - need }));
+  if (!(lampFlux > 0)) fail(t('pf.lampFlux', { v: lampFlux }));
   const scale = lampFlux / 1000;
   const raw = new Float64Array(need);
-  for (let i = 0; i < need; i++) raw[i] = next('сила света') * scale;
-  if (Math.abs(tilt) > 1e-9) warnings.push(`Светильник измерен с наклоном ${tilt}°; наклон не учитывается`);
-  if (Math.abs(conv - 1) > 1e-9) warnings.push(`Коэффициент пересчета силы света ${conv} не применяется (значения в кд/клм)`);
+  for (let i = 0; i < need; i++) raw[i] = next('cd') * scale;
+  if (Math.abs(tilt) > 1e-9) warnings.push(t('pf.wTilt', { v: tilt }));
+  if (Math.abs(conv - 1) > 1e-9) warnings.push(t('pf.wConv', { v: conv }));
 
-  checkAscending(Gd, 'углы γ');
-  if (Gd[0] < -1e-9 || Gd[Ng - 1] > 180 + 1e-9) fail('Углы γ должны лежать в пределах 0…180°');
+  checkAscending(Gd, 'gAngles');
+  if (Gd[0] < -1e-9 || Gd[Ng - 1] > 180 + 1e-9) fail(t('pf.gRange'));
   let C = idx.map((i) => Cd[i]);
   let cd = raw;
   const sym = LDT_SYM[isym];
@@ -294,8 +299,8 @@ export function parseLdt(text, fileName = '') {
     cd = new Float64Array(need);
     order.forEach(([, i], p) => cd.set(raw.subarray(i * Ng, (i + 1) * Ng), p * Ng));
   } else if (isym === 1) C = [0];
-  checkAscending(C, 'углы C');
-  if (isym === 0 && (C[0] < -1e-9 || C[C.length - 1] >= 360 + 1e-9)) fail('Углы C должны лежать в пределах 0…360°');
+  checkAscending(C, 'cAngles');
+  if (isym === 0 && (C[0] < -1e-9 || C[C.length - 1] >= 360 + 1e-9)) fail(t('pf.cRange'));
 
   const round = !(lumB > 0), roundArea = !(areaB > 0);
   return finish({
@@ -333,25 +338,26 @@ function finish(t) {
     const { planes, rows } = expandPlanes({ ...t, C: Float64Array.from(t.C), gamma: Float64Array.from(t.gamma) });
     const f = tableFlux(planes, rows, Float64Array.from(t.gamma)).total;
     if (Math.abs(f / t.ratedFlux - 1) > 0.01) {
-      t.warnings.push(`Поток светильника в файле ${fmt1(t.ratedFlux)} лм (поток ламп × КПД ${fmt1(100 * t.lor)} %) не совпадает с потоком по кривой силы света ${fmt1(f)} лм; принят поток по кривой`);
+      t.warnings.push(tr('pf.wFlux', { rated: fmt1(t.ratedFlux), lor: fmt1(100 * t.lor), f: fmt1(f) }));
     }
   }
   for (let i = 0; i < t.cd.length; i++) {
     if (!(t.cd[i] >= 0)) {
       if (t.cd[i] < 0 && t.cd[i] > -1e-6) { t.cd[i] = 0; continue; }
-      fail(`Отрицательная или неверная сила света в таблице: ${t.cd[i]}`);
+      fail(tr('pf.negative', { v: t.cd[i] }));
     }
   }
   let max = 0;
   for (const v of t.cd) max = Math.max(max, v);
-  if (!(max > 0)) fail('В таблице силы света все значения нулевые');
+  if (!(max > 0)) fail(tr('pf.zero'));
   return Object.freeze({ ...t, C: Float64Array.from(t.C), gamma: Float64Array.from(t.gamma), warnings: Object.freeze(t.warnings) });
 }
 
-function checkAscending(a, what) {
-  for (let i = 1; i < a.length; i++) if (!(a[i] > a[i - 1])) fail(`${what[0].toUpperCase()}${what.slice(1)} должны возрастать: ${a[i - 1]}, ${a[i]}`);
+function checkAscending(a, key) {
+  const w = what(key);
+  for (let i = 1; i < a.length; i++) if (!(a[i] > a[i - 1])) fail(t('pf.ascending', { what: `${w[0].toUpperCase()}${w.slice(1)}`, a: a[i - 1], b: a[i] }));
 }
-const fmt1 = (x) => String(Number(x.toFixed(1))).replace('.', ',');
+const fmt1 = (x) => formatNumber(x, 1);
 const range = (a, b) => Array.from({ length: b - a }, (_, i) => a + i);
 const mod360 = (x) => ((x % 360) + 360) % 360;
 

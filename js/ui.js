@@ -1,7 +1,7 @@
 // Input form and value validation.
 // validateParams and stepValue are pure functions (tested in Node); initForm touches the DOM
 // and is only called from the browser.
-// Labels and error messages are user-facing and therefore in Russian.
+// Labels and error messages come from the dictionaries (js/i18n.js).
 
 /**
  * Largest number of luminaires n_x · n_y: beyond it a recalculation takes many seconds (500 in a
@@ -11,8 +11,9 @@
 export const MAX_LUMINAIRES = 500;
 
 import { ILLUMINANCE_SCALE } from './workplane.js';
+import { t, decimal, formatNumber as fmtNumber, planeName } from './i18n.js';
 
-/** Lowest mounting height, m: above the 0.8 m work plane (spec, "Входные параметры"). */
+/** Lowest mounting height, m: above the 0.8 m work plane (spec, "Input parameters"). */
 export const HM_MIN = 0.9;
 
 /**
@@ -25,70 +26,69 @@ export const photometricHeight = (hm, housing = 0) => hm - housing;
 export const ceilingDrop = (H, hm, housing = 0) => H - photometricHeight(hm, housing);
 
 /**
- * Parameters entered by the user. Ranges follow the spec table "Входные параметры" (input parameters).
+ * Parameters entered by the user. Ranges follow the spec table "Input parameters".
  * The subdivision step is not a user parameter: it is chosen by autoStep() in geometry.js.
  * Angles are in degrees here (UI only); the calculation modules take radians.
  *   group — form section (data-group in the page); int — integer only; gt — strict lower bound;
  *   step — change by the arrows and the ↑ / ↓ keys (0.1 unless stated otherwise); ladder — the arrows
  *   go to the next value of this list instead;
  *   max may depend on other values; when(values) — the field is shown and checked only if true;
- *   kind: 'choice' — a value set by the page (no field of its own).
+ *   kind: 'choice' — a value set by the page (no field of its own);
+ *   plane — the value is the height of a work plane and is shown as its name (H-0.8);
+ *   label, unit and maxNote are taken from the dictionary (form.<key>, unit.<unit>, form.note.<key>).
  */
 export const PARAMS = Object.freeze([
-  { key: 'L', group: 'room', label: 'Длина', sym: 'L', unit: 'м', def: 6, min: 1, max: 50, step: 0.1 },
-  { key: 'W', group: 'room', label: 'Ширина', sym: 'W', unit: 'м', def: 4, min: 1, max: 50, step: 0.1 },
-  { key: 'H', group: 'room', label: 'Высота', sym: 'H', unit: 'м', def: 3, min: 2, max: 20, step: 0.1 },
-  { key: 'rhoC', group: 'refl', label: 'Потолок', sym: 'ρ<sub>1</sub>', unit: '', def: 0.7, min: 0, max: 0.9, step: 0.1 },
-  { key: 'rhoW', group: 'refl', label: 'Стены', sym: 'ρ<sub>2…5</sub>', unit: '', def: 0.5, min: 0, max: 0.9, step: 0.1 },
-  { key: 'rhoF', group: 'refl', label: 'Пол', sym: 'ρ<sub>0</sub>', unit: '', def: 0.2, min: 0, max: 0.9, step: 0.1 },
-  // the arrows of E_n walk the scale of illuminance levels (100 → 150 → 200 …), those of h_р switch
+  { key: 'L', group: 'room', get label() { return t('form.L'); }, get unit() { return t('unit.m'); }, def: 6, min: 1, max: 50, step: 0.1 },
+  { key: 'W', group: 'room', get label() { return t('form.W'); }, get unit() { return t('unit.m'); }, def: 4, min: 1, max: 50, step: 0.1 },
+  { key: 'H', group: 'room', get label() { return t('form.H'); }, get unit() { return t('unit.m'); }, def: 3, min: 2, max: 20, step: 0.1 },
+  { key: 'rhoC', group: 'refl', get label() { return t('form.rhoC'); }, unit: '', def: 0.7, min: 0, max: 0.9, step: 0.1 },
+  { key: 'rhoW', group: 'refl', get label() { return t('form.rhoW'); }, unit: '', def: 0.5, min: 0, max: 0.9, step: 0.1 },
+  { key: 'rhoF', group: 'refl', get label() { return t('form.rhoF'); }, unit: '', def: 0.2, min: 0, max: 0.9, step: 0.1 },
+  // the arrows of E_n walk the scale of illuminance levels (100 → 150 → 200 …), those of h_wp switch
   // between the two standard planes 0.0 and 0.8 m; any other value can still be typed
-  { key: 'En', group: 'norm', label: 'Освещенность Ē', sym: 'E<sub>н</sub>', unit: 'лк', def: 200, min: 1, max: 5000, ladder: ILLUMINANCE_SCALE },
+  { key: 'En', group: 'norm', get label() { return t('form.En'); }, get unit() { return t('unit.lx'); }, def: 200, min: 1, max: 5000, ladder: ILLUMINANCE_SCALE },
   {
-    key: 'hwp', group: 'norm', label: 'Рабочая поверхность', sym: 'h<sub>р</sub>', unit: '', prefix: 'Г-', def: 0, min: 0, ladder: [0, 0.8],
-    max: (v) => Math.max(0, (v.H ?? 20) - 0.1), maxNote: 'H − 0,1',
+    key: 'hwp', group: 'norm', get label() { return t('form.hwp'); }, unit: '', plane: true, def: 0, min: 0, ladder: [0, 0.8],
+    max: (v) => Math.max(0, (v.H ?? 20) - 0.1), get maxNote() { return t('form.note.hwp'); },
   },
   // uniformity required by the norm, U₀ = Emin / Ē; empty — not set (stage 7)
-  { key: 'U0n', group: 'norm', label: 'Равномерность U₀', sym: 'U<sub>0</sub>', unit: '', def: null, min: 0.1, max: 1, step: 0.05, optional: true },
-  { key: 'mf', group: 'norm', label: 'Коэффициент эксплуатации MF', sym: 'MF', unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
-  { key: 'nx', group: 'grid', label: 'Вдоль X', sym: 'n<sub>x</sub>', unit: 'шт', def: 3, min: 1, max: 30, int: true, step: 1 },
-  { key: 'ny', group: 'grid', label: 'Вдоль Y', sym: 'n<sub>y</sub>', unit: 'шт', def: 2, min: 1, max: 30, int: true, step: 1 },
+  { key: 'U0n', group: 'norm', get label() { return t('form.U0n'); }, unit: '', def: null, min: 0.1, max: 1, step: 0.05, optional: true },
+  { key: 'mf', group: 'norm', get label() { return t('form.mf'); }, unit: '', def: 0.75, min: 0.1, max: 1, step: 0.1 },
+  { key: 'nx', group: 'grid', get label() { return t('form.nx'); }, get unit() { return t('unit.pcs'); }, def: 3, min: 1, max: 30, int: true, step: 1 },
+  { key: 'ny', group: 'grid', get label() { return t('form.ny'); }, get unit() { return t('unit.pcs'); }, def: 2, min: 1, max: 30, int: true, step: 1 },
   // mounting height: the centre of the top of the housing (as in DIALux); it follows H while it is
   // at the ceiling (initForm)
   {
-    key: 'hm', group: 'grid', label: 'Высота установки', sym: 'h<sub>м</sub>', unit: 'м', def: 3, min: HM_MIN, step: 0.1,
-    max: (v) => v.H ?? 20, maxNote: 'не выше H',
+    key: 'hm', group: 'grid', get label() { return t('form.hm'); }, get unit() { return t('unit.m'); }, def: 3, min: HM_MIN, step: 0.1,
+    max: (v) => v.H ?? 20, get maxNote() { return t('form.note.hm'); },
   },
-  { key: 'psi', group: 'grid', label: 'Поворот', sym: 'ψ', unit: '°', def: 0, min: 0, max: 180, step: 90 },
+  { key: 'psi', group: 'grid', get label() { return t('form.psi'); }, unit: '°', def: 0, min: 0, max: 180, step: 90 },
   // photometry: 'cosine' without a file, 'file' with one (set by the page, no field)
   { key: 'phot', group: 'lumdata', kind: 'choice', def: 'cosine', options: [{ value: 'cosine' }, { value: 'file' }] },
-  { key: 'flux', group: 'lumdata', label: 'Поток', sym: 'Φ', unit: 'лм', def: 4000, gt: 0, max: 1e6, step: 100 },
-  { key: 'cct', group: 'lumdata', label: 'Цв. темп.', sym: 'T<sub>ц</sub>', unit: 'К', def: 3000, min: 1000, max: 20000, step: 100, when: (v) => v.phot === 'file' },
-  { key: 'power', group: 'lumdata', label: 'Мощность', sym: 'P', unit: 'Вт', def: 10, gt: 0, max: 1e5, step: 0.1, when: (v) => v.phot === 'file' },
+  { key: 'flux', group: 'lumdata', get label() { return t('form.flux'); }, get unit() { return t('unit.lm'); }, def: 4000, gt: 0, max: 1e6, step: 100 },
+  { key: 'cct', group: 'lumdata', get label() { return t('form.cct'); }, get unit() { return t('unit.K'); }, def: 3000, min: 1000, max: 20000, step: 100, when: (v) => v.phot === 'file' },
+  { key: 'power', group: 'lumdata', get label() { return t('form.power'); }, get unit() { return t('unit.W'); }, def: 10, gt: 0, max: 1e5, step: 0.1, when: (v) => v.phot === 'file' },
 ]);
 
-/** Parses a number from a string; accepts a decimal comma and spaces. */
+/**
+ * Parses a number from a string; accepts a decimal comma or point, spaces and the letter prefix of
+ * a plane name (H-0.8).
+ */
 export function parseNumber(s) {
   if (typeof s === 'number') return s;
-  const t = String(s).trim().replace(/^[ГгG]\s*-\s*/, '').replace(/\s+/g, '').replace(',', '.');
-  if (!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(t)) return NaN;
-  return Number(t);
+  const v = String(s).trim().replace(/^\p{L}\s*-\s*/u, '').replace(/\s+/g, '').replace(',', '.');
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(v)) return NaN;
+  return Number(v);
 }
 
-/** A value as its field shows it: decimal comma, the prefix of the field (Г- of the work plane). */
-export const shown = (p, x) => {
-  const t = formatNumber(x, 6);
-  return p?.prefix ? `${p.prefix}${t.includes(',') ? t : `${t},0`}` : t; // Г-0,0 as the planes are named
-};
+/** A value as its field shows it: the decimal separator of the language; a plane by its name. */
+export const shown = (p, x) => (p?.plane ? planeName(x) : formatNumber(x, 6));
 
-/** A typed value with every decimal point turned into a comma (fields always show a comma). */
-export const toComma = (s) => String(s).replace(/\./g, ',');
+/** A typed value with every decimal separator turned into the one of the language. */
+export const toDecimal = (s) => String(s).replace(/[.,]/g, decimal());
 
-/** Formats a number for display: decimal comma, no trailing zeros. */
-export function formatNumber(x, digits = 3) {
-  if (!Number.isFinite(x)) return '—';
-  return String(Number(x.toFixed(digits))).replace('.', ',');
-}
+/** Formats a number for display: decimal separator of the language, no trailing zeros. */
+export const formatNumber = fmtNumber;
 
 /** Reflectances of faces 0…5 (floor, ceiling, four walls) from form values. */
 export const faceRho = (v) => [v.rhoF, v.rhoC, v.rhoW, v.rhoW, v.rhoW, v.rhoW];
@@ -133,27 +133,29 @@ export function validateParams(raw) {
   for (const p of PARAMS) {
     if (p.kind === 'choice') {
       const x = raw[p.key] ?? p.def;
-      if (!p.options.some((o) => o.value === x)) errors[p.key] = 'Выберите вариант';
+      if (!p.options.some((o) => o.value === x)) errors[p.key] = t('form.err.choice');
       else values[p.key] = x;
       continue;
     }
     if (p.when && !p.when({ ...choices, ...values })) { values[p.key] = p.def; continue; }
     if (p.optional && (raw[p.key] == null || String(raw[p.key]).trim() === '')) { values[p.key] = null; continue; }
     const x = parseNumber(raw[p.key] ?? '');
-    if (!Number.isFinite(x)) { errors[p.key] = 'Введите число'; continue; }
-    if (p.int && !Number.isInteger(x)) { errors[p.key] = 'Введите целое число'; continue; }
+    if (!Number.isFinite(x)) { errors[p.key] = t('form.err.number'); continue; }
+    if (p.int && !Number.isInteger(x)) { errors[p.key] = t('form.err.int'); continue; }
     const max = typeof p.max === 'function' ? p.max(values) : p.max;
     const unit = p.unit && p.unit !== '°' ? ` ${p.unit}` : p.unit;
-    if (p.gt !== undefined && !(x > p.gt)) { errors[p.key] = `Должно быть больше ${formatNumber(p.gt)}${unit}`; continue; }
+    if (p.gt !== undefined && !(x > p.gt)) { errors[p.key] = t('form.err.gt', { x: formatNumber(p.gt), unit }); continue; }
     if (p.min !== undefined && x < p.min || x > max) {
-      const lo = p.gt !== undefined ? `> ${formatNumber(p.gt)}, не более ` : `${formatNumber(p.min)}…`;
-      errors[p.key] = `Допустимо ${lo}${formatNumber(max)}${unit}${p.maxNote ? ` (${p.maxNote})` : ''}`;
+      const note = p.maxNote ? ` (${p.maxNote})` : '';
+      errors[p.key] = p.gt !== undefined
+        ? t('form.err.rangeGt', { gt: formatNumber(p.gt), max: formatNumber(max), unit, note })
+        : t('form.err.range', { min: formatNumber(p.min), max: formatNumber(max), unit, note });
       continue;
     }
     values[p.key] = x;
   }
   if (Number.isInteger(values.nx) && Number.isInteger(values.ny) && values.nx * values.ny > MAX_LUMINAIRES) {
-    errors.ny = `Не более ${MAX_LUMINAIRES} светильников, сейчас ${values.nx} × ${values.ny} = ${values.nx * values.ny}`;
+    errors.ny = t('form.err.maxLum', { max: MAX_LUMINAIRES, nx: values.nx, ny: values.ny, n: values.nx * values.ny });
     delete values.ny;
   }
   return { ok: Object.keys(errors).length === 0, values, errors };
@@ -182,7 +184,7 @@ export function initForm(root, onChange) {
     fld.className = 'fld';
     fld.id = `w-${p.key}`;
     fld.innerHTML = `<label class="fl" for="in-${p.key}"><span class="t">${p.label}</span></label>
-      <div class="ibox"><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="Больше">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="Меньше">${DOWN}</button></span><input id="in-${p.key}" name="${p.key}" inputmode="decimal" autocomplete="off" spellcheck="false"
+      <div class="ibox"><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="${t('form.more')}">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="${t('form.less')}">${DOWN}</button></span><input id="in-${p.key}" name="${p.key}" inputmode="decimal" autocomplete="off" spellcheck="false"
         value="${p.def == null ? '' : shown(p, p.def)}"${p.placeholder ? ` placeholder="${p.placeholder}"` : ''} aria-describedby="err-${p.key}"><span class="unit">${p.unit}</span></div>
       <span class="ferr" id="err-${p.key}" role="alert" hidden></span>`;
     const input = fld.querySelector('input');
@@ -194,13 +196,13 @@ export function initForm(root, onChange) {
       check();
     };
     fld.querySelectorAll('.spin button').forEach((b) => b.addEventListener('click', () => bump(Number(b.dataset.d))));
-    // the decimal separator is always shown as a comma, whatever is typed (stage 7)
-    // a field with a prefix shows it again after editing (Г-0,8)
-    if (p.prefix) input.addEventListener('change', () => { const x = parseNumber(input.value); if (Number.isFinite(x)) input.value = shown(p, x); });
+    // the decimal separator is always the one of the language, whatever is typed (stages 7, 8)
+    // a plane field shows the plane name again after editing (H-0.8)
+    if (p.plane) input.addEventListener('change', () => { const x = parseNumber(input.value); if (Number.isFinite(x)) input.value = shown(p, x); });
     input.addEventListener('input', () => {
-      if (!input.value.includes('.')) return;
+      if (!input.value.includes(decimal() === ',' ? '.' : ',')) return;
       const at = input.selectionStart;
-      input.value = toComma(input.value);
+      input.value = toDecimal(input.value);
       if (at != null) input.setSelectionRange(at, at);
     });
     input.addEventListener('keydown', (e) => {
@@ -245,7 +247,7 @@ export function initForm(root, onChange) {
   function set(v, { exact = false } = {}) {
     for (const [k, x] of Object.entries(v)) {
       if (k in choice) choice[k] = x;
-      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? shown(PARAMS.find((q) => q.key === k), x) : toComma(x);
+      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? shown(PARAMS.find((q) => q.key === k), x) : toDecimal(x);
     }
     clearTimeout(timer);
     check(!exact);
