@@ -150,10 +150,12 @@ Stage 5 — photometric files (IES LM-63 and EULUMDAT); accepted 5 Nov 2026 (`np
 the C direction and the luminaire length orientation agree with DIALux):
 - `js/photfile.js`: parsers reducing both formats to one table (stored C planes × γ angles, cd) with
   the symmetry (`rot`, `quad`, `half0`, `half90` — LDT Isym 3 starts at C270 —, `none`), sizes and the
-  rated flux (LDT: Φ_lamps of the first lamp set · LORL; IES states no luminaire flux). Quirks met in
-  the Maytoni library are tolerated with a warning (an LDT declaring Isym 0/2/4 with one plane is
-  read as rotational; the LDT conversion factor is not applied: the tables integrate to the rated
-  flux without it); broken files are rejected with a message in Russian. IES horizontal angles are
+  rated flux (LDT: Φ_lamps of the first lamp set · LORL · conversion factor; IES states no luminaire
+  flux). The LDT conversion factor (field 24) multiplies the intensities, as in DIALux (since 20 Nov
+  2026: Nostalgia.ldt 880 lm · 0.5 = 440 lm, Reif-DL048-01W.ldt 640 lm · 0.852 = 545 lm, both as in
+  DIALux), with a warning when it is not 1. Quirks met in the Maytoni library are tolerated with a
+  warning (an LDT declaring Isym 0/2/4 with one plane is read as rotational); broken files are
+  rejected with a message in Russian. IES horizontal angles are
   read as C angles as they are; the luminaire length lies along C0–C180 in IES and along C90–C270
   in LDT (ERCO pairs: IES width = LDT length, identical C angles);
 - `js/photometry.js`: the table expanded to the full circle, a bilinear interpolant in (C, γ) and the

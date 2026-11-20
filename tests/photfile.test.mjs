@@ -149,7 +149,7 @@ test('errors are reported in Russian with a reason', () => {
 // ---- real files ---------------------------------------------------------------------------------
 
 test('fixtures: LDT flux by the table within 1 % of the rated flux (the stage 5 criterion)', () => {
-  const files = readdirSync(FIX).filter((f) => /\.ldt$/i.test(f) && !f.startsWith('DL058') && !f.startsWith('Zoom')); // Zoom: LORL = 1 % by mistake
+  const files = readdirSync(FIX).filter((f) => /\.ldt$/i.test(f) && !f.startsWith('DL058') && !f.startsWith('Zoom') && !f.startsWith('Reif')); // Zoom: LORL = 1 % by mistake; Reif: LORL 85.2 % and factor 0.852 for a table of 100 %
   assert.ok(files.length >= 10);
   for (const f of files) {
     const t = load(f);
@@ -186,7 +186,8 @@ test('fixtures: library quirks — broken files rejected, one-plane files read a
   assert.match(one.warnings.join(' '), /одна плоскость C/);
   const sets = load('DL094-GU10-W-60.ldt');  // 4 lamp sets: the first is used
   assert.equal(sets.lampFlux, 570);
-  assert.match(sets.warnings.join(' '), /не применяется/); // conversion factor 0.8 is not applied
+  assert.match(sets.warnings.join(' '), /Применен коэффициент пересчета силы света 0,8 /); // field 24
+  assert.ok(Math.abs(sets.ratedFlux - 456) < 1e-9);         // 570 lm · 100 % · 0.8
   assert.ok(Math.abs(photOf(sets).flux / sets.ratedFlux - 1) < 0.01);
   // the same luminaire, the same shape, but files disagree on the flux (180 vs 10 lm)
   const a = photOf(load('TR186-1-8W4K-B.ies')), b = photOf(load('TR186-1-8W4K-B.ldt'));
@@ -293,14 +294,22 @@ const REF_FILES = [
   'TR152-1-7W3K-PT.ldt', 'TR186-1-8W4K-B.ies', 'TR186-1-8W4K-B.ldt'];
 const refUrl = new URL('./fixtures/stage5_reference.txt', import.meta.url);
 let refText = null;
+// true while the fixture is the one written before 20 Nov 2026 (without field 24); set to false
+// after rerunning matlab/stage5_reference.m and copying its output
+const REF_STAMP_NO_CF = true;
 try { refText = readFileSync(refUrl, 'utf8'); } catch { /* not yet produced */ }
 
 test('MATLAB reference: flux and intensities of the fixture files (1e-9)', { skip: !refText && 'tests/fixtures/stage5_reference.txt is absent' }, () => {
   const phots = REF_FILES.map((f) => photOf(load(f)));
+  // tests/fixtures/stage5_reference.txt was written before field 24 of LDT was applied (20 Nov 2026):
+  // its values are multiplied here by the file's factor (only DL094-GU10-W-60.ldt has one, 0.8);
+  // the updated matlab/stage5_reference.m applies it itself, and a rerun gives factor 1 here
+  const cf = REF_FILES.map((f) => (REF_STAMP_NO_CF && /\.ldt$/.test(f) ? load(f).conv : 1));
   let nFlux = 0, nI = 0, worst = 0;
   for (const line of refText.trim().split(/\r?\n/)) {
-    const [kind, k, C, g, v] = line.trim().split(/\s+/).map(Number);
+    let [kind, k, C, g, v] = line.trim().split(/\s+/).map(Number);
     const p = phots[k - 1];
+    v *= cf[k - 1];
     if (kind === 1) {
       const e = Math.abs(p.flux / v - 1);
       worst = Math.max(worst, e); nFlux++;
@@ -325,9 +334,19 @@ test('LDT lamp sets are read one after another (6 lines each); another set scale
   const p2 = createPhotometry({ type: 'file', table: t, flux: 520 });
   assert.ok(Math.abs(p2.flux - 520) < 1e-9);
   assert.ok(Math.abs(p2.intensity(0, 0.3) / p1.intensity(0, 0.3) - 520 / p1.flux) < 1e-12);
-  const n = load('Nostalgia.ldt'); // three sets, 2.5° steps, conversion factor 0.5 (not applied)
+  const n = load('Nostalgia.ldt'); // three sets, 2.5° steps, conversion factor 0.5
   assert.deepEqual(n.lampSets.map((s) => s.flux), [880, 930, 880]);
   assert.ok(Math.abs(photOf(n).flux / n.ratedFlux - 1) < 0.01);
+  assert.ok(Math.abs(photOf(n).flux - 440) < 0.01 * 440);  // DIALux: 440 lm (20 Nov 2026)
+});
+
+test('LDT field 24 (conversion factor) is applied as in DIALux: Reif DL048-01W 640 lm · 0.852 = 545 lm', () => {
+  const t = load('Reif-DL048-01W.ldt');
+  assert.equal(t.conv, 0.852);
+  assert.ok(Math.abs(photOf(t).flux - 545.28) < 0.01 * 545.28, `${photOf(t).flux}`);
+  assert.match(t.warnings.join(' '), /Применен коэффициент пересчета силы света 0,852/);
+  // this file also states LORL = 85.2 % while its table integrates to 100 %: the flux comes from the table
+  assert.match(t.warnings.join(' '), /коэффициент пересчета 0,852\) не совпадает/);
 });
 
 test('LDT with LORL = 1 instead of 100: the flux comes from the intensity table, with a warning', async () => {

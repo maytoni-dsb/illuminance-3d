@@ -122,7 +122,8 @@ function t = read_ldt(txt)
     case 3, idx = mod((3*Mc/4) + (0:Mc/2), Mc) + 1;
     case 4, idx = 1:Mc/4+1;
   end
-  I = reshape(d(1:numel(idx)*Ng), Ng, numel(idx)) * flux / 1000;
+  cf = num(24); if ~(cf > 0), cf = 1; end   % field 24, conversion factor (applied since 20 Nov 2026)
+  I = reshape(d(1:numel(idx)*Ng), Ng, numel(idx)) * flux / 1000 * cf;
   C = Cd(idx);
   syms = {'none', 'rot', 'half0', 'half90', 'quad'};
   t.sym = syms{isym + 1};

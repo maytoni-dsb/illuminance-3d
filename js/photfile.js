@@ -222,7 +222,11 @@ export function parseLdt(text, fileName = '') {
   const areaL = mm(16, 'areaL'), areaB = mm(17, 'areaB');
   const areaH = [18, 19, 20, 21].map((n) => mm(n, 'areaH'));
   const lorl = num(23, 'lorl');
-  const conv = num(24, 'conv');
+  // field 24, the conversion factor for luminous intensities, multiplies the table (decision of
+  // 20 Nov 2026: DIALux applies it, e.g. Nostalgia.ldt 880 lm · 0.5 = 440 lm); a factor that is
+  // not positive is ignored with a warning
+  const convRaw = num(24, 'conv');
+  const conv = convRaw > 0 ? convRaw : 1;
   const tilt = num(25, 'tilt');
   const nSets = int(26, 'nSets');
   if (!(nSets >= 1 && nSets <= 50)) fail(t('pf.nSets', { n: nSets }));
@@ -280,11 +284,12 @@ export function parseLdt(text, fileName = '') {
   if (have < need) fail(t('pf.count', { have, need, planes: nStored, angles: Ng }));
   if (have > need) warnings.push(t('pf.extra', { n: have - need }));
   if (!(lampFlux > 0)) fail(t('pf.lampFlux', { v: lampFlux }));
-  const scale = lampFlux / 1000;
+  const scale = lampFlux / 1000 * conv;
   const raw = new Float64Array(need);
   for (let i = 0; i < need; i++) raw[i] = next('cd') * scale;
   if (Math.abs(tilt) > 1e-9) warnings.push(t('pf.wTilt', { v: tilt }));
-  if (Math.abs(conv - 1) > 1e-9) warnings.push(t('pf.wConv', { v: conv }));
+  if (!(convRaw > 0)) warnings.push(t('pf.wConvBad', { v: convRaw }));
+  else if (Math.abs(conv - 1) > 1e-9) warnings.push(t('pf.wConv', { v: formatNumber(conv, 3) }));
 
   checkAscending(Gd, 'gAngles');
   if (Gd[0] < -1e-9 || Gd[Ng - 1] > 180 + 1e-9) fail(t('pf.gRange'));
@@ -315,9 +320,10 @@ export function parseLdt(text, fileName = '') {
     gamma: Gd.map((x) => x * DEG),
     cd,
     sym,
-    ratedFlux: lampFlux * lorl / 100,
+    ratedFlux: lampFlux * lorl / 100 * conv,
     lampFlux,
     lor: lorl / 100,
+    conv,
     absolute: nLamps < 0,
     power: lampSets[0].power,
     cct: lampSets[0].cct,
@@ -338,7 +344,10 @@ function finish(t) {
     const { planes, rows } = expandPlanes({ ...t, C: Float64Array.from(t.C), gamma: Float64Array.from(t.gamma) });
     const f = tableFlux(planes, rows, Float64Array.from(t.gamma)).total;
     if (Math.abs(f / t.ratedFlux - 1) > 0.01) {
-      t.warnings.push(tr('pf.wFlux', { rated: fmt1(t.ratedFlux), lor: fmt1(100 * t.lor), f: fmt1(f) }));
+      const conv = t.conv ?? 1;
+      t.warnings.push(Math.abs(conv - 1) > 1e-9
+        ? tr('pf.wFluxConv', { rated: fmt1(t.ratedFlux), lor: fmt1(100 * t.lor), conv: formatNumber(conv, 3), f: fmt1(f) })
+        : tr('pf.wFlux', { rated: fmt1(t.ratedFlux), lor: fmt1(100 * t.lor), f: fmt1(f) }));
     }
   }
   for (let i = 0; i < t.cd.length; i++) {
