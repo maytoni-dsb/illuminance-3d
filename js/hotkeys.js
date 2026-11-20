@@ -22,3 +22,24 @@ export function hotkeyAction(e) {
   if (e.ctrlKey || e.metaKey || e.altKey) return null;
   return HOTKEYS[e.key] ?? null;
 }
+
+/**
+ * Keys of the plan editor (stage 2.1), or null: Ctrl+Z — undo, Ctrl+Y and Ctrl+Shift+Z — redo
+ * (Cmd on a Mac), Delete and Backspace — delete the selection, the arrows — move it by one step of
+ * the plan grid ({ move: [±1 | 0, ±1 | 0] }, +1 is +X right and +Y up). Inside a text field the
+ * keys keep their own meaning (`inField`).
+ */
+export function editorKey(e, inField = false) {
+  if (inField) return null;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && !e.altKey) {
+    const z = e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z', y = e.code === 'KeyY' || e.key === 'y' || e.key === 'Y';
+    if (z) return e.shiftKey ? 'redo' : 'undo';
+    if (y && !e.shiftKey) return 'redo';
+    return null;
+  }
+  if (mod || e.altKey) return null;
+  if (e.key === 'Delete' || e.key === 'Backspace') return 'delete';
+  const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+  return arrows[e.key] ? { move: arrows[e.key] } : null;
+}

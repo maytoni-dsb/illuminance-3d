@@ -26,16 +26,16 @@
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
       "./js/groupform.js": "./js/groupform.js?v=44a9a357",
       "./js/groups.js": "./js/groups.js?v=0bf40a48",
-      "./js/groupui.js": "./js/groupui.js?v=46b6e1fc",
-      "./js/help.js": "./js/help.js?v=070403f0",
-      "./js/hotkeys.js": "./js/hotkeys.js?v=82950a0c",
+      "./js/groupui.js": "./js/groupui.js?v=6b1cd1b4",
+      "./js/help.js": "./js/help.js?v=98159935",
+      "./js/hotkeys.js": "./js/hotkeys.js?v=ddc6eb6d",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=5b649b69",
-      "./js/lang-en.js": "./js/lang-en.js?v=57528f0a",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=39d0e84e",
-      "./js/model.js": "./js/model.js?v=e56074d1",
+      "./js/lang-de.js": "./js/lang-de.js?v=eb9ad033",
+      "./js/lang-en.js": "./js/lang-en.js?v=857ec953",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=98b84db8",
+      "./js/model.js": "./js/model.js?v=d6dfcba8",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -43,7 +43,8 @@
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=834ff87e",
-      "./js/planview.js": "./js/planview.js?v=6c83bff0",
+      "./js/planedit.js": "./js/planedit.js?v=8cee9dab",
+      "./js/planview.js": "./js/planview.js?v=4da55d50",
       "./js/project.js": "./js/project.js?v=b41537ba",
       "./js/report.js": "./js/report.js?v=5784e9bc",
       "./js/reportsvg.js": "./js/reportsvg.js?v=8b0d8a9f",
@@ -51,7 +52,7 @@
       "./js/solver.js": "./js/solver.js?v=76236421",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=1cd77bb9",
-      "./js/view3d.js": "./js/view3d.js?v=3ee518f3",
+      "./js/view3d.js": "./js/view3d.js?v=0a47599b",
       "./js/worker.js": "./js/worker.js?v=a2071819",
       "./js/workplane.js": "./js/workplane.js?v=2c3e96f7"
     }
@@ -574,6 +575,8 @@
     .gfields .fsub.wide,.gfields .fld.wide{grid-column:1 / -1}
     .gfields .fsub small{font-weight:400;color:var(--muted)}
     .gchoice .seg button{height:26px;padding:0 10px;font-size:12px}
+    .fsub .tgl{margin-left:auto;font-weight:400;font-size:12px}
+    #edithint{margin-top:6px}
     #placenote{color:var(--err)}
   </style>
 </head>
@@ -666,6 +669,10 @@
           <div class="gshint" id="hmnote"></div>
           <div class="gshint" id="estnote" hidden></div>
           <div class="gshint warn" id="placenote" role="alert" hidden></div>
+          <div class="fsub"><span data-i18n="lum.planGrid"></span> <button type="button" class="help" data-help="plangrid" data-i18n-attr="aria-label:lum.planGridHelp" aria-expanded="false">?</button>
+            <label class="tgl sm" data-i18n-attr="title:lum.snapTip"><input type="checkbox" id="snap" role="switch"> <span data-i18n="lum.snap"></span></label></div>
+          <div class="fgrid" id="pgrid" style="--cols:2"></div>
+          <div class="gshint" id="edithint" data-i18n-html="lum.editHint"></div>
         </div>
       </form>
 
@@ -811,7 +818,7 @@
 
 <script type="module">
   import { createRoom, autoStep } from './js/geometry.js';
-  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES, photometricHeight, ceilingDrop } from './js/ui.js';
+  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES, photometricHeight, ceilingDrop, parseNumber } from './js/ui.js';
   import { stage2Checks } from './js/checks2.js';
   import { faceAverages } from './js/direct.js';
   import { luminance, exposure } from './js/tonemap.js';
@@ -821,18 +828,22 @@
   import { initHelp } from './js/help.js';
   import { levelStatus, bilinear, cellStats } from './js/workplane.js';
   import { isolineSet } from './js/isolines.js';
-  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D } from './js/planview.js';
+  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D, drawEditor } from './js/planview.js';
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry } from './js/photometry.js';
   import {
     formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-    addGroup, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, placementErrors, lumCount, calcParams as modelCalcParams,
+    addGroup, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeLetter,
   } from './js/model.js';
   import { groupPoints, groupCount } from './js/groups.js';
-  import { renderTypes, renderGroups, initGroupForm, typeName } from './js/groupui.js';
+  import { renderTypes, renderGroups, initGroupForm, typeName, typeColor } from './js/groupui.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
-  import { hotkeyAction } from './js/hotkeys.js';
+  import { hotkeyAction, editorKey } from './js/hotkeys.js';
+  import {
+    planItems, pickAt, selectionOf, combine, boxSelection, selectedItems, isSelected, isEmpty, emptySelection,
+    dragDelta, clampDelta, moveSelection, deleteSelection,
+  } from './js/planedit.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
   import { initReport } from './js/reportui.js';
@@ -900,8 +911,10 @@
           const css = getComputedStyle($('.viewcard'));
           drawRoomPlan(ctx, info.T, size, { L: room.L, W: room.W, xs, ys, ink: css.getPropertyValue('--ink2').trim() || '#2e2e2e' });
           if (planDraw) drawPlaneOnPlan(ctx, info.T, size, planDraw);
+          if (m) drawEditor(ctx, info.T, size, editorDraw(m, css.getPropertyValue('--accent').trim() || '#7C54FE'));
         } else if (planDraw) drawPlane3D(ctx, info.project, size, planDraw);
       },
+      onPlanPointer: (type, e) => planPointer(type, e),
       onHover(info) {
         // only the values: illuminance, and the luminance of a face (a plane has none)
         const pill = $('#hover');
@@ -1103,8 +1116,10 @@
     current = values;
     const ar = activeRoom();
     if (ar && !switching) {
-      const H0 = ar.model.room.H;
+      const H0 = ar.model.room.H, prev = ar.model;
       ar.model = applyTypeValues(applyRoomValues(ar.model, values), selType, values);
+      const ty = (m) => m.types.find((x) => x.id === selType);
+      if (JSON.stringify([roomValues(prev), ty(prev) && typeValues(ty(prev))]) !== JSON.stringify([roomValues(ar.model), ty(ar.model) && typeValues(ty(ar.model))])) remember(prev);
       if (ar.norm && !normMatches(ar.norm, values)) ar.norm = null; // edited by hand
       if (values.H !== H0) loadGroupForm();                           // a height may have followed the room
       else gform.context(gctx(ar.model, ar.model.groups.find((g) => g.id === selGroup)));
@@ -1121,6 +1136,7 @@
     renderNormSrc();
     showCentre(m);
     const place = showPlacement(m);
+    lastPer = place.per;
     renderLum(m, place.per);
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
@@ -1420,6 +1436,7 @@
 
   /** Puts an edited model of the active room in place; form: the group fields are loaded again. */
   function setModel(m, { form = false } = {}) {
+    remember(activeRoom().model);
     activeRoom().model = m;
     if (form) loadGroupForm();
     autosave();
@@ -1461,9 +1478,13 @@
   const form = initForm($('#form'), update, { groups: ['room', 'refl', 'norm', 'lumdata'] });
   // fields of the selected group (js/groupui.js): every valid change goes to the model
   const gform = initGroupForm($('#gform'), (g, extra) => {
-    if (extra?.at != null) selPoint = extra.at;
-    const m = model();
-    if (!m.groups.some((x) => x.id === g.id)) return;
+    if (extra?.at != null) {
+      selPoint = extra.at;
+      if (g.kind === 'single') sel = { groups: new Set(), points: new Map([[g.id, new Set([selPoint])]]) };
+    }
+    const m = model(), old = m.groups.find((x) => x.id === g.id);
+    if (!old) return;
+    if (JSON.stringify(old) !== JSON.stringify(g)) remember(m);
     activeRoom().model = replaceGroup(m, g.id, g);
     $('#estnote').hidden = true;
     autosave();
@@ -1475,7 +1496,7 @@
     photFile = f;
     if (switching) return; // another room or type is being loaded: its values come with it
     const ar = activeRoom();
-    if (ar) { ar.model = withTypeFile(ar.model, selType, f ? { name: f.name, text: f.text, set: f.set } : null); autosave(); }
+    if (ar) { remember(ar.model); ar.model = withTypeFile(ar.model, selType, f ? { name: f.name, text: f.text, set: f.set } : null); autosave(); }
     if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
     else { form.set({ phot: 'cosine', flux: 4000 }); $('#estnote').hidden = true; }
     // a new file: estimate the number of luminaires of the selected grid of this type; another lamp
@@ -1504,14 +1525,20 @@
     current = form.values();
     activeRoom().model = applyTypeValues(model(), selType, current);
   }
-  /** Selects a group: its fields, and its type in the form. */
+  /** Selects a group (in the list and on the plan): its fields, and its type in the form. */
   function selectGroup(id, { point = 0 } = {}) {
     const m = model(), g = m.groups.find((x) => x.id === id) ?? m.groups[0];
-    selGroup = g?.id ?? null; selPoint = point;
-    $('#estnote').hidden = true;
+    sel = !g ? emptySelection() : g.kind === 'single' ? { groups: new Set(), points: new Map([[g.id, new Set([point])]]) } : { groups: new Set([g.id]), points: new Map() };
+    focusGroup(g?.id ?? null, point);
+    refresh();
+  }
+  /** Shows the fields of a group without changing the selection on the plan. */
+  function focusGroup(id, point = 0) {
+    const m = model(), g = m.groups.find((x) => x.id === id);
+    if (selGroup !== id) $('#estnote').hidden = true;
+    selGroup = id; selPoint = point;
     if (g && g.type !== selType) showType(g.type);
     loadGroupForm();
-    refresh();
   }
 
   $('#types').addEventListener('click', (e) => {
@@ -1519,17 +1546,21 @@
     if (!b || b.disabled) return;
     let m = model();
     if (b.dataset.type) { showType(b.dataset.type); refresh(); return; }
-    if (b.dataset.addtype) { const r = addType(m); activeRoom().model = r.model; showType(r.id); autosave(); refresh(); return; }
+    if (b.dataset.addtype) { remember(m); const r = addType(m); activeRoom().model = r.model; showType(r.id); autosave(); refresh(); return; }
     if (b.dataset.deltype) {
       const next = removeType(m, b.dataset.deltype);
       if (!next) return;
+      remember(m);
       activeRoom().model = next;
       if (selType === b.dataset.deltype) showType(next.types[0].id);
       autosave(); refresh();
     }
   });
+  let named = false; // the name being typed is one step of the undo history
+  $('#tyname').addEventListener('focus', () => { named = false; });
   $('#tyname').addEventListener('input', (e) => {
     e.stopPropagation(); // not a calculation input
+    if (!named) { remember(model()); named = true; }
     activeRoom().model = renameType(model(), selType, e.target.value);
     renderLum(model()); report.invalidate('rooms'); autosave();
   });
@@ -1540,21 +1571,208 @@
     const m = model();
     if (b.dataset.group) { selectGroup(b.dataset.group); return; }
     if (b.dataset.add) {
+      remember(m);
       const r = addGroup(m, b.dataset.add, selType);
       activeRoom().model = r.model; autosave(); selectGroup(r.id); return;
     }
     const act = b.dataset.act;
     if (act === 'dup') {
       const r = duplicateGroup(m, selGroup, 0.5, 0.5);
-      if (r) { activeRoom().model = r.model; autosave(); selectGroup(r.id); }
+      if (r) { remember(m); activeRoom().model = r.model; autosave(); selectGroup(r.id); }
     } else if (act === 'ungroup') {
-      activeRoom().model = ungroupGroup(m, selGroup); autosave(); selectGroup(selGroup);
+      remember(m); activeRoom().model = ungroupGroup(m, selGroup); autosave(); selectGroup(selGroup);
     } else if (act === 'del') {
       const k = m.groups.findIndex((g) => g.id === selGroup), next = removeGroup(m, selGroup);
       if (!next) return;
-      activeRoom().model = next; autosave(); selectGroup(next.groups[Math.max(0, k - 1)].id);
+      remember(m); activeRoom().model = next; autosave(); selectGroup(next.groups[Math.max(0, k - 1)].id);
     }
   });
+
+  // ---- plan editor (stage 2.1): selection, dragging, the selection rectangle, keys, undo ----
+  let sel = emptySelection();  // selected groups and single luminaires (js/planedit.js)
+  let drag = null;             // { mode: 'move' | 'box', … } while the left button is down on the plan
+  let lastPer = new Map();     // group id → number of placement errors (last refresh)
+  const itemsNow = () => planItems(model(), sizeOf);
+  /** The luminaires on the view while dragging: no calculation until the button is released. */
+  function previewLums() {
+    const m = model();
+    try { view?.setLuminaires(viewSets(m, paramsOf(m))); } catch (e) { /* a height outside the room: drawn on release */ }
+    view?.refresh();
+  }
+  /** The first luminaire of a selection: { group, index }. */
+  function firstOf(s) {
+    for (const g of model().groups) {
+      if (s.groups.has(g.id)) return { group: g.id, index: 0 };
+      const p = s.points.get(g.id);
+      if (p?.size) return { group: g.id, index: Math.min(...p) };
+    }
+    return null;
+  }
+  /** What the overlay draws for the editor. */
+  function editorDraw(m, accent) {
+    const kOf = new Map(m.types.map((ty, k) => [ty.id, k]));
+    const bad = new Set(placementErrors(m, sizeOf).map((e) => `${e.group}:${e.index}`));
+    const guides = [];
+    for (const g of m.groups) {
+      if (!sel.groups.has(g.id)) continue;
+      if (g.kind === 'circle') guides.push({ kind: 'circle', cx: g.cx, cy: g.cy, r: g.r });
+      else if (g.kind === 'line' || g.kind === 'lines') {
+        const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1, nx = -(g.y1 - g.y0) / len, ny = (g.x1 - g.x0) / len;
+        const segments = [];
+        for (let r = 0; r < (g.kind === 'lines' ? g.rows : 1); r++) {
+          const o = r * (g.gap ?? 0);
+          segments.push([[g.x0 + nx * o, g.y0 + ny * o], [g.x1 + nx * o, g.y1 + ny * o]]);
+        }
+        guides.push({ kind: 'line', segments });
+      }
+    }
+    return {
+      items: planItems(m, sizeOf), color: (ty) => typeColor(kOf.get(ty) ?? 0), letter: (ty) => typeLetter(kOf.get(ty) ?? 0),
+      selected: (it) => isSelected(sel, it.group, it.index, it.kind), grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
+      guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad,
+    };
+  }
+  /** Pointer of the plan (left mouse button, view3d.onPlanPointer). */
+  function planPointer(type, e) {
+    if (stage !== 2 || !activeRoom()) return false;
+    const m = model(), tol = 4 * e.k;
+    if (type === 'hover') {
+      const it = pickAt(itemsNow(), e.x, e.y, tol);
+      return it ? (isSelected(sel, it.group, it.index, it.kind) ? 'move' : 'pointer') : '';
+    }
+    if (type === 'down') {
+      const items = itemsNow(), it = pickAt(items, e.x, e.y, tol);
+      if (it) {
+        if (e.shift || e.ctrl) sel = combine(sel, selectionOf(it), 'toggle');
+        else if (!isSelected(sel, it.group, it.index, it.kind)) sel = selectionOf(it);
+        if (isSelected(sel, it.group, it.index, it.kind)) {
+          focusGroup(it.group, it.kind === 'single' ? it.index : 0);
+          drag = { mode: 'move', x0: e.x, y0: e.y, anchor: { x: it.x, y: it.y }, base: m, items: selectedItems(items, sel), d: [0, 0] };
+        } else drag = null;
+      } else {
+        drag = { mode: 'box', x0: e.x, y0: e.y, x1: e.x, y1: e.y, add: e.shift || e.ctrl, base: sel };
+        if (!drag.add) sel = emptySelection();
+      }
+      renderLum(m, lastPer);
+      view?.refresh();
+      return true;
+    }
+    if (!drag) return undefined;
+    if (type === 'move') {
+      if (drag.mode === 'move') {
+        const d = dragDelta(drag.anchor, e.x - drag.x0, e.y - drag.y0, planGrid(m), drag.items, m.room.shape.L, m.room.shape.W);
+        if (d[0] !== drag.d[0] || d[1] !== drag.d[1]) {
+          drag.d = d;
+          activeRoom().model = moveSelection(drag.base, sel, d[0], d[1]);
+          previewLums();
+        }
+      } else { drag.x1 = e.x; drag.y1 = e.y; view?.refresh(); }
+      return undefined;
+    }
+    // released or cancelled
+    const dr = drag; drag = null;
+    if (dr.mode === 'move') {
+      if (type === 'cancel') { activeRoom().model = dr.base; previewLums(); return undefined; }
+      if (dr.d[0] || dr.d[1]) { remember(dr.base); autosave(); loadGroupForm(); refresh(); }
+    } else {
+      if (type !== 'cancel' && (Math.abs(dr.x1 - dr.x0) > tol || Math.abs(dr.y1 - dr.y0) > tol)) {
+        const box = boxSelection(itemsNow(), dr.x0, dr.y0, dr.x1, dr.y1);
+        sel = dr.add ? combine(dr.base, box) : box;
+        const first = firstOf(sel);
+        if (first) focusGroup(first.group, first.index);
+      }
+      renderLum(model(), lastPer);
+      view?.refresh();
+    }
+    return undefined;
+  }
+  /** Moves the selection by one step of the plan grid (the arrows), stopping at the walls. */
+  function nudge(dir) {
+    const m = model(), g = planGrid(m);
+    const items = selectedItems(planItems(m, sizeOf), sel);
+    const [dx, dy] = clampDelta(items, dir[0] * g.sx, dir[1] * g.sy, m.room.shape.L, m.room.shape.W);
+    if (!dx && !dy) return;
+    remember(m); activeRoom().model = moveSelection(m, sel, dx, dy); autosave(); loadGroupForm(); refresh();
+  }
+  /** Deletes the selection (Delete); the last luminaire of the room stays. */
+  function deleteSel() {
+    const m = model(), next = deleteSelection(m, sel);
+    if (!next) { toast(t('lum.lastLum')); return; }
+    if (next === m) return;
+    remember(m); activeRoom().model = next; sel = emptySelection(); autosave();
+    if (!next.groups.some((g) => g.id === selGroup)) selGroup = next.groups[0].id;
+    selPoint = 0;
+    loadGroupForm(); refresh();
+  }
+
+  // undo and redo: the models of the active room before each edit
+  const histories = new Map(); // room id → { past: [], future: [] }
+  const hist = () => { const id = project.active; if (!histories.has(id)) histories.set(id, { past: [], future: [] }); return histories.get(id); };
+  function remember(prev) {
+    if (switching || !prev) return;
+    const h = hist();
+    h.past.push(prev);
+    if (h.past.length > 100) h.past.shift();
+    h.future.length = 0;
+  }
+  function restore(m) {
+    activeRoom().model = m;
+    autosave();
+    if (!m.groups.some((g) => g.id === selGroup)) { selGroup = m.groups[0].id; selPoint = 0; }
+    const pruned = emptySelection();
+    for (const g of m.groups) {
+      if (sel.groups.has(g.id)) pruned.groups.add(g.id);
+      const p = sel.points.get(g.id);
+      if (p && g.kind === 'single') pruned.points.set(g.id, new Set([...p].filter((i) => i < g.points.length)));
+    }
+    sel = pruned;
+    showType(m.types.some((ty) => ty.id === selType) ? selType : m.types[0].id);
+    loadGroupForm(); showPlanGrid(); refresh();
+  }
+  function undo() { const h = hist(); if (!h.past.length) return; h.future.push(model()); restore(h.past.pop()); }
+  function redo() { const h = hist(); if (!h.future.length) return; h.past.push(model()); restore(h.future.pop()); }
+  document.addEventListener('keydown', (e) => {
+    if (stage !== 2 || normDlg.isOpen() || !activeRoom()) return;
+    const inField = !!e.target.closest?.('input, textarea, select, [contenteditable="true"]');
+    const a = editorKey(e, inField);
+    if (!a) return;
+    if (a === 'undo') { e.preventDefault(); undo(); }
+    else if (a === 'redo') { e.preventDefault(); redo(); }
+    else if (!view?.isPlan() || isEmpty(sel)) return;
+    else if (a === 'delete') { e.preventDefault(); deleteSel(); }
+    else if (a.move) { e.preventDefault(); nudge(a.move); }
+  });
+
+  // the plan grid: steps along X and Y, origin, snapping (kept with the room, not a calculation input)
+  const PG = [['sx', 0.001, 100], ['sy', 0.001, 100], ['ox', -1000, 1000], ['oy', -1000, 1000]];
+  $('#pgrid').innerHTML = PG.map(([k]) => `<div class="fld" id="w-pg-${k}"><label class="fl" for="in-pg-${k}"><span class="t">${t(`lum.pg.${k}`)}</span></label>
+    <div class="ibox"><input id="in-pg-${k}" inputmode="decimal" autocomplete="off" spellcheck="false"><span class="unit">${t('unit.m')}</span></div><span class="ferr" hidden></span></div>`).join('');
+  function showPlanGrid() {
+    const g = planGrid(model());
+    for (const [k] of PG) { $(`#in-pg-${k}`).value = formatNumber(g[k], 6); $(`#w-pg-${k}`).classList.remove('bad'); }
+    $('#snap').checked = g.snap;
+  }
+  let pgTimer = 0;
+  function readPlanGrid() {
+    const g = { ...planGrid(model()), snap: $('#snap').checked };
+    let ok = true;
+    for (const [k, lo, hi] of PG) {
+      const x = parseNumber($(`#in-pg-${k}`).value), good = Number.isFinite(x) && x >= lo && x <= hi && (k[0] !== 's' || x > 0);
+      const w = $(`#w-pg-${k}`), fe = w.querySelector('.ferr');
+      w.classList.toggle('bad', !good); fe.hidden = good;
+      fe.textContent = good ? '' : t('form.err.range', { min: formatNumber(k[0] === 's' ? 0.001 : lo), max: formatNumber(hi), unit: ` ${t('unit.m')}`, note: '' });
+      if (good) g[k] = x; else ok = false;
+    }
+    if (!ok) return;
+    activeRoom().model = { ...model(), plan: g };
+    autosave();
+    view?.refresh();
+  }
+  for (const ev of ['input', 'change']) {
+    $('#pgrid').addEventListener(ev, (e) => { e.stopPropagation(); clearTimeout(pgTimer); pgTimer = setTimeout(readPlanGrid, ev === 'input' ? 300 : 0); });
+  }
+  $('#snap').addEventListener('change', (e) => { e.stopPropagation(); readPlanGrid(); });
+  $('#snap').addEventListener('input', (e) => e.stopPropagation());
   $('#suggest').addEventListener('click', suggestGrid);
   $('#planes').addEventListener('click', (e) => {
     const b = e.target.closest('.pplan');
@@ -1692,8 +1910,10 @@
       $('#planenote').textContent = '';
     } finally { switching = false; }
     selGroup = r.model.groups[0]?.id ?? null; selPoint = 0;
+    sel = emptySelection(); drag = null;
     showType(r.model.groups[0]?.type ?? r.model.types[0].id);
     loadGroupForm();
+    showPlanGrid();
     refresh();
   }
   function switchRoom(id) {

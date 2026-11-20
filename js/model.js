@@ -20,6 +20,7 @@
 import { DEFAULTS, validateParams, faceRho, ceilingDrop, photometricHeight, HM_MIN, MAX_LUMINAIRES } from './ui.js';
 import { rectOutline } from './geometry.js';
 import { GROUP_KINDS, CIRCLE_ORIENT, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup } from './groups.js';
+import { cleanPlanGrid, PLAN_GRID } from './planedit.js';
 
 /** Shapes of the room the model takes (stage 2.3 adds L, U and T). */
 export const SHAPES = Object.freeze(['rect']);
@@ -276,6 +277,9 @@ export function ungroupGroup(m, id) {
   return g ? replaceGroup(m, id, ungroup(g, roomSize(m))) : m;
 }
 
+/** The grid of the plan editor of the room (steps, origin, snapping). */
+export const planGrid = (m) => m.plan ?? { ...PLAN_GRID };
+
 /** A new id with the prefix that no item of the list has: t1, t2… */
 export function newId(list, prefix) {
   const used = new Set(list.map((x) => x.id));
@@ -396,6 +400,7 @@ export function cleanModel(d) {
     return out;
   });
   const m = { room, design, types, groups };
+  if (d.plan) m.plan = cleanPlanGrid(d.plan); // the grid of the plan editor (not a calculation input)
   if (lumCount(m) > MAX_LUMINAIRES) fail('model.count');
   return m;
 }

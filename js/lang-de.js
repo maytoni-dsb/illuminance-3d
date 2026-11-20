@@ -91,6 +91,13 @@ export default {
       low: '{lums} mit dem photometrischen Zentrum nicht über der Nutzebene.',
     },
     notCalc: 'Die Anordnung enthält Fehler: es wird nicht berechnet',
+    planGrid: 'Planraster',
+    planGridHelp: 'Hilfe: das Planraster',
+    snap: 'Fangen',
+    snapTip: 'Eine gezogene Leuchte rastet an den Knoten des Planrasters ein',
+    pg: { sx: 'Schritt X', sy: 'Schritt Y', ox: 'Ursprung X', oy: 'Ursprung Y' },
+    editHint: 'Im Plan (F2): ein Klick wählt eine Gruppe, Umschalt fügt hinzu, ein Rechteck wählt mehrere; Ziehen oder die Pfeile verschieben, Entf löscht, Strg+Z macht rückgängig.',
+    lastLum: 'Ein Raum behält mindestens eine Leuchte',
   },
   gform: {
     nx: 'Entlang X', ny: 'Entlang Y', hm: 'Montagehöhe', psi: 'Drehung',
@@ -290,11 +297,11 @@ export default {
       },
       grid: {
         title: 'Leuchtenanordnung',
-        text: 'Ein regelmäßiges Raster n<sub>x</sub> × n<sub>y</sub>: von der Wand bis zur äußeren Reihe — ein halber Abstand.<br>' +
-          '<b>Vorschlagen</b> — eine Abschätzung der Leuchtenanzahl über den Raumwirkungsgrad und ein Raster mit ähnlichen Abständen in Länge und Breite.<br>' +
-          '<b>Montagehöhe h<sub>m</sub></b> — bis zur Oberkante des Gehäuses, wie in DIALux: Der Lichtschwerpunkt liegt um die Gehäusehöhe aus der Datei tiefer. ' +
-          'Bei h<sub>m</sub> = H sitzt die Leuchte an der Decke, und ihr nach oben gerichteter Lichtstrom wird nicht berücksichtigt.<br>' +
-          '<b>Drehung ψ</b> — der Winkel der C0-Ebene zur X-Achse gegen den Uhrzeigersinn, die Pfeile gehen in Schritten von 90°.',
+        text: 'Leuchtengruppen: ein <b>Raster</b> n<sub>x</sub> × n<sub>y</sub> (von der Wand bis zur äußeren Reihe ein halber Abstand; ein eigener Bereich ist möglich), eine <b>Linie</b> (nach Anzahl oder Abstand, mit Abstand von den Enden; die Drehung zählt ab der Richtung der Linie), <b>mehrere Linien</b>, ein <b>Kreis</b> (tangential, radial oder gleich ausgerichtet) und <b>einzelne</b> Leuchten mit eigener Höhe und Drehung. Eine Gruppe wird als Ganzes verschoben; heben Sie die Gruppierung auf, um Leuchten einzeln zu verschieben.<br><b>Vorschlagen</b> — eine Abschätzung der Leuchtenanzahl über den Raumwirkungsgrad für das gewählte Raster.<br><b>Montagehöhe h<sub>m</sub></b> — bis zur Oberkante des Gehäuses, wie in DIALux: das photometrische Zentrum liegt um die Gehäusehöhe tiefer.<br>Das Gehäuse einer Leuchte muss ganz im Raum liegen, sonst wird nicht berechnet.',
+      },
+      plangrid: {
+        title: 'Planraster',
+        text: 'Die Knoten, an denen eine im Plan gezogene Leuchte einrastet: die Schritte entlang X und Y und der Ursprung (ein Punkt, durch den seine Linien gehen). Die Pfeile verschieben die gewählten Leuchten um einen Schritt. Das Raster wird mit dem Raum im Projekt gespeichert und beeinflusst die Berechnung nicht.',
       },
       results: {
         title: 'Ergebnisse',

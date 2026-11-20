@@ -6,7 +6,7 @@ import { t } from './i18n.js';
 
 /** Topics: data-help="<key>" on a button.help, field keys "f:<key>", stages "stage1…3". */
 export const HELP_KEYS = Object.freeze([
-  'stage1', 'stage2', 'stage3', 'room', 'refl', 'norm', 'file', 'lumdata', 'grid', 'results', 'plane', 'view',
+  'stage1', 'stage2', 'stage3', 'room', 'refl', 'norm', 'file', 'lumdata', 'grid', 'plangrid', 'results', 'plane', 'view',
   'f:roomname', 'f:L', 'f:W', 'f:H', 'f:rhoC', 'f:rhoW', 'f:rhoF', 'f:En', 'f:hwp', 'f:U0n', 'f:mf', 'f:nx', 'f:ny',
   'f:hm', 'f:psi', 'f:flux', 'f:cct', 'f:power',
   'f:name', 'f:description', 'f:author', 'f:phone', 'f:email', 'f:customer',

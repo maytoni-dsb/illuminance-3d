@@ -649,6 +649,8 @@ export function createView(container, opts = {}) {
     plMaterial.uniforms.plain.value = planeDisplay === 'plan-color' ? 0 : 1;
     if (roomGroup) roomGroup.visible = !(shown && onPlan);
     // on the plan the luminaires are outlines only: their fill would hide the plan
+    // on the plan the page draws the luminaires on the overlay (stage 2.1 editor)
+    if (lumGroup) lumGroup.visible = !plan || !opts.onPlanPointer;
     lumGroup?.traverse((o) => { if (o.isMesh) o.visible = !plan; });
     if (planeOutline) planeOutline.visible = !!shown && planeDisplay === 'layer';
     if (planeLines) planeLines.visible = !!shown && planeDisplay === 'layer';
@@ -791,8 +793,24 @@ export function createView(container, opts = {}) {
   let lastMiddle = 0;         // time of the last wheel-button press, for the double click
 
   el.addEventListener('contextmenu', (e) => e.preventDefault());
+  // the plan editor of the page (stage 2.1): on the plan the left mouse button is its own
+  let editing = false;
+  const planEvent = (e) => {
+    const T = planTransform(), r = el.getBoundingClientRect();
+    const px = e.clientX - r.left, py = e.clientY - r.top, [x, y] = T.toRoom(px, py);
+    return { x, y, px, py, k: T.k, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey };
+  };
   el.addEventListener('pointerdown', (e) => {
     if (!orbit) return;
+    if (plan && e.button === 0 && e.pointerType !== 'touch' && opts.onPlanPointer && !pointers.size) {
+      if (opts.onPlanPointer('down', planEvent(e)) !== false) {
+        editing = true;
+        el.setPointerCapture(e.pointerId);
+        opts.onHover?.(null);
+        e.preventDefault();
+        return;
+      }
+    }
     el.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) {
@@ -813,8 +831,12 @@ export function createView(container, opts = {}) {
   });
   el.addEventListener('auxclick', (e) => e.preventDefault());
   el.addEventListener('pointermove', (e) => {
+    if (editing) { opts.onPlanPointer('move', planEvent(e)); return; }
     const p = pointers.get(e.pointerId);
-    if (!p) { hover(e); return; }
+    if (!p) {
+      if (plan && opts.onPlanPointer) el.style.cursor = opts.onPlanPointer('hover', planEvent(e)) || '';
+      hover(e); return;
+    }
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     p.x = e.clientX; p.y = e.clientY;
     if (pinch && pointers.size === 2) {
@@ -836,6 +858,7 @@ export function createView(container, opts = {}) {
     requestRender();
   });
   const release = (e) => {
+    if (editing) { editing = false; opts.onPlanPointer(e.type === 'pointercancel' ? 'cancel' : 'up', planEvent(e)); return; }
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     if (pointers.size === 0) dragMode = null;

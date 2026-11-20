@@ -149,14 +149,16 @@ export function initGroupForm(host, onChange) {
     if (r.ok) { g = r.group; onChange(r.group); }
   }
 
+  // the room form around listens to input and change too: these fields are not its own
   host.addEventListener('input', (e) => {
+    e.stopPropagation();
     const el = e.target;
     if (el.tagName === 'INPUT' && el.value.includes(decimal() === ',' ? '.' : ',')) {
       const at = el.selectionStart; el.value = toDecimal(el.value); if (at != null) el.setSelectionRange(at, at);
     }
     clearTimeout(timer); timer = setTimeout(check, 200);
   });
-  host.addEventListener('change', () => { clearTimeout(timer); check(); });
+  host.addEventListener('change', (e) => { e.stopPropagation(); clearTimeout(timer); check(); });
   host.addEventListener('keydown', (e) => {
     if (e.target.tagName !== 'INPUT' || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
     e.preventDefault(); bump(e.target.closest('.fld').dataset.k, e.key === 'ArrowUp' ? 1 : -1);

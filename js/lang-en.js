@@ -89,6 +89,13 @@ export default {
       low: '{lums} with the photometric centre not above the work plane.',
     },
     notCalc: 'The arrangement has errors: nothing is calculated',
+    planGrid: 'Plan grid',
+    planGridHelp: 'Help: the plan grid',
+    snap: 'Snap',
+    snapTip: 'A dragged luminaire snaps to the nodes of the plan grid',
+    pg: { sx: 'Step X', sy: 'Step Y', ox: 'Origin X', oy: 'Origin Y' },
+    editHint: 'On the plan (F2): a click selects a group, Shift adds, a rectangle selects several; drag or the arrows move, Delete deletes, Ctrl+Z undoes.',
+    lastLum: 'A room keeps at least one luminaire',
   },
   gform: {
     nx: 'Along X', ny: 'Along Y', hm: 'Mounting height', psi: 'Rotation',
@@ -287,12 +294,12 @@ export default {
           'do not enter the calculation and are printed in the report.',
       },
       grid: {
-        title: 'Luminaire layout',
-        text: 'A regular grid n<sub>x</sub> × n<sub>y</sub>: from the wall to the outer row — half a step.<br>' +
-          '<b>Suggest</b> — an estimate of the number of luminaires by the utilisation factor and a grid with similar steps along the length and the width.<br>' +
-          '<b>Mounting height h<sub>m</sub></b> — to the top of the housing, as in DIALux: the photometric centre is lower by the housing height from the file. ' +
-          'With h<sub>m</sub> = H the luminaire is on the ceiling, and its upward flux is not taken into account.<br>' +
-          '<b>Rotation ψ</b> — the angle of the C0 plane from the X axis counterclockwise, the arrows step by 90°.',
+        title: 'Luminaire arrangement',
+        text: 'Groups of luminaires: a <b>grid</b> n<sub>x</sub> × n<sub>y</sub> (from the wall to the outer row — half a step; an area of its own is possible), a <b>line</b> (by number or by spacing, with offsets from the ends; the rotation counts from the direction of the line), <b>several lines</b>, a <b>circle</b> (tangent, radial or the same orientation) and <b>single</b> luminaires with their own height and rotation. A group moves as a whole; ungroup it to move the luminaires one by one.<br><b>Suggest</b> — an estimate of the number of luminaires by the utilisation factor for the selected grid.<br><b>Mounting height h<sub>m</sub></b> — to the top of the housing, as in DIALux: the photometric centre is the housing height lower.<br>The housing of a luminaire must lie wholly inside the room, otherwise nothing is calculated.',
+      },
+      plangrid: {
+        title: 'Plan grid',
+        text: 'The nodes a luminaire snaps to when dragged on the plan: the steps along X and Y and the origin (a point its lines pass through). The arrows move the selected luminaires by one step. The grid is kept in the project with the room and does not affect the calculation.',
       },
       results: {
         title: 'Results',

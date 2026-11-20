@@ -238,3 +238,66 @@ export function drawPlane3D(ctx, project, size, d) {
   }
   ctx.restore();
 }
+
+/**
+ * The plan editor (stage 2.1): the plan grid (when snapping is on and its lines are not too dense),
+ * the guides of the selected groups (line, circle), every luminaire as its housing turned by ψ
+ * (a dot without a housing) in the colour of its type with the type's letter when there is room,
+ * the selection and the selection rectangle.
+ * @param {{ items: object[], color: (type) => string, letter: (type) => string, selected: (it) => boolean,
+ *           grid: { sx, sy, ox, oy, snap }, L, W, guides: object[], box: [x0, y0, x1, y1] | null,
+ *           accent: string, bad: Set<string> }} d — bad: "group:index" of the misplaced luminaires
+ */
+export function drawEditor(ctx, T, size, d) {
+  ctx.save();
+  // plan grid: thin lines inside the room
+  if (d.grid.snap) {
+    const px = d.grid.sx / T.k, py = d.grid.sy / T.k;
+    if (px >= 8 && py >= 8) {
+      ctx.strokeStyle = 'rgba(124,84,254,.16)'; ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      const i0 = Math.ceil((0 - d.grid.ox) / d.grid.sx), i1 = Math.floor((d.L - d.grid.ox) / d.grid.sx);
+      for (let i = i0; i <= i1; i++) { const x = T.x(d.grid.ox + i * d.grid.sx); ctx.moveTo(x, T.y(0)); ctx.lineTo(x, T.y(d.W)); }
+      const j0 = Math.ceil((0 - d.grid.oy) / d.grid.sy), j1 = Math.floor((d.W - d.grid.oy) / d.grid.sy);
+      for (let j = j0; j <= j1; j++) { const y = T.y(d.grid.oy + j * d.grid.sy); ctx.moveTo(T.x(0), y); ctx.lineTo(T.x(d.L), y); }
+      ctx.stroke();
+    }
+  }
+  // guides of the selected groups
+  ctx.setLineDash([6, 4]); ctx.strokeStyle = d.accent; ctx.lineWidth = 1;
+  for (const g of d.guides) {
+    ctx.beginPath();
+    if (g.kind === 'circle') ctx.arc(T.x(g.cx), T.y(g.cy), g.r / T.k, 0, 2 * Math.PI);
+    else for (const [a, b] of g.segments) { ctx.moveTo(T.x(a[0]), T.y(a[1])); ctx.lineTo(T.x(b[0]), T.y(b[1])); }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  // luminaires
+  ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const it of d.items) {
+    const cx = T.x(it.x), cy = T.y(it.y), col = d.color(it.type), sel = d.selected(it);
+    const bad = d.bad.has(`${it.group}:${it.index}`);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-it.psi * Math.PI / 180); // room +Y is up on the screen: counter-clockwise turns
+    const w = it.a / T.k, h = it.b / T.k;
+    ctx.beginPath();
+    if (w >= 3 && h >= 3) ctx.rect(-w / 2, -h / 2, w, h); else ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+    ctx.globalAlpha = sel ? 0.55 : 0.35; ctx.fillStyle = bad ? '#EB3D00' : col; ctx.fill();
+    ctx.globalAlpha = 1; ctx.lineWidth = sel ? 2 : 1.2; ctx.strokeStyle = bad ? '#EB3D00' : sel ? d.accent : col; ctx.stroke();
+    // the C0 direction: a short tick
+    const r = Math.max(w / 2, 5);
+    ctx.beginPath(); ctx.moveTo(r - 3, 0); ctx.lineTo(r + 3, 0); ctx.strokeStyle = sel ? d.accent : col; ctx.lineWidth = 1; ctx.stroke();
+    ctx.restore();
+    if (Math.min(w, h) >= 13 || (w < 3 && sel)) halo(ctx, d.letter(it.type), cx, Math.min(w, h) >= 13 ? cy : cy - 12, '#111');
+  }
+  // the selection rectangle
+  if (d.box) {
+    const [x0, y0, x1, y1] = d.box;
+    const a = T.x(Math.min(x0, x1)), b = T.y(Math.max(y0, y1));
+    ctx.fillStyle = 'rgba(124,84,254,.08)'; ctx.strokeStyle = d.accent; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.fillRect(a, b, Math.abs(x1 - x0) / T.k, Math.abs(y1 - y0) / T.k);
+    ctx.strokeRect(a, b, Math.abs(x1 - x0) / T.k, Math.abs(y1 - y0) / T.k);
+  }
+  ctx.restore();
+}
