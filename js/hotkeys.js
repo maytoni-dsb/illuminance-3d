@@ -26,7 +26,8 @@ export function hotkeyAction(e) {
 /**
  * Keys of the plan editor (stage 2.1), or null: Ctrl+Z — undo, Ctrl+Y and Ctrl+Shift+Z — redo
  * (Cmd on a Mac), Delete and Backspace — delete the selection, the arrows — move it by one step of
- * the plan grid ({ move: [±1 | 0, ±1 | 0] }, +1 is +X right and +Y up). Inside a text field the
+ * the plan grid ({ move: [±1 | 0, ±1 | 0] }, +1 is +X right and +Y up), Escape — stop drawing,
+ * Q / W / E — the tools select, move, rotate, G — grid shown, S — snapping. Inside a text field the
  * keys keep their own meaning (`inField`).
  */
 export function editorKey(e, inField = false) {
@@ -40,6 +41,10 @@ export function editorKey(e, inField = false) {
   }
   if (mod || e.altKey) return null;
   if (e.key === 'Delete' || e.key === 'Backspace') return 'delete';
+  if (e.key === 'Escape') return 'escape';
+  // the tools of the plan (by the key's place, so a Russian layout works too)
+  const tools = { KeyQ: 'select', KeyW: 'move', KeyE: 'rotate', KeyG: 'grid', KeyS: 'snap' };
+  if (!e.shiftKey && tools[e.code]) return tools[e.code];
   const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
   return arrows[e.key] ? { move: arrows[e.key] } : null;
 }

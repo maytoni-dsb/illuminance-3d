@@ -24,18 +24,18 @@
       "./js/estimate.js": "./js/estimate.js?v=8e837379",
       "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
-      "./js/groupform.js": "./js/groupform.js?v=44a9a357",
-      "./js/groups.js": "./js/groups.js?v=0bf40a48",
-      "./js/groupui.js": "./js/groupui.js?v=6b1cd1b4",
+      "./js/groupform.js": "./js/groupform.js?v=fe9956af",
+      "./js/groups.js": "./js/groups.js?v=06614448",
+      "./js/groupui.js": "./js/groupui.js?v=12c749db",
       "./js/help.js": "./js/help.js?v=98159935",
-      "./js/hotkeys.js": "./js/hotkeys.js?v=ddc6eb6d",
+      "./js/hotkeys.js": "./js/hotkeys.js?v=e9d8ff5c",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=5300eb14",
-      "./js/lang-en.js": "./js/lang-en.js?v=e733dc5b",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=790f7d9c",
-      "./js/model.js": "./js/model.js?v=d6dfcba8",
+      "./js/lang-de.js": "./js/lang-de.js?v=eedebae3",
+      "./js/lang-en.js": "./js/lang-en.js?v=432cf0a3",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=abd9bd4b",
+      "./js/model.js": "./js/model.js?v=1f3f508c",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -43,8 +43,8 @@
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=834ff87e",
-      "./js/planedit.js": "./js/planedit.js?v=8cee9dab",
-      "./js/planview.js": "./js/planview.js?v=4da55d50",
+      "./js/planedit.js": "./js/planedit.js?v=ed2df37c",
+      "./js/planview.js": "./js/planview.js?v=d3b9d4a6",
       "./js/project.js": "./js/project.js?v=b41537ba",
       "./js/report.js": "./js/report.js?v=28d31a24",
       "./js/reportsvg.js": "./js/reportsvg.js?v=84be1ad7",
@@ -578,6 +578,59 @@
     .fsub .tgl{margin-left:auto;font-weight:400;font-size:12px}
     #edithint{margin-top:6px}
     #placenote{color:var(--err)}
+    /* stage 2.1: the luminaire and its placement (after DIALux) */
+    .lumact{display:flex;align-items:center;gap:8px;margin:-2px 0 8px;font-size:13px;min-width:0}
+    .lumact .lname2{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .lumact .lcount{margin-left:auto;color:var(--ink3);white-space:nowrap;font-size:12px}
+    .kinds{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin:0 0 8px}
+    .kinds button{height:32px;border:0;background:var(--card);color:var(--ink3);cursor:pointer;display:grid;place-items:center}
+    .kinds button+button{border-left:1px solid var(--rule)}
+    .kinds button:hover{color:var(--ink)}
+    .kinds button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+    .kinds button.draw{box-shadow:inset 0 -2px 0 var(--accent)}
+    .grow{display:grid;grid-template-columns:20px minmax(0,1fr);gap:6px;align-items:center;margin:0 0 5px}
+    .gic{display:grid;place-items:center;color:var(--ink3)}
+    .gcells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+    .gcells.c1 .gf{grid-column:3}
+    .gf{position:relative;display:flex;align-items:center;height:28px;border:1px solid var(--rule);border-radius:8px;background:var(--card);min-width:0}
+    .gf:focus-within{border-color:var(--accent)}
+    .gf.bad{border-color:var(--err)}
+    .gf .gax{flex:none;font-size:11px;color:var(--ink3);padding-left:7px}
+    .gf .spin{display:none}
+    .gf input{flex:1;min-width:0;height:100%;border:0;background:none;outline:none;text-align:right;font:inherit;font-size:12.5px;color:var(--ink);padding:0 6px 0 4px}
+    .gf .gu{flex:none;font-size:11.5px;color:var(--ink3);margin-left:-4px;padding-right:6px}
+    .gerr{margin:2px 0 4px}
+    .gdraw{margin-top:2px}
+    .etools{position:absolute;top:12px;left:12px;display:flex;gap:6px;z-index:6}
+    .egroup,.epill{position:relative;display:flex;height:34px;border:1px solid var(--rule);border-radius:999px;background:var(--card)}
+    .egroup > button,.epill > button{position:relative;width:36px;height:100%;border:0;background:none;color:var(--ink2);cursor:pointer;display:grid;place-items:center;padding:0}
+    .egroup > button:first-child,.epill > button:first-child{border-radius:999px 0 0 999px}
+    .egroup > button:last-child,.epill > button:last-child{border-radius:0 999px 999px 0}
+    .egroup > button + button{border-left:1px solid var(--rule)}
+    .egroup > button[aria-pressed="true"],.epill > button[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+    .egroup sub,.epill sub{position:absolute;right:4px;bottom:3px;font-size:9.5px;line-height:1;color:var(--ink3)}
+    .epill > .earr{width:22px;border-left:1px solid var(--rule)}
+    .epop{position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:196px;padding:10px;background:var(--card);border:1px solid var(--rule);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+    .eplab{font-size:11.5px;color:var(--ink3);margin:2px 0 4px}
+    .eprow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+    .eprow label{display:flex;align-items:center;gap:4px;height:28px;padding:0 6px;border:1px solid var(--rule);border-radius:8px;font-size:11px;color:var(--ink3)}
+    .eprow input{width:100%;min-width:0;border:0;background:none;outline:none;text-align:right;font:inherit;font-size:12.5px;color:var(--ink)}
+    .eprow input[aria-invalid]{color:var(--err)}
+    .eck{display:flex;align-items:center;gap:8px;height:28px;font-size:13px;cursor:pointer}
+    .ehint{position:absolute;left:12px;top:54px;z-index:5;max-width:60%;padding:5px 10px;font-size:12px;color:var(--ink2);background:var(--card);border:1px solid var(--rule);border-radius:8px}
+    .ndlg.ldlg{width:min(780px,94vw);height:auto;max-height:86vh}
+    .earr[aria-expanded="true"]::after{display:none}
+    .ltable{width:100%;border-collapse:collapse;margin-bottom:12px}
+    .ltable th{font-size:11.5px;font-weight:500;color:var(--ink3);text-align:left;padding:0 8px 6px 0;border-bottom:1px solid var(--rule)}
+    .ltable td{padding:8px 8px 8px 0;border-bottom:1px solid var(--rule);vertical-align:middle;font-size:13px}
+    .ltable tr.on td{background:var(--soft2)}
+    .ltable .n{text-align:right;width:60px}
+    .ltable .lname{width:100%;height:28px;border:1px solid var(--rule);border-radius:8px;padding:0 8px;font:inherit;font-size:13px;background:var(--card);color:var(--ink)}
+    .ltable small{display:block;margin-top:3px;color:var(--ink3);font-size:11.5px}
+    .ltable .acts{white-space:nowrap;text-align:right;width:1%}
+    .ltable .lact{font-size:12px;color:var(--accent);font-weight:600;margin-right:6px}
+    .ltable .ldel{border:0;background:none;color:var(--ink3);font-size:18px;cursor:pointer;padding:0 4px;vertical-align:middle}
+    .ltable .ldel:disabled{opacity:.35;cursor:default}
   </style>
 </head>
 <body>
@@ -652,10 +705,9 @@
           <div class="normsrc" id="normsrc"></div>
         </div>
         <div class="fsec">
-          <div class="shd"><span data-i18n="lum.types"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button></div>
-          <div class="tylist" id="types"></div>
-          <div class="fld text wide" id="w-tyname"><label class="fl" for="tyname"><span class="t" data-i18n="lum.typeName"></span></label>
-            <div class="ibox"><input id="tyname" autocomplete="off" spellcheck="false" maxlength="80"></div></div>
+          <div class="shd"><span data-i18n="app.lum"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button>
+            <button type="button" class="gschipb sm" id="lumlistbtn" aria-haspopup="dialog" data-i18n="lum.list" data-i18n-attr="title:lum.listTip"></button></div>
+          <div class="lumact" id="lumact"></div>
           <div id="photfile"></div>
           <div class="pfcard" id="lumcard"></div>
           <div class="fld wide" id="lampsets" hidden></div>
@@ -663,16 +715,12 @@
         </div>
         <div class="fsec">
           <div class="shd"><span data-i18n="lum.place"></span> <button type="button" class="help" data-help="grid" data-i18n-attr="aria-label:app.helpGrid" aria-expanded="false">?</button>
-            <button type="button" class="gschipb sm" id="suggest" data-i18n-attr="title:app.suggestTip" data-i18n="app.suggest"></button></div>
-          <div id="groups"></div>
+            <button type="button" class="gschipb sm" id="suggest" data-i18n-attr="title:app.suggestTip" data-i18n="app.suggest" hidden></button></div>
+          <div class="kinds" id="kinds" role="group" data-i18n-attr="aria-label:lum.place"></div>
           <div id="gform"></div>
           <div class="gshint" id="hmnote"></div>
           <div class="gshint" id="estnote" hidden></div>
           <div class="gshint warn" id="placenote" role="alert" hidden></div>
-          <div class="fsub"><span data-i18n="lum.planGrid"></span> <button type="button" class="help" data-help="plangrid" data-i18n-attr="aria-label:lum.planGridHelp" aria-expanded="false">?</button>
-            <label class="tgl sm" data-i18n-attr="title:lum.snapTip"><input type="checkbox" id="snap" role="switch"> <span data-i18n="lum.snap"></span></label></div>
-          <div class="fgrid" id="pgrid" style="--cols:2"></div>
-          <div class="gshint" id="edithint" data-i18n-html="lum.editHint"></div>
         </div>
       </form>
 
@@ -699,6 +747,42 @@
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
         <button type="button" class="vbtn help" data-help="view" data-i18n-attr="aria-label:app.helpView" aria-expanded="false">?</button>
       </div>
+      <div class="etools" id="etools" hidden>
+        <div class="egroup" id="etool" role="group" data-i18n-attr="aria-label:lum.tools">
+          <button type="button" class="tipl" data-tool="select" aria-pressed="true" data-i18n-attr="aria-label:lum.tool.select;data-tip:lum.tool.select" data-key="Q">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3.5 2.5 12 8.2l-3.8.7 2.2 4.4-1.6.8-2.2-4.4L3.5 12z"/></svg><sub>Q</sub></button>
+          <button type="button" class="tipl" data-tool="move" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.move;data-tip:lum.tool.move" data-key="W">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M1.5 8h13M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2"/></svg><sub>W</sub></button>
+          <button type="button" class="tipl" data-tool="rotate" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.rotate;data-tip:lum.tool.rotate" data-key="E">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M11.8 1.8v2.8H9"/></svg><sub>E</sub></button>
+        </div>
+        <div class="epill">
+          <button type="button" class="tipl" id="gridon" aria-pressed="true" data-i18n-attr="aria-label:lum.gridShow;data-tip:lum.gridShow" data-key="G">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M6 2v12M10 2v12M2 6h12M2 10h12"/></svg><sub>G</sub></button>
+          <button type="button" class="earr tipl" id="gridset" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:lum.gridSet;data-tip:lum.gridSet">
+            <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
+          <div class="epop" id="gridpop" hidden>
+            <div class="eplab" data-i18n="lum.step"></div>
+            <div class="eprow"><label><span>X</span><input id="pg-sx" inputmode="decimal" autocomplete="off"></label><label><span>Y</span><input id="pg-sy" inputmode="decimal" autocomplete="off"></label></div>
+            <div class="eplab" data-i18n="lum.origin"></div>
+            <div class="eprow"><label><span>X</span><input id="pg-ox" inputmode="decimal" autocomplete="off"></label><label><span>Y</span><input id="pg-oy" inputmode="decimal" autocomplete="off"></label></div>
+            <div class="ferr" id="pgerr" hidden></div>
+          </div>
+        </div>
+        <div class="epill">
+          <button type="button" class="tipl" id="snapon" aria-pressed="true" data-i18n-attr="aria-label:lum.snap;data-tip:lum.snap" data-key="S">
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3.5 2.5v5a4.5 4.5 0 0 0 9 0v-5"/><path d="M3.5 5h2.5M10 5h2.5" stroke-width="2.2"/></svg><sub>S</sub></button>
+          <button type="button" class="earr tipl" id="snapset" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:lum.snapSet;data-tip:lum.snapSet">
+            <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
+          <div class="epop" id="snappop" hidden>
+            <label class="eck"><input type="checkbox" data-mode="grid"> <span data-i18n="lum.snapGrid"></span></label>
+            <label class="eck"><input type="checkbox" data-mode="vertex"> <span data-i18n="lum.snapVertex"></span></label>
+            <label class="eck"><input type="checkbox" data-mode="mid"> <span data-i18n="lum.snapMid"></span></label>
+            <label class="eck"><input type="checkbox" data-mode="centre"> <span data-i18n="lum.snapCentre"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="ehint" id="ehint" hidden></div>
       <div class="vtop"><div class="vstatus" id="hover"></div></div>
       <div class="vbottom">
         <div class="legend" id="legend" data-i18n-attr="aria-label:app.legend"><span class="lt" data-i18n="app.legendUnit"></span><ol></ol></div>
@@ -797,6 +881,13 @@
     <div class="ndfoot" id="normnote"></div>
   </dialog>
 
+  <dialog class="ndlg ldlg" id="lumdlg" aria-labelledby="lumtitle">
+    <div class="ndhead"><div class="gshd"><span class="gskick" data-i18n="lum.listKick"></span><h1 id="lumtitle" data-i18n="lum.listTitle"></h1>
+      <p data-i18n="lum.listLead"></p></div>
+      <button type="button" class="ndclose" id="lumclose" data-i18n-attr="aria-label:app.close">×</button></div>
+    <div class="ndbody" id="lumlist"></div>
+  </dialog>
+
   <main class="stage rstage" id="stage3" hidden>
     <section class="gscard rtreecard" data-i18n-attr="aria-label:app.reportTree">
       <div class="rtreebody">
@@ -834,15 +925,15 @@
   import { createPhotometry } from './js/photometry.js';
   import {
     formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-    addGroup, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeLetter,
+    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeLetter,
   } from './js/model.js';
   import { groupPoints, groupCount } from './js/groups.js';
-  import { renderTypes, renderGroups, initGroupForm, typeName, typeColor } from './js/groupui.js';
+  import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeColor, typeMark } from './js/groupui.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
   import { hotkeyAction, editorKey } from './js/hotkeys.js';
   import {
     planItems, pickAt, selectionOf, combine, boxSelection, selectedItems, isSelected, isEmpty, emptySelection,
-    dragDelta, clampDelta, moveSelection, deleteSelection,
+    clampDelta, moveSelection, deleteSelection, snapPoint, rotateSelection, replaceType,
   } from './js/planedit.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
@@ -902,6 +993,8 @@
       },
       onOverlay(ctx, info, size) {
         if (!room || !current) return;
+        $('#etools').hidden = info.mode !== '2d' || stage !== 2;
+        if (info.mode !== '2d') $('#ehint').hidden = true;
         if (info.mode === '2d') {
           // the axes of the selected grid (stage 2.1; the plan editor draws every luminaire)
           const m = activeRoom()?.model, g = m?.groups.find((x) => x.id === selGroup);
@@ -1062,13 +1155,12 @@
   const model = () => activeRoom().model;
   const typeIndex = (m, id) => Math.max(0, m.types.findIndex((ty) => ty.id === id));
   const nameOfType = (ty, k) => typeName(ty, k, fileOfType(ty));
-  /** The note under the group: where the photometric centre of the selected group is. */
+  /** The note under the fields: where the photometric centre is (group in focus, else the next group). */
   function showCentre(m) {
-    const el = $('#hmnote'), g = m.groups.find((x) => x.id === selGroup);
-    if (!g) { el.innerHTML = ''; return; }
-    const ty = m.types.find((x) => x.id === g.type);
-    const pt = groupPoints(g, { L: m.room.shape.L, W: m.room.shape.W })[g.kind === 'single' ? Math.min(selPoint, g.points.length - 1) : 0];
-    if (!pt) { el.innerHTML = ''; return; }
+    const el = $('#hmnote'), g = !isEmpty(sel) ? m.groups.find((x) => x.id === selGroup) : null;
+    const ty = m.types.find((x) => x.id === (g ? g.type : selType));
+    const pt = g ? groupPoints(g, { L: m.room.shape.L, W: m.room.shape.W })[g.kind === 'single' ? Math.min(selPoint, g.points.length - 1) : 0] : { hm: drafts[kind]?.hm ?? m.room.H };
+    if (!pt || !ty) { el.innerHTML = ''; return; }
     const hh = housingOf(ty), z = photometricHeight(pt.hm, hh);
     const mm = (x) => String(Math.round(x * 1000));
     el.innerHTML = t('app.centre', { z: formatNumber(z, 3) }) + (z <= m.design.hwp + 1e-9 ? t('app.centreLow') : '');
@@ -1097,17 +1189,21 @@
     for (const e of errs) per.set(e.group, (per.get(e.group) ?? 0) + 1);
     return { ok: !errs.length, per };
   }
-  /** The lists of types and groups and the fields of the selected group. */
+  /** The active luminaire line, the placement buttons and "Suggest" (a grid in focus). */
   function renderLum(m, per = new Map()) {
-    renderTypes($('#types'), m, selType, nameOfType);
-    renderGroups($('#groups'), m, selGroup, per);
+    const k = typeIndex(m, selType), ty = m.types[k];
+    const n = m.groups.filter((g) => g.type === ty.id).reduce((a, g) => a + groupCount(g), 0);
+    $('#lumact').innerHTML = `${typeMark(k)}<span class="lname2">${esc(nameOfType(ty, k))}</span><span class="lcount">${t('app.lums', { n })}</span>`;
+    renderKinds($('#kinds'), kind, drawing);
     const g = m.groups.find((x) => x.id === selGroup);
-    $('#suggest').hidden = g?.kind !== 'grid';
+    $('#suggest').hidden = !(g?.kind === 'grid' && !isEmpty(sel));
   }
-  /** Loads the selected group into its fields. */
+  /** The fields: of the group in focus, else of the next group to draw. */
   function loadGroupForm() {
-    const m = model(), g = m.groups.find((x) => x.id === selGroup);
-    gform.load(g ?? null, gctx(m, g));
+    const m = model(), g = !isEmpty(sel) ? m.groups.find((x) => x.id === selGroup) : null;
+    if (g) gform.load({ group: g }, gctx(m, g));
+    else gform.load({ kind, draft: drafts[kind] }, gctx(m, null));
+    renderLum(m, lastPer);
   }
   const gctx = (m, g) => ({ H: m.room.H, L: m.room.shape.L, W: m.room.shape.W, others: g ? lumCount(m) - groupCount(g) : lumCount(m), at: selPoint });
 
@@ -1138,6 +1234,7 @@
     const place = showPlacement(m);
     lastPer = place.per;
     renderLum(m, place.per);
+    showHint();
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
       const h = autoStep(values.L, values.W, values.H); // the subdivision step is automatic
@@ -1476,36 +1573,52 @@
   }
 
   const form = initForm($('#form'), update, { groups: ['room', 'refl', 'norm', 'lumdata'] });
-  // fields of the selected group (js/groupui.js): every valid change goes to the model
-  const gform = initGroupForm($('#gform'), (g, extra) => {
-    if (extra?.at != null) {
-      selPoint = extra.at;
-      if (g.kind === 'single') sel = { groups: new Set(), points: new Map([[g.id, new Set([selPoint])]]) };
-    }
-    const m = model(), old = m.groups.find((x) => x.id === g.id);
+  // ---- luminaires and their placement (stage 2.1, the editor after DIALux) ----
+  let kind = 'single';     // placement kind of the buttons: the next group drawn
+  let drawing = false;     // a group of `kind` is being drawn on the plan
+  let pend = null;         // drawing in progress: { kind, x0, y0, x, y } (grid: rectangle; line, circle: first click)
+  let session = null;      // id of the group of single luminaires placed one by one now
+  const drafts = { single: {}, grid: {}, line: {}, circle: {} }; // fields of the next group of every kind
+  let tool = 'select';     // tools of the plan: select (Q), move (W), rotate (E)
+  let mv = null;           // tool move: { base: {x, y}, m0 } after the first click
+  let sel = emptySelection();  // selected groups and single luminaires (js/planedit.js)
+  let drag = null;         // left button down with the tool select or rotate
+  let lastPer = new Map(); // group id → number of placement errors (last refresh)
+  let snapMark = null;     // the snapped point under the pointer, drawn on the plan
+  const itemsNow = () => planItems(model(), sizeOf);
+
+  // fields of the selected group, or of the next group to draw
+  const gform = initGroupForm($('#gform'), (o) => {
+    if (o.draft) { drafts[kind] = o.draft; return; }
+    const g = o.group, m = model(), old = m.groups.find((x) => x.id === g.id);
     if (!old) return;
-    if (JSON.stringify(old) !== JSON.stringify(g)) remember(m);
+    if (o.at != null) {
+      selPoint = o.at;
+      sel = { groups: new Set(), points: new Map([[g.id, new Set([selPoint])]]) };
+      showCentre(m); view?.refresh(); return;
+    }
+    if (JSON.stringify(old) === JSON.stringify(g)) return;
+    remember(m);
     activeRoom().model = replaceGroup(m, g.id, g);
     $('#estnote').hidden = true;
     autosave();
     refresh();
   });
-  // a file sets the photometry of the selected type and fills flux, colour temperature and power
+  // a file sets the photometry of the active luminaire and fills flux, colour temperature and power
   // from its lamp set
   const photUI = initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('.form') }, (f) => {
     photFile = f;
-    if (switching) return; // another room or type is being loaded: its values come with it
+    if (switching) return; // another room or luminaire is being loaded: its values come with it
     const ar = activeRoom();
     if (ar) { remember(ar.model); ar.model = withTypeFile(ar.model, selType, f ? { name: f.name, text: f.text, set: f.set } : null); autosave(); }
     if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
     else { form.set({ phot: 'cosine', flux: 4000 }); $('#estnote').hidden = true; }
-    // a new file: estimate the number of luminaires of the selected grid of this type; another lamp
-    // set does not move the grid
     const g = model().groups.find((x) => x.id === selGroup);
     if (f && f.reason !== 'set' && g?.kind === 'grid' && g.type === selType) suggestGrid();
+    renderLumList();
   }, { restore: false });
 
-  /** Shows a type in the form: its name, file and values. */
+  /** Makes a luminaire type the active one: its file and values in the form. */
   function showType(id) {
     const m = model();
     const ty = m.types.find((x) => x.id === id) ?? m.types[0];
@@ -1518,81 +1631,108 @@
       if (ty.file && !photFile) activeRoom().model = withTypeFile(m, ty.id, null); // a file that no longer reads
       const v = { ...roomValues(model()), ...typeValues(model().types.find((x) => x.id === ty.id)) };
       if (!photFile) v.phot = 'cosine';
-      $('#tyname').value = ty.name ?? '';
-      $('#tyname').placeholder = nameOfType({ ...ty, name: undefined }, typeIndex(model(), ty.id));
       form.set(v, { exact: true });
     } finally { switching = false; }
     current = form.values();
     activeRoom().model = applyTypeValues(model(), selType, current);
+    renderLumList();
   }
-  /** Selects a group (in the list and on the plan): its fields, and its type in the form. */
+  /** Shows the fields of a group (it becomes the focus; its luminaire the active one). */
+  function focusGroup(id, point = 0) {
+    const m = model(), g = m.groups.find((x) => x.id === id);
+    if (selGroup !== id) $('#estnote').hidden = true;
+    selGroup = g ? id : null; selPoint = point;
+    if (g) { kind = g.kind; if (g.type !== selType) showType(g.type); }
+    loadGroupForm();
+  }
+  /** Selects a whole group (or one single luminaire) on the plan. */
   function selectGroup(id, { point = 0 } = {}) {
-    const m = model(), g = m.groups.find((x) => x.id === id) ?? m.groups[0];
+    const g = model().groups.find((x) => x.id === id);
     sel = !g ? emptySelection() : g.kind === 'single' ? { groups: new Set(), points: new Map([[g.id, new Set([point])]]) } : { groups: new Set([g.id]), points: new Map() };
     focusGroup(g?.id ?? null, point);
     refresh();
   }
-  /** Shows the fields of a group without changing the selection on the plan. */
-  function focusGroup(id, point = 0) {
-    const m = model(), g = m.groups.find((x) => x.id === id);
-    if (selGroup !== id) $('#estnote').hidden = true;
-    selGroup = id; selPoint = point;
-    if (g && g.type !== selType) showType(g.type);
+  /** Nothing selected: the fields show the next group to draw. */
+  function clearSelection() {
+    sel = emptySelection(); selGroup = null; selPoint = 0;
     loadGroupForm();
   }
 
-  $('#types').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b || b.disabled) return;
-    let m = model();
-    if (b.dataset.type) { showType(b.dataset.type); refresh(); return; }
-    if (b.dataset.addtype) { remember(m); const r = addType(m); activeRoom().model = r.model; showType(r.id); autosave(); refresh(); return; }
-    if (b.dataset.deltype) {
-      const next = removeType(m, b.dataset.deltype);
-      if (!next) return;
-      remember(m);
-      activeRoom().model = next;
-      if (selType === b.dataset.deltype) showType(next.types[0].id);
-      autosave(); refresh();
-    }
+  // the buttons of the placement kinds: a press starts drawing that kind on the plan
+  $('#kinds').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-kind]');
+    if (!b) return;
+    kind = b.dataset.kind;
+    startDrawing();
   });
+  function startDrawing() {
+    drawing = true; pend = null; session = null; mv = null;
+    setTool('select', { keepDrawing: true });
+    clearSelection();
+    if (view && !view.isPlan()) $('#plan').click();
+    refresh();
+  }
+  function stopDrawing() {
+    drawing = false; pend = null; session = null;
+    renderLum(model(), lastPer); showHint(); view?.refresh();
+  }
+
+  // the luminaires of the project (dialog "List")
+  const lumDlg = $('#lumdlg');
+  function renderLumList() {
+    if (!lumDlg.open || !activeRoom()) return;
+    renderLumListHost($('#lumlist'), model(), { nameOf: nameOfType, fileOf: fileOfType, active: selType, canReplace: !isEmpty(sel) });
+  }
+  $('#lumlistbtn').addEventListener('click', () => { lumDlg.showModal(); renderLumList(); });
+  $('#lumclose').addEventListener('click', () => lumDlg.close());
+  lumDlg.addEventListener('click', (e) => { if (e.target === lumDlg) lumDlg.close(); });
   let named = false; // the name being typed is one step of the undo history
-  $('#tyname').addEventListener('focus', () => { named = false; });
-  $('#tyname').addEventListener('input', (e) => {
-    e.stopPropagation(); // not a calculation input
+  $('#lumlist').addEventListener('focusin', (e) => { if (e.target.matches('.lname')) named = false; });
+  $('#lumlist').addEventListener('input', (e) => {
+    const el = e.target.closest('.lname');
+    if (!el) return;
     if (!named) { remember(model()); named = true; }
-    activeRoom().model = renameType(model(), selType, e.target.value);
-    renderLum(model()); report.invalidate('rooms'); autosave();
+    activeRoom().model = renameType(model(), el.dataset.name, el.value);
+    renderLum(model(), lastPer); report.invalidate('rooms'); autosave(); view?.refresh();
   });
-  $('#tyname').addEventListener('change', (e) => e.stopPropagation());
-  $('#groups').addEventListener('click', (e) => {
+  $('#lumlist').addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
     const m = model();
-    if (b.dataset.group) { selectGroup(b.dataset.group); return; }
-    if (b.dataset.add) {
-      remember(m);
-      const r = addGroup(m, b.dataset.add, selType);
-      activeRoom().model = r.model; autosave(); selectGroup(r.id); return;
-    }
-    const act = b.dataset.act;
-    if (act === 'dup') {
-      const r = duplicateGroup(m, selGroup, 0.5, 0.5);
-      if (r) { remember(m); activeRoom().model = r.model; autosave(); selectGroup(r.id); }
-    } else if (act === 'ungroup') {
-      remember(m); activeRoom().model = ungroupGroup(m, selGroup); autosave(); selectGroup(selGroup);
-    } else if (act === 'del') {
-      const k = m.groups.findIndex((g) => g.id === selGroup), next = removeGroup(m, selGroup);
+    if (b.dataset.use) { clearSelection(); showType(b.dataset.use); loadGroupForm(); refresh(); }
+    else if (b.dataset.replace) {
+      const next = replaceType(m, sel, b.dataset.replace);
+      if (next !== m) { remember(m); activeRoom().model = next.model ?? next; sel = next.sel ?? sel; autosave(); showType(b.dataset.replace); focusGroup(firstOf(sel)?.group ?? null, firstOf(sel)?.index ?? 0); refresh(); }
+    } else if (b.dataset.del) {
+      const next = removeType(m, b.dataset.del);
       if (!next) return;
-      remember(m); activeRoom().model = next; autosave(); selectGroup(next.groups[Math.max(0, k - 1)].id);
+      remember(m); activeRoom().model = next;
+      if (selType === b.dataset.del) showType(next.types[0].id);
+      autosave(); refresh();
+    } else if (b.dataset.addtype) {
+      remember(m); const r = addType(m); activeRoom().model = r.model; clearSelection(); showType(r.id); loadGroupForm(); autosave(); refresh();
     }
+    renderLumList();
   });
 
-  // ---- plan editor (stage 2.1): selection, dragging, the selection rectangle, keys, undo ----
-  let sel = emptySelection();  // selected groups and single luminaires (js/planedit.js)
-  let drag = null;             // { mode: 'move' | 'box', … } while the left button is down on the plan
-  let lastPer = new Map();     // group id → number of placement errors (last refresh)
-  const itemsNow = () => planItems(model(), sizeOf);
+  // ---- plan editor: tools, drawing, snapping, keys, undo ----
+  function setTool(t, { keepDrawing = false } = {}) {
+    tool = t; mv = null; drag = null;
+    if (!keepDrawing && drawing) { drawing = false; pend = null; session = null; }
+    for (const b of document.querySelectorAll('#etool button')) b.setAttribute('aria-pressed', String(b.dataset.tool === t));
+    renderLum(model(), lastPer); showHint(); view?.refresh();
+  }
+  $('#etool').addEventListener('click', (e) => { const b = e.target.closest('button[data-tool]'); if (b) setTool(b.dataset.tool); });
+  /** The hint at the bottom of the plan: what the next click does. */
+  function showHint() {
+    const el = $('#ehint');
+    let k = null;
+    if (drawing) k = pend ? `lum.hint.${kind}2` : `lum.hint.${kind}`;
+    else if (tool === 'move') k = isEmpty(sel) ? 'lum.hint.selectFirst' : mv ? 'lum.hint.move2' : 'lum.hint.move';
+    else if (tool === 'rotate') k = isEmpty(sel) ? 'lum.hint.selectFirst' : 'lum.hint.rotate';
+    el.textContent = k ? t(k) : '';
+    el.hidden = !k || !view?.isPlan();
+  }
   /** The luminaires on the view while dragging: no calculation until the button is released. */
   function previewLums() {
     const m = model();
@@ -1608,6 +1748,14 @@
     }
     return null;
   }
+  /** A point of the plan snapped (js/planedit.snapPoint); the luminaires of `except` are not targets. */
+  function snapped(x, y, k, except = null) {
+    const m = model();
+    const centres = except ? itemsNow().filter((it) => !isSelected(except, it.group, it.index, it.kind)) : itemsNow();
+    const p = snapPoint(x, y, planGrid(m), m.room.shape.L, m.room.shape.W, centres, 10 * k);
+    snapMark = p.kind && p.kind !== 'grid' ? p : null;
+    return p;
+  }
   /** What the overlay draws for the editor. */
   function editorDraw(m, accent) {
     const kOf = new Map(m.types.map((ty, k) => [ty.id, k]));
@@ -1616,26 +1764,107 @@
     for (const g of m.groups) {
       if (!sel.groups.has(g.id)) continue;
       if (g.kind === 'circle') guides.push({ kind: 'circle', cx: g.cx, cy: g.cy, r: g.r });
-      else if (g.kind === 'line' || g.kind === 'lines') {
-        const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1, nx = -(g.y1 - g.y0) / len, ny = (g.x1 - g.x0) / len;
-        const segments = [];
-        for (let r = 0; r < (g.kind === 'lines' ? g.rows : 1); r++) {
-          const o = r * (g.gap ?? 0);
-          segments.push([[g.x0 + nx * o, g.y0 + ny * o], [g.x1 + nx * o, g.y1 + ny * o]]);
-        }
-        guides.push({ kind: 'line', segments });
-      }
+      else if (g.kind === 'line') guides.push({ kind: 'line', segments: [[[g.x0, g.y0], [g.x1, g.y1]]] });
+      else if (g.kind === 'grid' && g.area) { const a = g.area; guides.push({ kind: 'line', segments: [[[a.x0, a.y0], [a.x1, a.y0]], [[a.x1, a.y0], [a.x1, a.y1]], [[a.x1, a.y1], [a.x0, a.y1]], [[a.x0, a.y1], [a.x0, a.y0]]] }); }
     }
+    // the group being drawn
+    if (drawing && pend) {
+      if (pend.kind === 'grid') guides.push({ kind: 'line', segments: [[[pend.x0, pend.y0], [pend.x, pend.y0]], [[pend.x, pend.y0], [pend.x, pend.y]], [[pend.x, pend.y], [pend.x0, pend.y]], [[pend.x0, pend.y], [pend.x0, pend.y0]]] });
+      if (pend.kind === 'line') guides.push({ kind: 'line', segments: [[[pend.x0, pend.y0], [pend.x, pend.y]]] });
+      if (pend.kind === 'circle') guides.push({ kind: 'circle', cx: pend.x0, cy: pend.y0, r: Math.hypot(pend.x - pend.x0, pend.y - pend.y0) });
+    }
+    if (mv?.to) guides.push({ kind: 'line', segments: [[[mv.base.x, mv.base.y], [mv.to.x, mv.to.y]]] });
     return {
       items: planItems(m, sizeOf), color: (ty) => typeColor(kOf.get(ty) ?? 0), letter: (ty) => typeLetter(kOf.get(ty) ?? 0),
       selected: (it) => isSelected(sel, it.group, it.index, it.kind), grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
-      guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad,
+      guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad, snap: snapMark,
     };
   }
+  /** A group drawn: added with the type of the active luminaire and the fields of the draft. */
+  function addDrawn(k, geo) {
+    const m = model();
+    remember(m);
+    const r = addGroup(m, k, selType, geo, draftValuesOf(k));
+    activeRoom().model = r.model;
+    autosave();
+    return r.id;
+  }
+  const draftValuesOf = (k) => { const d = { ...drafts[k] }; for (const h of ['hm', 'hm1']) if (d[h] == null) delete d[h]; return d; };
   /** Pointer of the plan (left mouse button, view3d.onPlanPointer). */
   function planPointer(type, e) {
     if (stage !== 2 || !activeRoom()) return false;
     const m = model(), tol = 4 * e.k;
+    // drawing a group
+    if (drawing) {
+      const p = snapped(e.x, e.y, e.k);
+      if (type === 'hover') { if (pend && pend.kind !== 'grid') { pend.x = p.x; pend.y = p.y; } view?.refresh(); return 'crosshair'; }
+      if (type === 'down') {
+        if (kind === 'single') {
+          if (session && m.groups.some((g) => g.id === session)) { remember(m); activeRoom().model = addPoint(m, session, p.x, p.y, draftValuesOf('single')); autosave(); }
+          else session = addDrawn('single', { x: p.x, y: p.y });
+          const g = model().groups.find((x) => x.id === session);
+          sel = { groups: new Set(), points: new Map([[session, new Set([g.points.length - 1])]]) };
+          selGroup = session; selPoint = g.points.length - 1;
+          refresh();
+          return true;
+        }
+        if (kind === 'grid') { pend = { kind, x0: p.x, y0: p.y, x: p.x, y: p.y }; showHint(); view?.refresh(); return true; }
+        if (!pend) { pend = { kind, x0: p.x, y0: p.y, x: p.x, y: p.y }; showHint(); view?.refresh(); return true; }
+        // the second click of a line or a circle
+        const id = kind === 'line'
+          ? (Math.hypot(p.x - pend.x0, p.y - pend.y0) > tol ? addDrawn('line', { x0: pend.x0, y0: pend.y0, x1: p.x, y1: p.y }) : null)
+          : (Math.hypot(p.x - pend.x0, p.y - pend.y0) > tol ? addDrawn('circle', { cx: pend.x0, cy: pend.y0, r: Math.hypot(p.x - pend.x0, p.y - pend.y0) }) : null);
+        if (id) { drawing = false; pend = null; selectGroup(id); showHint(); }
+        return true;
+      }
+      if (type === 'move' && pend?.kind === 'grid') { pend.x = p.x; pend.y = p.y; view?.refresh(); return undefined; }
+      if ((type === 'up' || type === 'cancel') && pend?.kind === 'grid') {
+        const ok = type === 'up' && Math.abs(pend.x - pend.x0) > tol && Math.abs(pend.y - pend.y0) > tol;
+        const geo = { x0: pend.x0, y0: pend.y0, x1: pend.x, y1: pend.y };
+        pend = null;
+        if (ok) { const id = addDrawn('grid', geo); drawing = false; selectGroup(id); }
+        showHint(); view?.refresh();
+      }
+      return undefined;
+    }
+    // the tool move: a base point, then the target
+    if (tool === 'move') {
+      if (type === 'hover') {
+        if (mv) { const p = snapped(e.x, e.y, e.k, sel); mv.to = p; const d = clampDelta(selectedItems(planItems(mv.m0, sizeOf), sel), p.x - mv.base.x, p.y - mv.base.y, m.room.shape.L, m.room.shape.W); activeRoom().model = moveSelection(mv.m0, sel, d[0], d[1]); previewLums(); }
+        else snapped(e.x, e.y, e.k);
+        return 'crosshair';
+      }
+      if (type !== 'down') return undefined;
+      if (isEmpty(sel)) { const it = pickAt(itemsNow(), e.x, e.y, tol); if (it) { sel = selectionOf(it); focusGroup(it.group, it.kind === 'single' ? it.index : 0); } renderLum(m, lastPer); showHint(); view?.refresh(); if (!it) return true; }
+      if (!mv) { const p = snapped(e.x, e.y, e.k, sel); mv = { base: { x: p.x, y: p.y }, m0: model() }; showHint(); return true; }
+      const changed = model() !== mv.m0;
+      if (changed) { remember(mv.m0); autosave(); loadGroupForm(); }
+      mv = null; snapMark = null; refresh(); showHint();
+      return true;
+    }
+    // the tool rotate: drag around the centre of the selection; 15° steps with snapping
+    if (tool === 'rotate') {
+      const items = selectedItems(itemsNow(), sel);
+      if (type === 'hover') return items.length ? 'grab' : '';
+      if (type === 'down') {
+        if (!items.length) { const it = pickAt(itemsNow(), e.x, e.y, tol); if (it) { sel = selectionOf(it); focusGroup(it.group, it.kind === 'single' ? it.index : 0); renderLum(m, lastPer); showHint(); view?.refresh(); } return true; }
+        const cx = items.reduce((a, it) => a + it.x, 0) / items.length, cy = items.reduce((a, it) => a + it.y, 0) / items.length;
+        drag = { mode: 'rotate', cx, cy, a0: Math.atan2(e.y - cy, e.x - cx), m0: m, d: 0 };
+        return true;
+      }
+      if (!drag || drag.mode !== 'rotate') return undefined;
+      if (type === 'move') {
+        let d = (Math.atan2(e.y - drag.cy, e.x - drag.cx) - drag.a0) * 180 / Math.PI;
+        if (planGrid(m).snap) d = Math.round(d / 15) * 15;
+        if (d !== drag.d) { drag.d = d; activeRoom().model = rotateSelection(drag.m0, sel, d); previewLums(); }
+        return undefined;
+      }
+      const dr = drag; drag = null;
+      if (type === 'cancel') { activeRoom().model = dr.m0; previewLums(); return undefined; }
+      if (dr.d) { remember(dr.m0); autosave(); loadGroupForm(); refresh(); }
+      return undefined;
+    }
+    // the tool select
     if (type === 'hover') {
       const it = pickAt(itemsNow(), e.x, e.y, tol);
       return it ? (isSelected(sel, it.group, it.index, it.kind) ? 'move' : 'pointer') : '';
@@ -1651,16 +1880,17 @@
         } else drag = null;
       } else {
         drag = { mode: 'box', x0: e.x, y0: e.y, x1: e.x, y1: e.y, add: e.shift || e.ctrl, base: sel };
-        if (!drag.add) sel = emptySelection();
+        if (!drag.add) clearSelection();
       }
-      renderLum(m, lastPer);
+      renderLum(m, lastPer); showCentre(model()); showHint();
       view?.refresh();
       return true;
     }
     if (!drag) return undefined;
     if (type === 'move') {
       if (drag.mode === 'move') {
-        const d = dragDelta(drag.anchor, e.x - drag.x0, e.y - drag.y0, planGrid(m), drag.items, m.room.shape.L, m.room.shape.W);
+        const p = snapped(drag.anchor.x + e.x - drag.x0, drag.anchor.y + e.y - drag.y0, e.k, sel);
+        const d = clampDelta(drag.items, p.x - drag.anchor.x, p.y - drag.anchor.y, m.room.shape.L, m.room.shape.W);
         if (d[0] !== drag.d[0] || d[1] !== drag.d[1]) {
           drag.d = d;
           activeRoom().model = moveSelection(drag.base, sel, d[0], d[1]);
@@ -1670,10 +1900,10 @@
       return undefined;
     }
     // released or cancelled
-    const dr = drag; drag = null;
+    const dr = drag; drag = null; snapMark = null;
     if (dr.mode === 'move') {
       if (type === 'cancel') { activeRoom().model = dr.base; previewLums(); return undefined; }
-      if (dr.d[0] || dr.d[1]) { remember(dr.base); autosave(); loadGroupForm(); refresh(); }
+      if (dr.d[0] || dr.d[1]) { remember(dr.base); autosave(); loadGroupForm(); refresh(); } else view?.refresh();
     } else {
       if (type !== 'cancel' && (Math.abs(dr.x1 - dr.x0) > tol || Math.abs(dr.y1 - dr.y0) > tol)) {
         const box = boxSelection(itemsNow(), dr.x0, dr.y0, dr.x1, dr.y1);
@@ -1681,7 +1911,7 @@
         const first = firstOf(sel);
         if (first) focusGroup(first.group, first.index);
       }
-      renderLum(model(), lastPer);
+      renderLum(model(), lastPer); showHint();
       view?.refresh();
     }
     return undefined;
@@ -1699,10 +1929,8 @@
     const m = model(), next = deleteSelection(m, sel);
     if (!next) { toast(t('lum.lastLum')); return; }
     if (next === m) return;
-    remember(m); activeRoom().model = next; sel = emptySelection(); autosave();
-    if (!next.groups.some((g) => g.id === selGroup)) selGroup = next.groups[0].id;
-    selPoint = 0;
-    loadGroupForm(); refresh();
+    remember(m); activeRoom().model = next; autosave();
+    clearSelection(); refresh();
   }
 
   // undo and redo: the models of the active room before each edit
@@ -1718,7 +1946,6 @@
   function restore(m) {
     activeRoom().model = m;
     autosave();
-    if (!m.groups.some((g) => g.id === selGroup)) { selGroup = m.groups[0].id; selPoint = 0; }
     const pruned = emptySelection();
     for (const g of m.groups) {
       if (sel.groups.has(g.id)) pruned.groups.add(g.id);
@@ -1726,53 +1953,80 @@
       if (p && g.kind === 'single') pruned.points.set(g.id, new Set([...p].filter((i) => i < g.points.length)));
     }
     sel = pruned;
+    if (!m.groups.some((g) => g.id === selGroup)) { selGroup = null; selPoint = 0; }
+    if (session && !m.groups.some((g) => g.id === session)) session = null;
     showType(m.types.some((ty) => ty.id === selType) ? selType : m.types[0].id);
     loadGroupForm(); showPlanGrid(); refresh();
   }
   function undo() { const h = hist(); if (!h.past.length) return; h.future.push(model()); restore(h.past.pop()); }
   function redo() { const h = hist(); if (!h.future.length) return; h.past.push(model()); restore(h.future.pop()); }
   document.addEventListener('keydown', (e) => {
-    if (stage !== 2 || normDlg.isOpen() || !activeRoom()) return;
+    if (stage !== 2 || normDlg.isOpen() || lumDlg.open || !activeRoom()) return;
     const inField = !!e.target.closest?.('input, textarea, select, [contenteditable="true"]');
     const a = editorKey(e, inField);
     if (!a) return;
-    if (a === 'undo') { e.preventDefault(); undo(); }
-    else if (a === 'redo') { e.preventDefault(); redo(); }
-    else if (!view?.isPlan() || isEmpty(sel)) return;
-    else if (a === 'delete') { e.preventDefault(); deleteSel(); }
+    if (a === 'undo') { e.preventDefault(); undo(); return; }
+    if (a === 'redo') { e.preventDefault(); redo(); return; }
+    if (!view?.isPlan()) return;
+    if (a === 'escape') {
+      if (pend) { pend = null; showHint(); view.refresh(); }
+      else if (mv) { activeRoom().model = mv.m0; mv = null; previewLums(); showHint(); }
+      else if (drawing) stopDrawing();
+      else if (!isEmpty(sel)) { clearSelection(); renderLum(model(), lastPer); showHint(); view.refresh(); }
+      return;
+    }
+    if (a === 'select' || a === 'move' || a === 'rotate') { e.preventDefault(); setTool(a); return; }
+    if (a === 'grid' || a === 'snap') { e.preventDefault(); setPlanGrid({ [a === 'grid' ? 'show' : 'snap']: !planGrid(model())[a === 'grid' ? 'show' : 'snap'] }); return; }
+    if (isEmpty(sel)) return;
+    if (a === 'delete') { e.preventDefault(); deleteSel(); }
     else if (a.move) { e.preventDefault(); nudge(a.move); }
   });
 
-  // the plan grid: steps along X and Y, origin, snapping (kept with the room, not a calculation input)
-  const PG = [['sx', 0.001, 100], ['sy', 0.001, 100], ['ox', -1000, 1000], ['oy', -1000, 1000]];
-  $('#pgrid').innerHTML = PG.map(([k]) => `<div class="fld" id="w-pg-${k}"><label class="fl" for="in-pg-${k}"><span class="t">${t(`lum.pg.${k}`)}</span></label>
-    <div class="ibox"><input id="in-pg-${k}" inputmode="decimal" autocomplete="off" spellcheck="false"><span class="unit">${t('unit.m')}</span></div><span class="ferr" hidden></span></div>`).join('');
+  // the plan grid and snapping (kept with the room, not a calculation input): the pills of the plan
+  function setPlanGrid(patch) {
+    const g = planGrid(model());
+    activeRoom().model = { ...model(), plan: { ...g, ...patch, modes: { ...g.modes, ...(patch.modes ?? {}) } } };
+    autosave(); showPlanGrid(); view?.refresh();
+  }
   function showPlanGrid() {
     const g = planGrid(model());
-    for (const [k] of PG) { $(`#in-pg-${k}`).value = formatNumber(g[k], 6); $(`#w-pg-${k}`).classList.remove('bad'); }
-    $('#snap').checked = g.snap;
+    for (const k of ['sx', 'sy', 'ox', 'oy']) { $(`#pg-${k}`).value = formatNumber(g[k], 6); $(`#pg-${k}`).removeAttribute('aria-invalid'); }
+    $('#pgerr').hidden = true;
+    $('#gridon').setAttribute('aria-pressed', String(g.show));
+    $('#snapon').setAttribute('aria-pressed', String(g.snap));
+    for (const c of document.querySelectorAll('#snappop input[data-mode]')) c.checked = !!g.modes[c.dataset.mode];
   }
   let pgTimer = 0;
   function readPlanGrid() {
-    const g = { ...planGrid(model()), snap: $('#snap').checked };
-    let ok = true;
-    for (const [k, lo, hi] of PG) {
-      const x = parseNumber($(`#in-pg-${k}`).value), good = Number.isFinite(x) && x >= lo && x <= hi && (k[0] !== 's' || x > 0);
-      const w = $(`#w-pg-${k}`), fe = w.querySelector('.ferr');
-      w.classList.toggle('bad', !good); fe.hidden = good;
-      fe.textContent = good ? '' : t('form.err.range', { min: formatNumber(k[0] === 's' ? 0.001 : lo), max: formatNumber(hi), unit: ` ${t('unit.m')}`, note: '' });
-      if (good) g[k] = x; else ok = false;
+    const patch = {}, bad = [];
+    for (const k of ['sx', 'sy', 'ox', 'oy']) {
+      const x = parseNumber($(`#pg-${k}`).value), s_ = k[0] === 's';
+      const good = Number.isFinite(x) && (s_ ? x >= 0.001 && x <= 100 : x >= -1000 && x <= 1000);
+      $(`#pg-${k}`).toggleAttribute('aria-invalid', !good);
+      if (good) patch[k] = x; else bad.push(k);
     }
-    if (!ok) return;
-    activeRoom().model = { ...model(), plan: g };
-    autosave();
-    view?.refresh();
+    $('#pgerr').textContent = bad.length ? t('lum.gridErr') : ''; $('#pgerr').hidden = !bad.length;
+    if (!bad.length) setPlanGrid(patch);
   }
-  for (const ev of ['input', 'change']) {
-    $('#pgrid').addEventListener(ev, (e) => { e.stopPropagation(); clearTimeout(pgTimer); pgTimer = setTimeout(readPlanGrid, ev === 'input' ? 300 : 0); });
+  $('#gridpop').addEventListener('input', () => { clearTimeout(pgTimer); pgTimer = setTimeout(readPlanGrid, 300); });
+  $('#gridpop').addEventListener('change', () => { clearTimeout(pgTimer); readPlanGrid(); });
+  $('#snappop').addEventListener('change', (e) => { const c = e.target.closest('input[data-mode]'); if (c) setPlanGrid({ modes: { [c.dataset.mode]: c.checked } }); });
+  $('#gridon').addEventListener('click', () => setPlanGrid({ show: !planGrid(model()).show }));
+  $('#snapon').addEventListener('click', () => setPlanGrid({ snap: !planGrid(model()).snap }));
+  for (const [btn, pop] of [['#gridset', '#gridpop'], ['#snapset', '#snappop']]) {
+    $(btn).addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = $(pop).hidden;
+      for (const p of ['#gridpop', '#snappop']) $(p).hidden = true;
+      for (const b of ['#gridset', '#snapset']) $(b).setAttribute('aria-expanded', 'false');
+      $(pop).hidden = !open; $(btn).setAttribute('aria-expanded', String(open));
+    });
   }
-  $('#snap').addEventListener('change', (e) => { e.stopPropagation(); readPlanGrid(); });
-  $('#snap').addEventListener('input', (e) => e.stopPropagation());
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.epill')) return;
+    for (const p of ['#gridpop', '#snappop']) $(p).hidden = true;
+    for (const b of ['#gridset', '#snapset']) $(b).setAttribute('aria-expanded', 'false');
+  });
   $('#suggest').addEventListener('click', suggestGrid);
   $('#planes').addEventListener('click', (e) => {
     const b = e.target.closest('.pplan');
@@ -1909,8 +2163,8 @@
       clearResult();
       $('#planenote').textContent = '';
     } finally { switching = false; }
-    selGroup = r.model.groups[0]?.id ?? null; selPoint = 0;
-    sel = emptySelection(); drag = null;
+    selGroup = null; selPoint = 0;
+    sel = emptySelection(); drag = null; drawing = false; pend = null; session = null; mv = null;
     showType(r.model.groups[0]?.type ?? r.model.types[0].id);
     loadGroupForm();
     showPlanGrid();

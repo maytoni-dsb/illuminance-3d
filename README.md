@@ -64,19 +64,22 @@ file (format version 2, `js/project.js`), instances are generated and go to the 
 outline (`calc.js`, `CalcParams`). Project files of version 1 are read: the grid becomes one group
 "grid" of one type. The browser keeps the project of version 2 under its own key (`lcalc.v2.project`).
 
-Stage 2.1 — several types and the plan editor:
+Stage 2.1 — several types and the plan editor (after DIALux):
 
-- `js/groups.js` — the groups grid (optionally over an area of its own), line (by number or by
-  spacing), several lines, circle (tangent, radial, fixed) and single luminaires with their own
-  height and rotation; housing half sizes, the placement check, moving, ungrouping;
-- `js/model.js` — instances of all groups, `placementErrors` (outside the room, height, below the
-  work plane), the edits of the page (types, groups, room values), reading rooms of any content;
+- `js/groups.js` — the groups single (own height and rotation per luminaire), grid (cells of an
+  area, the room by default), line (n luminaires from start to end, heights between the ends) and
+  circle (rotation from the radius); no rotation of groups; housing half sizes, placement check,
+  moving, turning luminaires;
+- `js/model.js` — instances, `placementErrors`, groups drawn on the plan (`addGroup`, `addPoint`),
+  reading rooms of any content (groups of the first 2.1 editor converted);
 - `js/calc.js` — the direct component per type (cached per type) summed; mirror symmetry per set of
   one type; `js/checksmix.js` — the flux of every type and of all of them on the faces;
-- `js/groupform.js` (pure) and `js/groupui.js` — the lists of types and groups, the fields of a group;
-- `js/planedit.js` (pure) — picking, selection, snapping to the plan grid, moving within the walls,
-  deleting; the page routes the left mouse button on the plan (`view3d` `onPlanPointer`) and the keys
-  (`hotkeys.editorKey`: Ctrl+Z / Ctrl+Y, Delete, arrows) to it;
+- `js/groupform.js` (pure) and `js/groupui.js` — the placement buttons, the rows of fields with
+  icons (selected group, or the next group to draw), the list of luminaires of the project;
+- `js/planedit.js` (pure) — picking, selection, snapping (grid, vertices, midpoints, centres),
+  moving within the walls, rotating, replacing the type, deleting; the page routes the left mouse
+  button on the plan (`view3d` `onPlanPointer`) and the keys (`hotkeys.editorKey`: Q, W, E, G, S,
+  Esc, Delete, arrows, Ctrl+Z / Ctrl+Y) to it;
 - the report lists the luminaires by type and draws every luminaire at its position.
 
 Tests: `tests/types.test.mjs`, `tests/groups.test.mjs`, `tests/groupform.test.mjs`,

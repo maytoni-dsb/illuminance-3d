@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   planItems, pickAt, selectionOf, combine, boxSelection, selectedItems, snapValue, clampDelta, dragDelta,
-  moveSelection, deleteSelection, emptySelection, isEmpty, isSelected, cleanPlanGrid, PLAN_GRID,
+  moveSelection, deleteSelection, emptySelection, isEmpty, isSelected, cleanPlanGrid, PLAN_GRID, snapPoint, rotateSelection, replaceType,
 } from '../js/planedit.js';
 import { modelFromValues, addGroup, replaceGroup, cleanModel, planGrid, placementErrors } from '../js/model.js';
 import { groupPoints } from '../js/groups.js';
@@ -93,10 +93,39 @@ test('moving and deleting a selection; the model stays valid', () => {
 
 test('the plan grid is kept in the room and cleaned when read', () => {
   const m = model();
-  assert.deepEqual(planGrid(m), PLAN_GRID);
-  const withGrid = { ...m, plan: { sx: 0.6, sy: 0.3, ox: 0.1, oy: 0, snap: false } };
+  assert.deepEqual(planGrid(m), { ...PLAN_GRID });
+  const withGrid = { ...m, plan: { sx: 0.6, sy: 0.3, ox: 0.1, oy: 0, show: false, snap: false, modes: { grid: true, vertex: false, mid: true, centre: false } } };
   assert.deepEqual(cleanModel(JSON.parse(JSON.stringify(withGrid))).plan, withGrid.plan);
-  assert.deepEqual(cleanPlanGrid({ sx: -1, sy: 'a', ox: 2, snap: 1 }), { sx: 0.1, sy: 0.1, ox: 2, oy: 0, snap: true });
+  assert.deepEqual(cleanPlanGrid({ sx: -1, sy: 'a', ox: 2, snap: 1, modes: { mid: false } }),
+    { sx: 0.25, sy: 0.25, ox: 2, oy: 0, show: true, snap: true, modes: { grid: true, vertex: true, mid: false, centre: true } });
+});
+
+test('snapping: vertices, midpoints and centres within the tolerance, else the grid nodes', () => {
+  const g = { ...PLAN_GRID, modes: { ...PLAN_GRID.modes } };
+  assert.deepEqual(snapPoint(0.05, 3.97, g, 6, 4, [], 0.1), { x: 0, y: 4, kind: 'vertex' });
+  assert.deepEqual(snapPoint(3.04, 0.02, g, 6, 4, [], 0.1), { x: 3, y: 0, kind: 'mid' });
+  assert.deepEqual(snapPoint(3.04, 2.02, g, 6, 4, [], 0.1), { x: 3, y: 2, kind: 'centre' });
+  assert.deepEqual(snapPoint(1.27, 1.33, g, 6, 4, [{ x: 1.3, y: 1.3 }], 0.1), { x: 1.3, y: 1.3, kind: 'centre' });
+  const p = snapPoint(1.37, 1.13, g, 6, 4, [], 0.05);
+  assert.ok(near(p.x, 1.25) && near(p.y, 1.25) && p.kind === 'grid');
+  assert.equal(snapPoint(0.05, 3.97, { ...g, modes: { ...g.modes, vertex: false } }, 6, 4, [], 0.1).kind, 'grid');
+  assert.deepEqual(snapPoint(1.37, 1.13, { ...g, snap: false }, 6, 4, [], 0.1), { x: 1.37, y: 1.13, kind: null });
+  assert.deepEqual(snapPoint(1.37, 1.13, { ...g, modes: { grid: false, vertex: true, mid: true, centre: true } }, 6, 4, [], 0.05), { x: 1.37, y: 1.13, kind: null });
+});
+
+test('rotating and replacing the type of a selection', () => {
+  const m = model(), items = planItems(m, size);
+  const s = combine(selectionOf(pickAt(items, 1, 1, 0)), selectionOf(pickAt(items, 5.5, 3.5, 0)));
+  const r = rotateSelection(m, s, 45);
+  assert.equal(r.groups[0].psi, 45);
+  assert.deepEqual(r.groups[1].points.map((p) => p.psi), [0, 135]);
+  assert.equal(rotateSelection(m, s, 0), m);
+  const withT2 = { ...m, types: [...m.types, { ...m.types[0], id: 't2' }] };
+  const x = replaceType(withT2, s, 't2');
+  assert.equal(x.model.groups[0].type, 't2');
+  assert.deepEqual(x.model.groups.map((g) => [g.id, g.type, g.kind === 'single' ? g.points.length : 0]), [['g1', 't2', 0], ['g2', 't1', 1], ['g3', 't2', 1]]);
+  assert.ok(x.sel.groups.has('g1') && x.sel.points.get('g3').has(0));
+  assert.equal(replaceType(withT2, selectionOf(pickAt(items, 1, 1, 0)), 't1'), withT2);
 });
 
 test('keys of the editor', async () => {

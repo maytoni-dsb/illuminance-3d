@@ -19,7 +19,7 @@
 
 import { DEFAULTS, validateParams, faceRho, ceilingDrop, photometricHeight, HM_MIN, MAX_LUMINAIRES } from './ui.js';
 import { rectOutline } from './geometry.js';
-import { GROUP_KINDS, CIRCLE_ORIENT, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup } from './groups.js';
+import { GROUP_KINDS, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup } from './groups.js';
 import { cleanPlanGrid, PLAN_GRID } from './planedit.js';
 
 /** Shapes of the room the model takes (stage 2.3 adds L, U and T). */
@@ -234,23 +234,48 @@ export function removeType(m, id) {
 }
 
 /**
- * A new group of the kind with the type: placed in the middle of the room, at the ceiling.
+ * A group drawn on the plan (stage 2.1): the kind, the type, the drawn geometry and the values of
+ * the fields of the next group (`draft`: counts, heights, rotation).
+ *   single: { x, y } · grid: { x0, y0, x1, y1 } · line: { x0, y0, x1, y1 } · circle: { cx, cy, r }
  * @returns {{ model, id }}
  */
-export function addGroup(m, kind, type) {
+export function addGroup(m, kind, type, geo = null, draft = {}) {
   const { L, W } = roomSize(m), H = m.room.H, id = newId(m.groups, 'g');
-  const r2 = (x) => Math.round(x * 100) / 100;
-  const base = { id, type, kind, hm: H, psi: 0 };
+  const r2 = (x) => Math.round(x * 1e6) / 1e6;
+  const hm = Math.min(H, draft.hm ?? H), psi = draft.psi ?? 0;
   let g;
   switch (kind) {
-    case 'grid': g = { ...base, nx: 2, ny: 2 }; break;
-    case 'line': g = { ...base, x0: r2(L * 0.2), y0: r2(W / 2), x1: r2(L * 0.8), y1: r2(W / 2), by: 'count', n: 3, step: 1, off: 0 }; break;
-    case 'lines': g = { ...base, x0: r2(L * 0.2), y0: r2(W / 3), x1: r2(L * 0.8), y1: r2(W / 3), by: 'count', n: 3, step: 1, off: 0, rows: 2, gap: r2(W / 3) }; break;
-    case 'circle': g = { ...base, cx: r2(L / 2), cy: r2(W / 2), r: r2(Math.min(L, W) / 4), n: 6, start: 0, orient: 'tangent' }; break;
-    case 'single': g = { id, type, kind, points: [{ x: r2(L / 2), y: r2(W / 2), hm: H, psi: 0 }] }; break;
+    case 'grid': {
+      const a = geo ?? { x0: 0, y0: 0, x1: L, y1: W };
+      g = { id, type, kind, nx: draft.nx ?? 2, ny: draft.ny ?? 2, hm, psi };
+      if (geo) g.area = { x0: r2(Math.min(a.x0, a.x1)), y0: r2(Math.min(a.y0, a.y1)), x1: r2(Math.max(a.x0, a.x1)), y1: r2(Math.max(a.y0, a.y1)) };
+      break;
+    }
+    case 'line': {
+      const a = geo ?? { x0: L * 0.2, y0: W / 2, x1: L * 0.8, y1: W / 2 };
+      g = { id, type, kind, x0: r2(a.x0), y0: r2(a.y0), x1: r2(a.x1), y1: r2(a.y1), n: draft.n ?? 3, hm, hm1: Math.min(H, draft.hm1 ?? hm), psi };
+      break;
+    }
+    case 'circle': {
+      const a = geo ?? { cx: L / 2, cy: W / 2, r: Math.min(L, W) / 4 };
+      g = { id, type, kind, cx: r2(a.cx), cy: r2(a.cy), r: r2(a.r), n: draft.n ?? 6, hm, psi };
+      break;
+    }
+    case 'single': {
+      const a = geo ?? { x: L / 2, y: W / 2 };
+      g = { id, type, kind, points: [{ x: r2(a.x), y: r2(a.y), hm, psi }] };
+      break;
+    }
     default: throw new RangeError(`addGroup: group kind ${kind}`);
   }
   return { model: { ...m, groups: [...m.groups, g] }, id };
+}
+
+/** The model with a luminaire added to the group of single luminaires `id` (drawing one by one). */
+export function addPoint(m, id, x, y, draft = {}) {
+  const H = m.room.H, r2 = (v) => Math.round(v * 1e6) / 1e6;
+  return { ...m, groups: m.groups.map((g) => (g.id === id && g.kind === 'single'
+    ? { ...g, points: [...g.points, { x: r2(x), y: r2(y), hm: Math.min(H, draft.hm ?? H), psi: draft.psi ?? 0 }] } : g)) };
 }
 
 /** The model with the group `id` replaced. */
@@ -324,33 +349,45 @@ function cleanType(ty, id) {
   return out;
 }
 
-/** A group read from a file (null: a kind this version does not know). */
+/**
+ * A group read from a file (null: a kind this version does not know). Groups of the first editor
+ * of stage 2.1 are converted (20 Nov 2026): "several lines" become single luminaires, a line by
+ * step its count, a circle keeps its luminaires' rotation measured from the radius.
+ */
 function cleanGroup(g, id, type, room) {
   const { H } = room, L = room.shape.L, W = room.shape.W;
   const hm = (v) => num(v, HM_MIN, H, H);
   const base = { id, type, kind: g.kind };
   switch (g.kind) {
     case 'grid': {
-      const out = { ...base, nx: int(g.nx, 1, 30, DEFAULTS.nx), ny: int(g.ny, 1, 30, DEFAULTS.ny), hm: hm(g.hm), psi: num(g.psi, 0, 180, 0) };
+      const out = { ...base, nx: int(g.nx, 1, 30, DEFAULTS.nx), ny: int(g.ny, 1, 30, DEFAULTS.ny), hm: hm(g.hm), psi: angle(g.psi) };
       const a = g.area;
       if (a && [a.x0, a.y0, a.x1, a.y1].every((v) => coord(v, NaN) === v) && a.x1 > a.x0 && a.y1 > a.y0) out.area = { x0: a.x0, y0: a.y0, x1: a.x1, y1: a.y1 };
       return out;
     }
-    case 'line': case 'lines': {
+    case 'line': {
       const out = {
         ...base, x0: coord(g.x0, 0), y0: coord(g.y0, W / 2), x1: coord(g.x1, L), y1: coord(g.y1, W / 2),
-        by: g.by === 'step' ? 'step' : 'count', n: int(g.n, 1, MAX_LUMINAIRES, 2), step: num(g.step, 0.01, 1000, 1),
-        off: num(g.off, 0, 1000, 0), hm: hm(g.hm), psi: angle(g.psi),
+        n: int(g.n, 1, MAX_LUMINAIRES, 2), hm: hm(g.hm), hm1: 0, psi: angle(g.psi),
       };
-      if (g.kind === 'lines') { out.rows = int(g.rows, 1, MAX_LUMINAIRES, 2); out.gap = num(g.gap, -1000, 1000, 1); }
+      out.hm1 = g.hm1 === undefined ? out.hm : hm(g.hm1);
+      if (g.hm1 === undefined && (g.by === 'step' || g.off > 0)) {
+        // the first editor: luminaires by step between offsets — the same luminaires as single ones
+        return { ...base, kind: 'single', points: legacyPoints(g, room) };
+      }
       return out;
     }
-    case 'circle':
-      return {
+    case 'lines':
+      return { ...base, kind: 'single', points: legacyPoints(g, room) };
+    case 'circle': {
+      const out = {
         ...base, cx: coord(g.cx, L / 2), cy: coord(g.cy, W / 2), r: num(g.r, 0.01, 1000, Math.min(L, W) / 4),
-        n: int(g.n, 1, MAX_LUMINAIRES, 6), start: angle(g.start), orient: CIRCLE_ORIENT.includes(g.orient) ? g.orient : 'tangent',
-        hm: hm(g.hm), psi: angle(g.psi),
+        n: int(g.n, 1, MAX_LUMINAIRES, 6), hm: hm(g.hm), psi: angle(g.psi),
       };
+      if (g.orient === 'tangent') out.psi = angle(out.psi + 90);
+      if (g.start || g.orient === 'fixed') return { ...base, kind: 'single', points: legacyPoints(g, room) };
+      return out;
+    }
     case 'single':
       return {
         ...base,
@@ -360,6 +397,36 @@ function cleanGroup(g, id, type, room) {
     default:
       return null;
   }
+}
+
+/** Luminaires of a group of the first editor of stage 2.1 (lines by step, several lines, circles with a start angle). */
+function legacyPoints(g, room) {
+  const L = room.shape.L, W = room.shape.W, H = room.H, DEG_ = Math.PI / 180;
+  const n = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+  const h = Math.min(H, Math.max(HM_MIN, n(g.hm, H))), psi = n(g.psi, 0);
+  if (g.kind === 'circle') {
+    const cnt = Math.max(1, Math.min(MAX_LUMINAIRES, Math.round(n(g.n, 6)))), r = Math.max(0.01, n(g.r, 1));
+    return Array.from({ length: cnt }, (_, k) => {
+      const a = n(g.start, 0) + (360 * k) / cnt;
+      const p = g.orient === 'tangent' ? a + 90 + psi : g.orient === 'radial' ? a + psi : psi;
+      return { x: n(g.cx, L / 2) + r * Math.cos(a * DEG_), y: n(g.cy, W / 2) + r * Math.sin(a * DEG_), hm: h, psi: wrapDeg(p) };
+    });
+  }
+  const x0 = n(g.x0, 0), y0 = n(g.y0, W / 2), x1 = n(g.x1, L), y1 = n(g.y1, W / 2);
+  const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy), ux = len ? dx / len : 1, uy = len ? dy / len : 0;
+  const dir = len ? Math.atan2(dy, dx) / DEG_ : 0, off = Math.max(0, n(g.off, 0)), free = Math.max(0, len - 2 * off);
+  let ts = [];
+  if (g.by === 'step') {
+    const step = Math.max(0.01, n(g.step, 1)), cnt = Math.floor(free / step + 1e-9) + 1;
+    ts = Array.from({ length: cnt }, (_, k) => (len - (cnt - 1) * step) / 2 + k * step);
+  } else {
+    const cnt = Math.max(1, Math.round(n(g.n, 2)));
+    ts = cnt === 1 ? [len / 2] : Array.from({ length: cnt }, (_, k) => off + (free * k) / (cnt - 1));
+  }
+  const rows = g.kind === 'lines' ? Math.max(1, Math.round(n(g.rows, 1))) : 1, gap = n(g.gap, 0);
+  const out = [];
+  for (let r = 0; r < rows; r++) for (const t of ts) out.push({ x: x0 + t * ux - uy * r * gap, y: y0 + t * uy + ux * r * gap, hm: h, psi: wrapDeg(dir + psi) });
+  return out.slice(0, MAX_LUMINAIRES);
 }
 
 /**

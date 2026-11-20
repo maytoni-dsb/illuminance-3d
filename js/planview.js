@@ -240,20 +240,21 @@ export function drawPlane3D(ctx, project, size, d) {
 }
 
 /**
- * The plan editor (stage 2.1): the plan grid (when snapping is on and its lines are not too dense),
+ * The plan editor (stage 2.1): the plan grid (when shown and its lines are not too dense),
  * the guides of the selected groups (line, circle), every luminaire as its housing turned by ψ
  * (a dot without a housing) in the colour of its type with the type's letter when there is room,
  * the selection and the selection rectangle.
  * @param {{ items: object[], color: (type) => string, letter: (type) => string, selected: (it) => boolean,
- *           grid: { sx, sy, ox, oy, snap }, L, W, guides: object[], box: [x0, y0, x1, y1] | null,
- *           accent: string, bad: Set<string> }} d — bad: "group:index" of the misplaced luminaires
+ *           grid: { sx, sy, ox, oy, show }, L, W, guides: object[], box: [x0, y0, x1, y1] | null,
+ *           accent: string, bad: Set<string>, snap: { x, y, kind } | null }} d — bad: "group:index" of
+ *           the misplaced luminaires; snap: the snapped point under the pointer
  */
 export function drawEditor(ctx, T, size, d) {
   ctx.save();
   // plan grid: thin lines inside the room
-  if (d.grid.snap) {
+  if (d.grid.show) {
     const px = d.grid.sx / T.k, py = d.grid.sy / T.k;
-    if (px >= 8 && py >= 8) {
+    if (px >= 6 && py >= 6) {
       ctx.strokeStyle = 'rgba(124,84,254,.16)'; ctx.lineWidth = 0.6;
       ctx.beginPath();
       const i0 = Math.ceil((0 - d.grid.ox) / d.grid.sx), i1 = Math.floor((d.L - d.grid.ox) / d.grid.sx);
@@ -290,6 +291,16 @@ export function drawEditor(ctx, T, size, d) {
     ctx.beginPath(); ctx.moveTo(r - 3, 0); ctx.lineTo(r + 3, 0); ctx.strokeStyle = sel ? d.accent : col; ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
     if (Math.min(w, h) >= 13 || (w < 3 && sel)) halo(ctx, d.letter(it.type), cx, Math.min(w, h) >= 13 ? cy : cy - 12, '#111');
+  }
+  // the snapped point under the pointer: a vertex, a midpoint or a centre
+  if (d.snap) {
+    const x = T.x(d.snap.x), y = T.y(d.snap.y);
+    ctx.strokeStyle = d.accent; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (d.snap.kind === 'vertex') ctx.rect(x - 5, y - 5, 10, 10);
+    else if (d.snap.kind === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
+    else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
+    ctx.stroke();
   }
   // the selection rectangle
   if (d.box) {

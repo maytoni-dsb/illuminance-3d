@@ -99,10 +99,10 @@ test('a version 1 file saved as version 2 and opened again is the same project',
 test('a version 2 room with several types and groups is read (stage 2.1); a broken one is refused', () => {
   const d = JSON.parse(serializeProject(createProject()));
   d.rooms[0].types.push({ ...d.rooms[0].types[0], id: 't2' });
-  d.rooms[0].groups.push({ id: 'g2', type: 't2', kind: 'circle', cx: 3, cy: 2, r: 1, n: 8, start: 0, orient: 'radial', hm: 3, psi: 0 });
+  d.rooms[0].groups.push({ id: 'g2', type: 't2', kind: 'circle', cx: 3, cy: 2, r: 1, n: 8, hm: 3, psi: 90 });
   const p = parseProject(JSON.stringify(d));
   assert.deepEqual(p.rooms[0].model.groups.map((g) => g.kind), ['grid', 'circle']);
-  assert.equal(JSON.parse(serializeProject(p)).rooms[0].groups[1].orient, 'radial');
+  assert.equal(JSON.parse(serializeProject(p)).rooms[0].groups[1].psi, 90);
   d.rooms[0].groups[1].n = 495;
   assert.throws(() => parseProject(JSON.stringify(d)), /больше 500/);
   const e = JSON.parse(serializeProject(createProject()));

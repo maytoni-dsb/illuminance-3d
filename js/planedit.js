@@ -9,10 +9,14 @@
 // A selection is { groups: Set<groupId>, points: Map<groupId, Set<index>> } — whole groups, and
 // luminaires of groups of single luminaires.
 
-import { groupPoints, housingHalf, moveGroup, movePoints } from './groups.js';
+import { groupPoints, housingHalf, moveGroup, movePoints, turnLuminaires } from './groups.js';
 
-/** Defaults of the plan grid: steps along X and Y, origin, snapping (m). */
-export const PLAN_GRID = Object.freeze({ sx: 0.1, sy: 0.1, ox: 0, oy: 0, snap: true });
+/**
+ * Defaults of the plan grid and snapping: steps along X and Y, origin (m), the grid shown, snapping
+ * on, and the snaps: grid nodes, vertices (corners of the room), midpoints of the walls, centres
+ * (of the room and of the luminaires).
+ */
+export const PLAN_GRID = Object.freeze({ sx: 0.25, sy: 0.25, ox: 0, oy: 0, show: true, snap: true, modes: Object.freeze({ grid: true, vertex: true, mid: true, centre: true }) });
 
 /** An empty selection. */
 export const emptySelection = () => ({ groups: new Set(), points: new Map() });
@@ -172,6 +176,80 @@ export function deleteSelection(m, s) {
 /** Cleans a plan grid read from a file; a wrong value gets its default. */
 export function cleanPlanGrid(g) {
   const d = PLAN_GRID, num = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : def);
-  if (!g || typeof g !== 'object') return { ...d };
-  return { sx: num(g.sx, 0.001, 100, d.sx), sy: num(g.sy, 0.001, 100, d.sy), ox: num(g.ox, -1000, 1000, d.ox), oy: num(g.oy, -1000, 1000, d.oy), snap: typeof g.snap === 'boolean' ? g.snap : d.snap };
+  const bool = (v, def) => (typeof v === 'boolean' ? v : def);
+  if (!g || typeof g !== 'object') return { ...d, modes: { ...d.modes } };
+  const m = g.modes && typeof g.modes === 'object' ? g.modes : {};
+  return {
+    sx: num(g.sx, 0.001, 100, d.sx), sy: num(g.sy, 0.001, 100, d.sy), ox: num(g.ox, -1000, 1000, d.ox), oy: num(g.oy, -1000, 1000, d.oy),
+    show: bool(g.show, d.show), snap: bool(g.snap, d.snap),
+    modes: { grid: bool(m.grid, d.modes.grid), vertex: bool(m.vertex, d.modes.vertex), mid: bool(m.mid, d.modes.mid), centre: bool(m.centre, d.modes.centre) },
+  };
+}
+
+/**
+ * A point of the plan snapped (decided on 20 Nov 2026): the nearest vertex of the room, midpoint of
+ * a wall or centre (of the room, of a luminaire not being moved) within `tol` metres wins; else the
+ * nearest node of the grid; with snapping off the point itself.
+ * @param {{ x, y }[]} centres — centres of the luminaires that may be snapped to
+ * @returns {{ x, y, kind: 'vertex' | 'mid' | 'centre' | 'grid' | null }}
+ */
+export function snapPoint(x, y, grid, L, W, centres, tol) {
+  if (!grid.snap) return { x, y, kind: null };
+  const m = grid.modes ?? PLAN_GRID.modes;
+  const cand = [];
+  if (m.vertex) for (const [a, b] of [[0, 0], [L, 0], [L, W], [0, W]]) cand.push([a, b, 'vertex']);
+  if (m.mid) for (const [a, b] of [[L / 2, 0], [L, W / 2], [L / 2, W], [0, W / 2]]) cand.push([a, b, 'mid']);
+  if (m.centre) { cand.push([L / 2, W / 2, 'centre']); for (const c of centres) cand.push([c.x, c.y, 'centre']); }
+  let best = null, bd = tol;
+  for (const [a, b, kind] of cand) { const d = Math.hypot(a - x, b - y); if (d <= bd) { bd = d; best = { x: a, y: b, kind }; } }
+  if (best) return best;
+  if (m.grid) return { x: snapValue(x, grid.sx, grid.ox), y: snapValue(y, grid.sy, grid.oy), kind: 'grid' };
+  return { x, y, kind: null };
+}
+
+/** The model with the luminaires of the selection turned by dpsi degrees about their own axes. */
+export function rotateSelection(m, s, dpsi) {
+  if (!dpsi) return m;
+  return {
+    ...m,
+    groups: m.groups.map((g) => {
+      if (s.groups.has(g.id)) return turnLuminaires(g, dpsi);
+      const idx = s.points.get(g.id);
+      return idx?.size && g.kind === 'single' ? turnLuminaires(g, dpsi, [...idx]) : g;
+    }),
+  };
+}
+
+/**
+ * The selection given another luminaire type (dialog "List", "Replace"): whole groups take the
+ * type; selected single luminaires of a group move to a new group of single luminaires of that
+ * type (the rest keep theirs). Returns { model, sel } with the selection of the same luminaires,
+ * or the model itself when nothing changes.
+ */
+export function replaceType(m, s, type) {
+  let changed = false;
+  const groups = [], nsel = emptySelection();
+  const used = new Set(m.groups.map((g) => g.id));
+  const nid = () => { for (let k = 1; ; k++) if (!used.has(`g${k}`)) { used.add(`g${k}`); return `g${k}`; } };
+  for (const g of m.groups) {
+    if (s.groups.has(g.id)) {
+      if (g.type !== type) changed = true;
+      groups.push(g.type === type ? g : { ...g, type });
+      nsel.groups.add(g.id);
+      continue;
+    }
+    const idx = s.points.get(g.id);
+    if (g.kind === 'single' && idx?.size && g.type !== type) {
+      const keep = g.points.filter((_, k) => !idx.has(k)), take = g.points.filter((_, k) => idx.has(k));
+      changed = true;
+      if (keep.length) groups.push({ ...g, points: keep });
+      const id = keep.length ? nid() : g.id;
+      groups.push({ id, type, kind: 'single', points: take });
+      nsel.points.set(id, new Set(take.map((_, k) => k)));
+      continue;
+    }
+    if (idx?.size) nsel.points.set(g.id, new Set(idx));
+    groups.push(g);
+  }
+  return changed ? { model: { ...m, groups }, sel: nsel } : m;
 }

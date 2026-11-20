@@ -1,8 +1,8 @@
-// Luminaire types and groups in the form (stage 2.1): the list of types (letter, colour, name,
-// count), the list of groups and the fields of the selected group. Browser only; the pure part is
-// js/groupform.js (fields, validation) and js/model.js (the edits).
+// Luminaires in the form (stage 2.1, the editor after DIALux): the buttons of the placement kinds,
+// the rows of fields of the selected group or of the next group to draw, and the list of the
+// luminaires of the project (the dialog "List"). Browser only; the pure part is js/groupform.js.
 
-import { GROUP_FIELDS, groupFieldValues, validateGroup } from './groupform.js';
+import { rowsOf, fieldValues, draftValues, validateGroup, validateDraft } from './groupform.js';
 import { groupCount } from './groups.js';
 import { typeLetter } from './model.js';
 import { stepValue, parseNumber, toDecimal, formatNumber } from './ui.js';
@@ -29,126 +29,82 @@ export function typeName(ty, k, file = null) {
 /** Mark of a type: its letter on its colour. */
 export const typeMark = (k) => `<span class="tymark" style="--ty:${typeColor(k)}">${typeLetter(k)}</span>`;
 
-/**
- * The list of types: a button per type (selected one pressed) with its luminaire count, and a
- * button to add one.
- * @param {(ty, k) => string} nameOf
- */
-export function renderTypes(host, m, selected, nameOf) {
-  const counts = new Map(m.types.map((ty) => [ty.id, 0]));
-  for (const g of m.groups) counts.set(g.type, (counts.get(g.type) ?? 0) + groupCount(g));
-  host.innerHTML = m.types.map((ty, k) => {
-    const on = ty.id === selected, used = m.groups.some((g) => g.type === ty.id);
-    const del = m.types.length > 1
-      ? `<button type="button" class="tydel" data-deltype="${ty.id}"${used ? ` disabled title="${esc(t('lum.typeUsed'))}"` : ` title="${esc(t('lum.typeDel'))}"`} aria-label="${esc(t('lum.typeDelAria', { name: nameOf(ty, k) }))}">×</button>` : '';
-    return `<div class="tyitem${on ? ' on' : ''}"><button type="button" class="tybtn" data-type="${ty.id}" aria-pressed="${on}">${typeMark(k)}<span class="tyname">${esc(nameOf(ty, k))}</span><span class="tycount">${counts.get(ty.id)}</span></button>${del}</div>`;
-  }).join('') + `<button type="button" class="gschipb sm tyadd" data-addtype="1">+ ${esc(t('lum.typeAdd'))}</button>`;
-}
-
-const KIND_ICON = {
-  grid: '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><circle cx="4" cy="4" r="1.6"/><circle cx="12" cy="4" r="1.6"/><circle cx="4" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/></g></svg>',
-  line: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 8h13" stroke="currentColor" stroke-width="1" fill="none"/><g fill="currentColor"><circle cx="3" cy="8" r="1.6"/><circle cx="8" cy="8" r="1.6"/><circle cx="13" cy="8" r="1.6"/></g></svg>',
-  lines: '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="4.5" r="1.4"/><circle cx="8" cy="4.5" r="1.4"/><circle cx="13" cy="4.5" r="1.4"/><circle cx="3" cy="11.5" r="1.4"/><circle cx="8" cy="11.5" r="1.4"/><circle cx="13" cy="11.5" r="1.4"/></g></svg>',
-  circle: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1" fill="none"/><g fill="currentColor"><circle cx="13" cy="8" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="13" r="1.5"/></g></svg>',
-  single: '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="currentColor"><circle cx="5" cy="6" r="1.8"/><circle cx="11.5" cy="10.5" r="1.8"/></g></svg>',
+const SVG = (d, extra = '') => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"${extra}>${d}</svg>`;
+const DOT = (x, y, r = 1.7) => `<circle cx="${x}" cy="${y}" r="${r}" fill="currentColor" stroke="none"/>`;
+/** Icons of the placement kinds. */
+export const KIND_ICON = {
+  single: SVG(DOT(8, 8, 2.6)),
+  grid: SVG(DOT(4, 4) + DOT(12, 4) + DOT(4, 12) + DOT(12, 12)),
+  line: SVG(`<path d="M1.5 8h13" stroke-width="1"/>${DOT(3, 8)}${DOT(8, 8)}${DOT(13, 8)}`),
+  circle: SVG(`<circle cx="8" cy="8" r="5.2" stroke-width="1"/>${DOT(13.2, 8)}${DOT(2.8, 8)}${DOT(8, 2.8)}${DOT(8, 13.2)}`),
 };
-export const kindIcon = (kind) => `<span class="gricon">${KIND_ICON[kind] ?? ''}</span>`;
+/** Icons of the rows of fields. */
+const ROW_ICON = {
+  pos: SVG('<path d="M8 14.5s4.5-4.2 4.5-7.8a4.5 4.5 0 0 0-9 0C3.5 10.3 8 14.5 8 14.5z"/><circle cx="8" cy="6.7" r="1.6"/>'),
+  rot: SVG('<path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M11.8 1.8v2.8H9"/>'),
+  count: SVG('<path d="M5.5 2.5 4.5 13.5M11.5 2.5l-1 11M2.5 5.5h11M2 10.5h11"/>'),
+  size: SVG('<path d="M2 5.5h12M2 3.5v4M14 3.5v4M10.5 14V2M8.5 2h4M8.5 14h4" stroke-width="1.1"/>'),
+  centre: SVG('<circle cx="8" cy="8" r="5"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3"/>'),
+  start: SVG(`<path d="M5 8h9" stroke-dasharray="1.6 1.6"/><circle cx="4" cy="8" r="2.4"/>`),
+  end: SVG(`<path d="M2 8h9" stroke-dasharray="1.6 1.6"/>${DOT(12, 8, 2.4)}`),
+};
 
-/** Short description of a group for its row: "Grid 3 × 2", "Line · 4", "Circle · 8", "Single · 2". */
-export function groupLabel(g) {
-  const n = groupCount(g);
-  if (g.kind === 'grid') return t('lum.kindGrid', { nx: g.nx, ny: g.ny });
-  return `${t(`lum.kind.${g.kind}`)} · ${n}`;
+/** The buttons of the placement kinds: single (default), grid, line, circle. */
+export function renderKinds(host, kind, drawing) {
+  host.innerHTML = ['single', 'grid', 'line', 'circle'].map((k) =>
+    `<button type="button" data-kind="${k}" aria-pressed="${k === kind}" class="tipl${k === kind && drawing ? ' draw' : ''}" data-tip="${esc(t(`lum.kind.${k}`))}" aria-label="${esc(t(`lum.kind.${k}`))}">${KIND_ICON[k]}</button>`).join('');
 }
 
-/**
- * The list of groups: a row per group (icon, label, type mark, count; selected one pressed),
- * the actions of the selected group and the buttons that add a group of a kind.
- * @param {Map<string, number>} errorsOf — group id → number of placement errors
- */
-export function renderGroups(host, m, selected, errorsOf = new Map()) {
-  const kOf = new Map(m.types.map((ty, k) => [ty.id, k]));
-  const rows = m.groups.map((g) => {
-    const on = g.id === selected, bad = errorsOf.get(g.id) || 0;
-    return `<button type="button" class="gritem${on ? ' on' : ''}${bad ? ' bad' : ''}" data-group="${g.id}" aria-pressed="${on}"${bad ? ` title="${esc(t('lum.groupBad'))}"` : ''}>${kindIcon(g.kind)}<span class="grlabel">${esc(groupLabel(g))}</span>${typeMark(kOf.get(g.type) ?? 0)}</button>`;
-  }).join('');
-  const sel = m.groups.find((g) => g.id === selected);
-  const act = (a, label, dis = false, title = '') => `<button type="button" class="gschipb sm" data-act="${a}"${dis ? ' disabled' : ''}${title ? ` title="${esc(title)}"` : ''}>${esc(label)}</button>`;
-  const actions = sel ? `<div class="gracts">${act('dup', t('lum.dup'))}${act('ungroup', t('lum.ungroup'), sel.kind === 'single', t('lum.ungroupTip'))}${act('del', t('lum.del'), m.groups.length < 2)}</div>` : '';
-  const add = `<div class="gradd"><span>${esc(t('lum.add'))}</span>${['grid', 'line', 'lines', 'circle', 'single'].map((k) =>
-    `<button type="button" class="gschipb sm" data-add="${k}" title="${esc(t(`lum.kind.${k}`))}" aria-label="${esc(t('lum.addAria', { kind: t(`lum.kind.${k}`) }))}">${kindIcon(k)}</button>`).join('')}</div>`;
-  host.innerHTML = `<div class="grlist">${rows}</div>${actions}${add}`;
-}
-
-const UP = '<svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 5 4 0 8 5z" fill="currentColor"/></svg>';
-const DOWN = '<svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg>';
+const UP = '<svg viewBox="0 0 8 5" width="7" height="4" aria-hidden="true"><path d="M0 5 4 0 8 5z" fill="currentColor"/></svg>';
+const DOWN = '<svg viewBox="0 0 8 5" width="7" height="4" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg>';
 
 /**
- * The fields of the selected group, rebuilt for its kind on load(); on every valid change
- * onChange(group) gets the edited group.
- * @returns {{ load(g, ctx), group(): object|null, errors(): Record<string,string> }}
- *   ctx = { H, others, at } (groupform.validateGroup); `at` — the point of a single group
+ * The rows of fields: of the selected group, or of the next group to draw (`draft`). Every valid
+ * change calls onChange({ group }) or onChange({ draft }).
+ * @returns {{ load(o), context(c) }} o = { group } | { kind, draft }, with ctx { H, L, W, others, at }
  */
 export function initGroupForm(host, onChange) {
-  let g = null, ctx = null, inputs = {}, choice = {}, timer = 0, lastErrors = {};
-
-  const unitText = (u) => (u === 'm' ? t('unit.m') : u === 'pcs' ? t('unit.pcs') : u);
-  const shown = (x) => (x == null ? '' : formatNumber(x, 6));
+  let g = null, kind = 'single', draft = null, ctx = { H: 3, L: 6, W: 4, others: 0, at: 0 }, inputs = {}, fields = {}, timer = 0;
+  const shown = (x) => (x == null || !Number.isFinite(x) ? '' : formatNumber(x, 6));
 
   function build() {
-    inputs = {}; choice = {};
-    if (!g) { host.innerHTML = ''; return; }
-    const v = groupFieldValues(g, ctx.at);
+    inputs = {}; fields = {};
+    const rows = rowsOf(g ? g.kind : kind, !g);
+    const v = g ? fieldValues(g, ctx) : draftValues(kind, draft, ctx);
     const parts = [];
-    if (g.kind === 'single') {
+    if (g?.kind === 'single' && g.points.length > 1) {
       const n = g.points.length, at = Math.min(ctx.at ?? 0, n - 1);
-      parts.push(`<div class="gpoint"><button type="button" class="gschipb sm" data-pt="-1"${at <= 0 ? ' disabled' : ''} aria-label="${esc(t('lum.prevLum'))}">‹</button><span>${esc(t('lum.lumOf', { k: at + 1, n }))}</span><button type="button" class="gschipb sm" data-pt="1"${at >= n - 1 ? ' disabled' : ''} aria-label="${esc(t('lum.nextLum'))}">›</button>
-        <button type="button" class="gschipb sm" data-pt="add">+ ${esc(t('lum.addPoint'))}</button><button type="button" class="gschipb sm" data-pt="del"${n < 2 ? ' disabled' : ''}>${esc(t('lum.delPoint'))}</button></div>`);
+      parts.push(`<div class="gpoint"><button type="button" class="gschipb sm" data-pt="-1"${at <= 0 ? ' disabled' : ''} aria-label="${esc(t('lum.prevLum'))}">‹</button><span>${esc(t('lum.lumOf', { k: at + 1, n }))}</span><button type="button" class="gschipb sm" data-pt="1"${at >= n - 1 ? ' disabled' : ''} aria-label="${esc(t('lum.nextLum'))}">›</button></div>`);
     }
-    let sub = '';
-    for (const f of GROUP_FIELDS[g.kind]) {
-      // sub-headings: the area of a grid
-      if (f.key === 'ax0') { sub = 'area'; parts.push(`<div class="fsub wide">${esc(t('gform.area'))}<small>${esc(t('gform.areaNote'))}</small></div>`); }
-      if (f.choice) {
-        choice[f.key] = v[f.key] ?? f.choice[0];
-        parts.push(`<div class="fld wide gchoice" data-k="${f.key}"><span class="fl"><span class="t">${esc(t(`gform.${f.key}`))}</span></span><div class="seg" role="group">${f.choice.map((c) =>
-          `<button type="button" data-c="${c}" aria-pressed="${choice[f.key] === c}">${esc(t(`gform.${f.key}_${c}`))}</button>`).join('')}</div></div>`);
-        continue;
-      }
-      const ph = f.optional && sub === 'area' ? ` placeholder="${esc(shown({ ax0: 0, ay0: 0, ax1: ctx.L, ay1: ctx.W }[f.key]))}"` : '';
-      parts.push(`<div class="fld" id="w-g-${f.key}" data-k="${f.key}"><label class="fl" for="in-g-${f.key}"><span class="t">${esc(t(`gform.${f.key}`))}</span></label>
-        <div class="ibox"><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="${esc(t('form.more'))}">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="${esc(t('form.less'))}">${DOWN}</button></span><input id="in-g-${f.key}" inputmode="decimal" autocomplete="off" spellcheck="false" value="${esc(shown(v[f.key]))}"${ph} aria-describedby="err-g-${f.key}"><span class="unit">${esc(unitText(f.unit))}</span></div>
-        <span class="ferr" id="err-g-${f.key}" role="alert" hidden></span></div>`);
+    for (const r of rows) {
+      const cells = r.fields.map((f) => {
+        fields[f.key] = f;
+        const unit = f.unit === '°' ? '<span class="gu">°</span>' : '';
+        return `<div class="gf" data-k="${f.key}"><span class="gax">${esc(f.ax)}</span><span class="spin"><button type="button" tabindex="-1" data-d="1" aria-label="${esc(t('form.more'))}">${UP}</button><button type="button" tabindex="-1" data-d="-1" aria-label="${esc(t('form.less'))}">${DOWN}</button></span><input id="in-g-${f.key}" inputmode="decimal" autocomplete="off" spellcheck="false" value="${esc(shown(v[f.key]))}" aria-label="${esc(t(`gform.tip.${r.tip}`) + ': ' + f.ax)}">${unit}</div>`;
+      }).join('');
+      const tip = t(`gform.tip.${r.tip}`);
+      parts.push(`<div class="grow" data-tip="${esc(tip)}"><span class="gic" title="${esc(tip)}">${ROW_ICON[r.icon]}</span><div class="gcells c${r.fields.length}">${cells}</div></div>`);
     }
-    host.innerHTML = `<div class="fgrid gfields" style="--cols:2">${parts.join('')}</div>`;
-    for (const f of GROUP_FIELDS[g.kind]) if (!f.choice) inputs[f.key] = host.querySelector(`#in-g-${f.key}`);
-    showWhen();
+    parts.push('<div class="ferr gerr" role="alert" hidden></div>');
+    if (!g) parts.push(`<div class="gshint gdraw">${esc(t(`lum.draw.${kind}`))}</div>`);
+    host.innerHTML = parts.join('');
+    for (const k of Object.keys(fields)) inputs[k] = host.querySelector(`#in-g-${k}`);
   }
-
-  function raw() {
-    const r = { ...choice };
-    for (const [k, el] of Object.entries(inputs)) r[k] = el.value;
-    return r;
-  }
-  function showWhen() {
-    const v = { ...choice };
-    for (const f of GROUP_FIELDS[g.kind]) {
-      if (!f.when) continue;
-      const el = host.querySelector(`[data-k="${f.key}"]`);
-      if (el) el.hidden = !f.when(v);
-    }
-  }
+  const raw = () => Object.fromEntries(Object.entries(inputs).map(([k, el]) => [k, el.value]));
   function check() {
-    if (!g) return;
-    const r = validateGroup(g, raw(), ctx);
-    lastErrors = r.errors;
+    const r = g ? validateGroup(g, raw(), ctx) : validateDraft(kind, raw(), ctx);
+    const msgs = [];
     for (const [k, el] of Object.entries(inputs)) {
-      const e = r.errors[k] || '', box = el.closest('.fld'), fe = box.querySelector('.ferr');
-      fe.textContent = e; fe.hidden = !e; box.classList.toggle('bad', !!e); el.toggleAttribute('aria-invalid', !!e);
+      const e = r.errors[k] || '';
+      el.closest('.gf').classList.toggle('bad', !!e);
+      el.toggleAttribute('aria-invalid', !!e);
+      if (e && !msgs.includes(e)) msgs.push(e);
     }
-    if (r.ok) { g = r.group; onChange(r.group); }
+    const box = host.querySelector('.gerr');
+    box.textContent = msgs.join(' '); box.hidden = !msgs.length;
+    if (!r.ok) return;
+    if (g) { g = r.group; onChange({ group: r.group }); } else { draft = r.draft; onChange({ draft: r.draft }); }
   }
-
   // the room form around listens to input and change too: these fields are not its own
   host.addEventListener('input', (e) => {
     e.stopPropagation();
@@ -156,59 +112,62 @@ export function initGroupForm(host, onChange) {
     if (el.tagName === 'INPUT' && el.value.includes(decimal() === ',' ? '.' : ',')) {
       const at = el.selectionStart; el.value = toDecimal(el.value); if (at != null) el.setSelectionRange(at, at);
     }
-    clearTimeout(timer); timer = setTimeout(check, 200);
+    clearTimeout(timer); timer = setTimeout(check, 250);
   });
   host.addEventListener('change', (e) => { e.stopPropagation(); clearTimeout(timer); check(); });
   host.addEventListener('keydown', (e) => {
-    if (e.target.tagName !== 'INPUT' || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-    e.preventDefault(); bump(e.target.closest('.fld').dataset.k, e.key === 'ArrowUp' ? 1 : -1);
+    if (e.target.tagName !== 'INPUT') return;
+    if (e.key === 'Enter') { clearTimeout(timer); check(); return; }
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault(); bump(e.target.closest('.gf').dataset.k, e.key === 'ArrowUp' ? 1 : -1);
   });
   host.addEventListener('click', (e) => {
     const s = e.target.closest('.spin button');
-    if (s) { bump(s.closest('.fld').dataset.k, Number(s.dataset.d)); return; }
-    const c = e.target.closest('.gchoice button');
-    if (c) {
-      const k = c.closest('.gchoice').dataset.k;
-      choice[k] = c.dataset.c;
-      for (const b of c.parentElement.children) b.setAttribute('aria-pressed', String(b === c));
-      showWhen(); check(); return;
-    }
+    if (s) { bump(s.closest('.gf').dataset.k, Number(s.dataset.d)); return; }
     const p = e.target.closest('[data-pt]');
     if (p && g?.kind === 'single') {
-      const n = g.points.length, at = Math.min(ctx.at ?? 0, n - 1);
-      if (p.dataset.pt === 'add') {
-        const q = g.points[at];
-        g = { ...g, points: [...g.points, { ...q, x: q.x + 0.5 }] };
-        ctx = { ...ctx, at: g.points.length - 1 };
-        onChange(g, { at: ctx.at });
-      } else if (p.dataset.pt === 'del') {
-        if (n < 2) return;
-        g = { ...g, points: g.points.filter((_, k) => k !== at) };
-        ctx = { ...ctx, at: Math.max(0, at - 1) };
-        onChange(g, { at: ctx.at });
-      } else {
-        ctx = { ...ctx, at: Math.max(0, Math.min(n - 1, at + Number(p.dataset.pt))) };
-        onChange(g, { at: ctx.at });
-      }
+      const n = g.points.length;
+      ctx = { ...ctx, at: Math.max(0, Math.min(n - 1, (ctx.at ?? 0) + Number(p.dataset.pt))) };
+      onChange({ group: g, at: ctx.at });
       build();
     }
   });
   function bump(k, dir) {
-    const f = GROUP_FIELDS[g.kind].find((x) => x.key === k), el = inputs[k];
+    const f = fields[k], el = inputs[k];
     if (!f || !el) return;
-    const p = { ...f, def: 0, max: typeof f.max === 'function' ? f.max(ctx) : f.max };
-    const x = parseNumber(el.value);
-    if (f.optional && !Number.isFinite(x)) el.value = shown({ ax0: 0, ay0: 0, ax1: ctx.L, ay1: ctx.W }[k] ?? 0);
-    else el.value = shown(stepValue(p, x, dir));
+    const p = { ...f, def: 0, min: f.min ?? 0, max: typeof f.max === 'function' ? f.max(ctx) : f.max };
+    el.value = shown(stepValue(p, parseNumber(el.value), dir));
     clearTimeout(timer); check();
   }
-
   return {
-    /** Shows the group (rebuilds the fields). */
-    load(group, c) { g = group; ctx = { at: 0, ...c }; lastErrors = {}; build(); },
-    /** The context changed (room height, other groups): the values are checked again. */
-    context(c) { ctx = { ...ctx, ...c }; if (g) check(); },
-    group: () => g,
-    errors: () => lastErrors,
+    /** Shows a group ({ group }) or the next group to draw ({ kind, draft }); rebuilds the rows. */
+    load(o, c) { g = o.group ?? null; kind = o.kind ?? g?.kind ?? 'single'; draft = o.draft ?? {}; ctx = { at: 0, ...c }; build(); },
+    /** The context changed (room size, other groups): the values are shown again. */
+    context(c) { ctx = { ...ctx, ...c }; build(); },
   };
+}
+
+/**
+ * The luminaires of the project (dialog "List"): a row per type with its mark, name (editable),
+ * file, count; the active one marked; actions per row: make active, replace the luminaires of the
+ * selection, delete (only an unused type).
+ * @param {{ nameOf(ty, k), fileOf(ty), active, canReplace: boolean }} o
+ */
+export function renderLumList(host, m, o) {
+  const counts = new Map(m.types.map((ty) => [ty.id, 0]));
+  for (const g of m.groups) counts.set(g.type, (counts.get(g.type) ?? 0) + groupCount(g));
+  const rows = m.types.map((ty, k) => {
+    const f = o.fileOf(ty), n = counts.get(ty.id), on = ty.id === o.active;
+    const file = f ? `${esc(f.table.manufacturer?.trim() || '')} ${esc(f.name)}`.trim() : esc(t('rui.noFileLum'));
+    const flux = `${formatNumber(f ? f.phot.flux : ty.flux, 0)} ${t('unit.lm')}`;
+    return `<tr class="${on ? 'on' : ''}" data-type="${ty.id}">
+      <td>${typeMark(k)}</td>
+      <td><input class="lname" data-name="${ty.id}" value="${esc(ty.name ?? '')}" placeholder="${esc(typeName({ ...ty, name: undefined }, k, f))}" maxlength="80" aria-label="${esc(t('lum.typeName'))}"><small>${file} · ${esc(flux)}</small></td>
+      <td class="n">${n}</td>
+      <td class="acts">${on ? `<span class="lact">${esc(t('lum.active'))}</span>` : `<button type="button" class="gschipb sm" data-use="${ty.id}">${esc(t('lum.use'))}</button>`}
+        ${o.canReplace ? `<button type="button" class="gschipb sm" data-replace="${ty.id}" data-tip="${esc(t('lum.replaceTip'))}">${esc(t('lum.replace'))}</button>` : ''}
+        <button type="button" class="ldel" data-del="${ty.id}"${n || m.types.length < 2 ? ` disabled data-tip="${esc(t('lum.typeUsed'))}"` : ''} aria-label="${esc(t('lum.typeDel'))}">×</button></td></tr>`;
+  }).join('');
+  host.innerHTML = `<table class="ltable"><thead><tr><th></th><th>${esc(t('lum.typeName'))}</th><th class="n">${esc(t('rui.count'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <button type="button" class="gschipb" data-addtype="1">+ ${esc(t('lum.typeAdd'))}</button>`;
 }

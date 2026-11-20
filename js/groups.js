@@ -4,23 +4,19 @@
 //
 // A mounting point is { x, y, hm, psi }: plan position of the top centre of the housing, m,
 // mounting height h_m, m, and the rotation ψ of the C0 plane from +X, counter-clockwise, degrees.
+// Groups are drawn on the plan and have no rotation of their own (decided on 20 Nov 2026):
 //
-//   grid    { nx, ny, hm, psi, area? }           — as in version 1: cells of equal size over the
-//            area { x0, y0, x1, y1 } (the whole room when absent), a luminaire in every cell centre
-//   line    { x0, y0, x1, y1, by, n, step, off, hm, psi }
-//            from P0 to P1; by 'count': n luminaires from P0 + off to P1 − off, evenly (one: the
-//            middle); by 'step': as many as fit between the offsets with the spacing `step`, the
-//            row centred on the line. ψ counts from the direction P0 → P1.
-//   lines   line + { rows, gap }                  — `rows` copies of the line, the k-th moved by
-//            k · gap to the left of P0 → P1 (counter-clockwise normal)
-//   circle  { cx, cy, r, n, start, orient, hm, psi } — n luminaires at the angles start + k·360°/n;
-//            orient 'tangent': ψ = angle + 90° + psi, 'radial': ψ = angle + psi, 'fixed': ψ = psi
-//   single  { points: [{ x, y, hm, psi }] }       — every luminaire with its own height and rotation
+//   grid    { nx, ny, hm, psi, area? }        — as in version 1: cells of equal size over the area
+//            { x0, y0, x1, y1 } (the whole room when absent), a luminaire in every cell centre;
+//            the form shows the area as its centre and size
+//   line    { x0, y0, x1, y1, n, hm, hm1, psi } — n luminaires evenly from P0 to P1 (one: the
+//            middle); mounting heights from hm at P0 to hm1 at P1; ψ counts from the direction P0 → P1
+//   circle  { cx, cy, r, n, hm, psi }         — n luminaires at the angles k·360°/n from +X; ψ counts
+//            from the radius (90°: along the tangent)
+//   single  { points: [{ x, y, hm, psi }] }    — every luminaire with its own height and rotation
 
 /** Kinds of groups. */
-export const GROUP_KINDS = Object.freeze(['grid', 'line', 'lines', 'circle', 'single']);
-/** Orientations of a circle. */
-export const CIRCLE_ORIENT = Object.freeze(['tangent', 'radial', 'fixed']);
+export const GROUP_KINDS = Object.freeze(['single', 'grid', 'line', 'circle']);
 
 const DEG = Math.PI / 180;
 /** Lengths closer than this are equal (m); also the tolerance of the placement check. */
@@ -28,25 +24,6 @@ export const GEO_EPS = 1e-9;
 
 /** Angle in degrees reduced to [0, 360). */
 export const wrapDeg = (a) => { const r = a % 360; return r < 0 ? r + 360 : r + 0; };
-
-/** Plan positions along a line from (x0, y0) to (x1, y1): [{ x, y }] and the direction, degrees. */
-function linePositions(g) {
-  const dx = g.x1 - g.x0, dy = g.y1 - g.y0, len = Math.hypot(dx, dy);
-  const dir = len > 0 ? Math.atan2(dy, dx) / DEG : 0;
-  const ux = len > 0 ? dx / len : 1, uy = len > 0 ? dy / len : 0;
-  const free = Math.max(0, len - 2 * g.off); // length between the offsets
-  const s = [];
-  if (g.by === 'step') {
-    const n = Math.floor(free / g.step + 1e-9) + 1;
-    const first = (len - (n - 1) * g.step) / 2; // centred on the line (between the offsets)
-    for (let k = 0; k < n; k++) s.push(first + k * g.step);
-  } else if (g.n === 1) {
-    s.push(len / 2);
-  } else {
-    for (let k = 0; k < g.n; k++) s.push(g.off + (free * k) / (g.n - 1));
-  }
-  return { pts: s.map((t) => ({ x: g.x0 + t * ux, y: g.y0 + t * uy })), dir, ux, uy };
-}
 
 /**
  * Mounting points of a group, in the order of the luminaires.
@@ -69,23 +46,21 @@ export function groupPoints(g, room) {
       }
       return out;
     }
-    case 'line':
-    case 'lines': {
-      const { pts, dir, ux, uy } = linePositions(g);
-      const rows = g.kind === 'lines' ? g.rows : 1, gap = g.kind === 'lines' ? g.gap : 0;
+    case 'line': {
+      const dx = g.x1 - g.x0, dy = g.y1 - g.y0;
+      const dir = dx || dy ? Math.atan2(dy, dx) / DEG : 0;
       const out = [];
-      for (let r = 0; r < rows; r++) {
-        const ox = -uy * r * gap, oy = ux * r * gap;
-        for (const p of pts) out.push({ x: p.x + ox, y: p.y + oy, hm: g.hm, psi: wrapDeg(dir + g.psi) });
+      for (let k = 0; k < g.n; k++) {
+        const t = g.n === 1 ? 0.5 : k / (g.n - 1);
+        out.push({ x: g.x0 + t * dx, y: g.y0 + t * dy, hm: g.hm + t * (g.hm1 - g.hm), psi: wrapDeg(dir + g.psi) });
       }
       return out;
     }
     case 'circle': {
       const out = [];
       for (let k = 0; k < g.n; k++) {
-        const a = g.start + (360 * k) / g.n;
-        const psi = g.orient === 'tangent' ? a + 90 + g.psi : g.orient === 'radial' ? a + g.psi : g.psi;
-        out.push({ x: g.cx + g.r * Math.cos(a * DEG), y: g.cy + g.r * Math.sin(a * DEG), hm: g.hm, psi: wrapDeg(psi) });
+        const a = (360 * k) / g.n;
+        out.push({ x: g.cx + g.r * Math.cos(a * DEG), y: g.cy + g.r * Math.sin(a * DEG), hm: g.hm, psi: wrapDeg(a + g.psi) });
       }
       return out;
     }
@@ -100,16 +75,8 @@ export function groupPoints(g, room) {
 export function groupCount(g) {
   switch (g.kind) {
     case 'grid': return g.nx * g.ny;
-    case 'circle': return g.n;
+    case 'line': case 'circle': return g.n;
     case 'single': return g.points.length;
-    case 'line': case 'lines': {
-      let n = g.n;
-      if (g.by === 'step') {
-        const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);
-        n = Math.floor(Math.max(0, len - 2 * g.off) / g.step + 1e-9) + 1;
-      }
-      return n * (g.kind === 'lines' ? g.rows : 1);
-    }
     default: return 0;
   }
 }
@@ -170,7 +137,7 @@ export function moveGroup(g, dx, dy, room) {
       const a = g.area ?? { x0: 0, y0: 0, x1: room.L, y1: room.W };
       return { ...g, area: { x0: a.x0 + dx, y0: a.y0 + dy, x1: a.x1 + dx, y1: a.y1 + dy } };
     }
-    case 'line': case 'lines':
+    case 'line':
       return { ...g, x0: g.x0 + dx, y0: g.y0 + dy, x1: g.x1 + dx, y1: g.y1 + dy };
     case 'circle':
       return { ...g, cx: g.cx + dx, cy: g.cy + dy };
@@ -195,3 +162,18 @@ export function movePoints(g, indices, dx, dy) {
 export function ungroup(g, room) {
   return { id: g.id, type: g.type, kind: 'single', points: groupPoints(g, room) };
 }
+
+/**
+ * The group with its luminaires turned by dpsi degrees about their own vertical axes (the tool
+ * "rotate" of the plan); of single luminaires only those at `indices` (all when absent).
+ */
+export function turnLuminaires(g, dpsi, indices = null) {
+  if (g.kind !== 'single') return { ...g, psi: wrapDeg(g.psi + dpsi) };
+  const set = indices ? new Set(indices) : null;
+  return { ...g, points: g.points.map((p, k) => (!set || set.has(k) ? { ...p, psi: wrapDeg(p.psi + dpsi) } : p)) };
+}
+
+/** Grid area as the form shows it: centre and size. */
+export const areaCentre = (a) => ({ cx: (a.x0 + a.x1) / 2, cy: (a.y0 + a.y1) / 2, w: a.x1 - a.x0, h: a.y1 - a.y0 });
+/** Grid area from its centre and size. */
+export const areaOf = (cx, cy, w, h) => ({ x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 });

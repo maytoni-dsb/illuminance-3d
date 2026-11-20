@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   modelFromValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-  addGroup, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, formValues, lumCount, typeLetter, cleanModel, placementErrors,
+  addGroup, addPoint, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, formValues, lumCount, typeLetter, cleanModel, placementErrors,
 } from '../js/model.js';
-import { validateGroup, groupFieldValues, GROUP_FIELDS } from '../js/groupform.js';
+import { validateGroup, validateDraft, fieldValues, draftValues, rowsOf, GROUP_ROWS } from '../js/groupform.js';
 import { groupPoints } from '../js/groups.js';
 import { setLang } from '../js/i18n.js';
 import { DEFAULTS } from '../js/ui.js';
@@ -48,67 +48,70 @@ test('room values: the mounting heights equal to the room height follow it', () 
   assert.deepEqual([f.nx, f.ny, f.hm], [2, 1, 3]);
 });
 
-test('groups: add every kind inside the room, duplicate, ungroup, remove', () => {
+test('groups drawn on the plan: every kind with the draft; single luminaires one by one', () => {
   let m = modelFromValues({ ...DEFAULTS });
-  for (const k of ['grid', 'line', 'lines', 'circle', 'single']) {
-    const r = addGroup(m, k, 't1');
-    m = r.model;
-    assert.equal(m.groups.at(-1).id, r.id);
-    assert.equal(m.groups.at(-1).kind, k);
-  }
+  let r = addGroup(m, 'grid', 't1', { x0: 4, y0: 3, x1: 1, y1: 1 }, { nx: 3, ny: 2, hm: 2.8, psi: 90 });
+  m = r.model;
+  assert.deepEqual(m.groups.at(-1), { id: 'g2', type: 't1', kind: 'grid', nx: 3, ny: 2, hm: 2.8, psi: 90, area: { x0: 1, y0: 1, x1: 4, y1: 3 } });
+  m = addGroup(m, 'line', 't1', { x0: 1, y0: 2, x1: 5, y1: 2 }, { n: 5 }).model;
+  assert.deepEqual([m.groups.at(-1).n, m.groups.at(-1).hm, m.groups.at(-1).hm1], [5, 3, 3]);
+  m = addGroup(m, 'circle', 't1', { cx: 3, cy: 2, r: 1.2 }, { n: 8, psi: 90 }).model;
+  r = addGroup(m, 'single', 't1', { x: 1.5, y: 1.5 }, { hm: 2.5 });
+  m = addPoint(r.model, r.id, 2.5, 1.5, { hm: 2.5, psi: 45 });
+  assert.deepEqual(m.groups.at(-1).points, [{ x: 1.5, y: 1.5, hm: 2.5, psi: 0 }, { x: 2.5, y: 1.5, hm: 2.5, psi: 45 }]);
   assert.deepEqual(placementErrors(m), []);
   assert.deepEqual(cleanModel(JSON.parse(JSON.stringify(m))), m);
-  const d = duplicateGroup(m, 'g4', 0.5, 0.5);                 // the circle
+  const d = duplicateGroup(m, 'g4', 0.5, 0.5);
   assert.equal(d.model.groups[4].id, d.id);
-  const a = groupPoints(m.groups[3], room), b = groupPoints(d.model.groups[4], room);
-  b.forEach((p, k) => assert.ok(Math.abs(p.x - a[k].x - 0.5) < 1e-12 && Math.abs(p.y - a[k].y - 0.5) < 1e-12));
-  const u = ungroupGroup(m, 'g4');
-  assert.equal(u.groups[3].kind, 'single');
-  assert.equal(lumCount(u), lumCount(m));
+  assert.equal(lumCount(ungroupGroup(m, 'g4')), lumCount(m));
   assert.equal(removeGroup(m, 'g1').groups.length, m.groups.length - 1);
-  assert.equal(removeGroup(modelFromValues(DEFAULTS), 'g1'), null);
 });
 
-test('group fields: values, choices, errors and the limit of the room', () => {
-  const line = { id: 'g2', type: 't1', kind: 'line', x0: 1, y0: 2, x1: 5, y1: 2, by: 'count', n: 3, step: 1, off: 0, hm: 3, psi: 0 };
-  const ctx = { H: 3, others: 6 };
-  const raw = (g, over = {}) => ({ ...Object.fromEntries(Object.entries(groupFieldValues(g)).map(([k, v]) => [k, v == null ? '' : String(v)])), ...over });
-  let r = validateGroup(line, raw(line, { n: '7', x1: '5,5' }), ctx);
-  assert.ok(r.ok);
-  assert.equal(r.group.n, 7);
-  assert.equal(r.group.x1, 5.5);
-  r = validateGroup(line, raw(line, { by: 'step', step: '0' }), ctx);
-  assert.ok(!r.ok && r.errors.step);
-  r = validateGroup(line, raw(line, { by: 'step', step: '0.5', n: 'abc' }), ctx);   // n is hidden: not checked
-  assert.ok(r.ok && r.group.by === 'step' && r.group.step === 0.5);
-  r = validateGroup(line, raw(line, { hm: '3.2' }), ctx);
-  assert.match(r.errors.hm, /0,9…3/);
-  r = validateGroup(line, raw(line, { x1: '1' }), ctx);
+test('fields of a group: rows by kind, values, the grid as centre and size, the line length', () => {
+  assert.deepEqual(Object.keys(GROUP_ROWS), ['single', 'grid', 'line', 'circle']);
+  assert.deepEqual(rowsOf('line', true).flatMap((r) => r.fields.map((f) => f.key)), ['n', 'hm', 'hm1', 'psi']);
+  assert.deepEqual(rowsOf('grid', true).flatMap((r) => r.fields.map((f) => f.key)), ['nx', 'ny', 'hm', 'psi']);
+  const ctx = { H: 3, L: 6, W: 4, others: 6 };
+  const raw = (g, over = {}, c = ctx) => ({ ...Object.fromEntries(Object.entries(fieldValues(g, c)).map(([k, v]) => [k, String(v)])), ...over });
+  // a grid without an area shows the room; unchanged it keeps following the room
+  const grid = { id: 'g1', type: 't1', kind: 'grid', nx: 3, ny: 2, hm: 3, psi: 0 };
+  assert.deepEqual([fieldValues(grid, ctx).gx, fieldValues(grid, ctx).gw], [3, 6]);
+  let r = validateGroup(grid, raw(grid, { nx: '4' }), ctx);
+  assert.ok(r.ok && r.group.nx === 4 && r.group.area === undefined);
+  r = validateGroup(grid, raw(grid, { gx: '2', gw: '3' }), ctx);
+  assert.deepEqual(r.group.area, { x0: 0.5, y0: 0, x1: 3.5, y1: 4 });
+  r = validateGroup(grid, raw(grid, { gw: '0' }), ctx);
+  assert.ok(!r.ok && r.errors.gw);
+  // a line: the length moves the end point; a new end point gives a new length
+  const line = { id: 'g2', type: 't1', kind: 'line', x0: 1, y0: 1, x1: 4, y1: 5, n: 3, hm: 3, hm1: 3, psi: 0 };
+  assert.equal(fieldValues(line, ctx).len, 5);
+  r = validateGroup(line, raw(line, { len: '10' }), ctx);
+  assert.deepEqual([r.group.x1, r.group.y1], [7, 9]);
+  r = validateGroup(line, raw(line, { x1: '1', y1: '3' }), ctx);
+  assert.deepEqual([r.group.x1, r.group.y1], [1, 3]);
+  r = validateGroup(line, raw(line, { x1: '1', y1: '1' }), ctx);
   assert.ok(r.errors.x1);
+  r = validateGroup(line, raw(line, { hm1: '3.2' }), ctx);
+  assert.match(r.errors.hm1, /0,9…3/);
   r = validateGroup(line, raw(line, { n: '495' }), ctx);
   assert.match(r.errors.n, /всего 501/);
-  // a grid: its area all or nothing
-  const grid = { id: 'g1', type: 't1', kind: 'grid', nx: 3, ny: 2, hm: 3, psi: 0 };
-  r = validateGroup(grid, raw(grid, { ax0: '1' }), { H: 3, others: 0 });
-  assert.ok(r.errors.ay0 && r.errors.ax1);
-  r = validateGroup(grid, raw(grid, { ax0: '1', ay0: '0', ax1: '5', ay1: '4' }), { H: 3, others: 0 });
-  assert.deepEqual(r.group.area, { x0: 1, y0: 0, x1: 5, y1: 4 });
-  r = validateGroup(r.group, raw(r.group, { ax0: '', ay0: '', ax1: '', ay1: '' }), { H: 3, others: 0 });
-  assert.equal(r.group.area, undefined);
-  r = validateGroup(grid, raw(grid, { ax0: '5', ay0: '0', ax1: '1', ay1: '4' }), { H: 3, others: 0 });
-  assert.ok(r.errors.ax1);
-  r = validateGroup(grid, raw(grid, { psi: '200' }), { H: 3, others: 0 });
-  assert.ok(r.errors.psi);
-  // single luminaires: the point `at`
-  const single = { id: 'g3', type: 't1', kind: 'single', points: [{ x: 1, y: 1, hm: 3, psi: 0 }, { x: 2, y: 2, hm: 2.5, psi: 30 }] };
-  assert.deepEqual(groupFieldValues(single, 1), { x: 2, y: 2, hm: 2.5, psi: 30 });
-  r = validateGroup(single, { x: '2,5', y: '2', hm: '2.4', psi: '45' }, { H: 3, others: 0, at: 1 });
+  // a circle, single luminaires
+  const circle = { id: 'g3', type: 't1', kind: 'circle', cx: 3, cy: 2, r: 1, n: 6, hm: 3, psi: 90 };
+  assert.ok(validateGroup(circle, raw(circle, { r: '-1' }), ctx).errors.r);
+  assert.equal(validateGroup(circle, raw(circle, { psi: '0' }), ctx).group.psi, 0);
+  const single = { id: 'g4', type: 't1', kind: 'single', points: [{ x: 1, y: 1, hm: 3, psi: 0 }, { x: 2, y: 2, hm: 2.5, psi: 30 }] };
+  assert.deepEqual(fieldValues(single, { ...ctx, at: 1 }), { x: 2, y: 2, hm: 2.5, psi: 30 });
+  r = validateGroup(single, { x: '2,5', y: '2', hm: '2.4', psi: '45' }, { ...ctx, at: 1 });
   assert.deepEqual(r.group.points, [{ x: 1, y: 1, hm: 3, psi: 0 }, { x: 2.5, y: 2, hm: 2.4, psi: 45 }]);
-  // every kind has its fields; the circle's orientation is a choice
-  assert.deepEqual(Object.keys(GROUP_FIELDS), ['grid', 'line', 'lines', 'circle', 'single']);
-  const circle = { id: 'g4', type: 't1', kind: 'circle', cx: 3, cy: 2, r: 1, n: 6, start: 0, orient: 'tangent', hm: 3, psi: 0 };
-  r = validateGroup(circle, raw(circle, { orient: 'radial', r: '-1' }), { H: 3, others: 0 });
-  assert.ok(r.errors.r);
-  r = validateGroup(circle, raw(circle, { orient: 'radial' }), { H: 3, others: 0 });
-  assert.equal(r.group.orient, 'radial');
+});
+
+test('fields of the next group to draw: no geometry, the room height by default, the limit', () => {
+  const ctx = { H: 3, L: 6, W: 4, others: 490 };
+  assert.deepEqual(draftValues('line', {}, ctx), { n: 3, hm: 3, hm1: 3, psi: 0 });
+  let r = validateDraft('line', { n: '5', hm: '2.8', hm1: '2.6', psi: '90' }, ctx);
+  assert.deepEqual(r.draft, { n: 5, hm: 2.8, hm1: 2.6, psi: 90 });
+  r = validateDraft('grid', { nx: '4', ny: '3', hm: '3', psi: '0' }, ctx);
+  assert.ok(!r.ok && r.errors.ny);
+  r = validateDraft('single', { hm: '0.5', psi: '0' }, ctx);
+  assert.ok(r.errors.hm);
 });
