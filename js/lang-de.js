@@ -70,6 +70,8 @@ export default {
       format: 'Dies ist keine Projektdatei der Lichtberechnung.',
       version: 'Die Datei wurde mit einer neueren Version des Programms gespeichert ({v}).',
       rooms: 'Die Projektdatei enthält keine Räume.',
+      room: 'Raum {n} der Datei ist beschädigt.',
+      many: 'Raum {n} nutzt Funktionen einer neueren Programmversion (mehrere Leuchtentypen oder -gruppen).',
     },
   },
 
@@ -305,6 +307,8 @@ export default {
     infoMsg: 'Füllen Sie die Pflichtfelder aus — ohne sie wird keine Dokumentation erstellt.',
     open: 'Projekt öffnen…', newProject: 'Neues Projekt', next: 'Weiter',
     opened: '„{name}“ geöffnet: {rooms}.',
+    saved: '„{name}“ im Format der Version 2 gespeichert: Die Arbeitsversion 1 kann diese Datei nicht öffnen.',
+    beta: 'Testversion 2', betaTip: 'Eine Version in Entwicklung: Berechnung und Oberfläche ändern sich noch. Projekte werden im Format der Version 2 gespeichert, das die Arbeitsversion 1 nicht öffnen kann.',
     roomsN: { one: '{n} Raum', other: '{n} Räume' },
     newConfirm: 'Ein neues Projekt beginnen? Das aktuelle geht verloren, wenn es nicht in eine Datei gespeichert ist.',
     inputs: 'Eingabedaten', room: 'Raum', roomName: 'Name',

@@ -5,7 +5,6 @@
 
 import { buildReport, nodeId, ILL } from './report.js';
 import { createRoom, autoStep } from './geometry.js';
-import { luminaireGrid } from './photometry.js';
 import { luminance, exposure } from './tonemap.js';
 import { isolineSet } from './isolines.js';
 import { LEVELS } from './colorscale.js';
@@ -117,7 +116,7 @@ export function prepareRoom(rd) {
   });
   return {
     id: rd.id, name: rd.name?.trim() || t('app.untitled'), key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys,
-    psi: rd.params.psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm, v.H - rd.params.hc), images: null,
+    psi: rd.params.lums[0].psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2]), images: null,
     polar: polarOf(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux })),
   };
 }
@@ -162,7 +161,7 @@ export function initReport(o) {
     const ex = exposure(room, L);
     const view = await snapView();
     view.setRoom(room);
-    view.setLuminaires(luminaireGrid({ L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, hc: rd.params.hc, psi: rd.params.psi }), rd.file?.shape ?? null);
+    view.setLuminaires(rd.params.lums, rd.file?.shape ?? null);
     view.setValues(E);
     view.setLuminance(L, ex.m);
     const out = {

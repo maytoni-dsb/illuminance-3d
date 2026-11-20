@@ -7,7 +7,7 @@
 // The maintenance factor is not an input here: results are initial values E₀, MF is applied by
 // the page (E = MF · E₀), so changing MF needs no recalculation.
 
-import { createRoom, autoStep } from './geometry.js';
+import { createRoom, autoStep, rectOutline, outlineRect } from './geometry.js';
 import { buildKernel } from './kernel.js';
 import { solve, coarseData, energyBalance, sumpner, SOLVER_EPS } from './solver.js';
 import { createPhotometry, luminaireGrid } from './photometry.js';
@@ -20,18 +20,47 @@ import { planeHeights, planeTables, planeReflected, planeDirect, cellStats, plan
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
 /**
+ * Calculation inputs of version 2 (spec v2, "Data model"): the room outline, its height and ρ,
+ * the luminaire types and the list of instances. Until stage 2.1 exactly one type.
+ *   CalcParams = { outline: [x, y][] (rectangle until stage 2.3, geometry.outlineRect), H,
+ *                  rho: number[6] (faces 0…5), hwp?: number (height of the normative work plane, m),
+ *                  types: [{ id, phot: 'cosine' | 'directIndirect' | 'file', flux, fUp?,
+ *                            table?: PhotTable (photfile.js; phot = 'file'), fileKey?: string }],
+ *                  lums: [{ type, pos: [x, y, z] (photometric centre, m), psi (rad) }],
+ *                  checks?: boolean }
+ * With a file the flux comes from the table (the flux of its interpolant), `flux` is ignored.
+ *
+ * Version 1 inputs { L, W, H, nx, ny, flux, hc, psi, phot, fUp, table, fileKey, rho, hwp, checks }
+ * are still accepted and turned into the same instances (normalizeParams): the grid is generated
+ * by the same code, so both give identical results.
+ */
+export function normalizeParams(p) {
+  if (Array.isArray(p.lums)) return p;
+  const lums = luminaireGrid({ L: p.L, W: p.W, H: p.H, nx: p.nx, ny: p.ny, hc: p.hc, psi: p.psi });
+  return {
+    outline: rectOutline(p.L, p.W), H: p.H, rho: p.rho, hwp: p.hwp, checks: p.checks,
+    types: [{ id: 't1', phot: p.phot, flux: p.flux, fUp: p.fUp, table: p.table, fileKey: p.fileKey }],
+    lums: lums.map((l) => ({ type: 't1', pos: l.pos, psi: l.psi })),
+  };
+}
+
+/** Key of the luminaire set: the type's photometry and every instance. */
+function lumsKey(type, lums) {
+  const isFile = type.phot === 'file';
+  const head = [type.phot, isFile ? type.fileKey : type.flux, type.phot === 'directIndirect' ? type.fUp : 0].join('|');
+  let s = head;
+  for (const l of lums) s += `;${l.pos[0]},${l.pos[1]},${l.pos[2]},${l.psi}`;
+  return s;
+}
+
+/**
  * Creates a calculator that keeps the kernel, the direct component and the last solution between
  * calls, so that only what changed is recomputed.
- * @returns {{ run: (p: CalcParams) => CalcResult }}
+ * @returns {{ run: (p: CalcParams) => CalcResult, plan: (z: number) => object }}
  *
- * CalcParams = { L, W, H, nx, ny, flux, hc, psi (rad), phot: 'cosine' | 'directIndirect' | 'file', fUp,
- *                table?: PhotTable (photfile.js; phot = 'file'), fileKey?: string (identifies the table),
- *                rho: number[6] (faces 0…5), hwp?: number (height of the normative work plane, m),
- *                checks?: boolean }
- * With a file the flux comes from the table (the flux of its interpolant), `flux` is ignored.
  * CalcResult = { key, N, h, Edir, Eind (Float64Array, E₀, lx), iterations, converged, change,
  *                balance, sumpner, ms: { kernel, coarse, direct, solve, checks }, reused: {…},
- *                checks3?, checks4? }
+ *                lums, planes, flux (of one luminaire), lost, checks3?, checks4?, checks5? }
  */
 export function createCalc() {
   let geo = null;   // { key, room, kernel }
@@ -41,13 +70,20 @@ export function createCalc() {
   let planCache = new Map(); // plane height → { vt, gost }: point factor tables of the plans
   let last = null;           // { room, lums, phot, M } of the last run, for the plans
 
-  function run(p) {
+  function run(params) {
+    const p = normalizeParams(params);
     const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, planes: 0, checks: 0 };
     const reused = { kernel: true, direct: true };
+    if (!Array.isArray(p.types) || p.types.length !== 1) throw new RangeError('calc: exactly one luminaire type until stage 2.1');
+    if (!p.lums.length) throw new RangeError('calc: no luminaires');
+    const type = p.types[0];
+    if (p.lums.some((l) => l.type !== type.id)) throw new RangeError(`calc: a luminaire of an unknown type (${type.id} expected)`);
+    const { L, W } = outlineRect(p.outline);
+    const H = p.H;
 
-    const geoKey = `${p.L}|${p.W}|${p.H}`;
+    const geoKey = `${L}|${W}|${H}`;
     if (!geo || geo.key !== geoKey) {
-      const room = createRoom({ L: p.L, W: p.W, H: p.H, h: autoStep(p.L, p.W, p.H) });
+      const room = createRoom({ L, W, H, h: autoStep(L, W, H) });
       let t = now();
       const kernel = buildKernel(room);
       ms.kernel = now() - t;
@@ -60,11 +96,14 @@ export function createCalc() {
     }
     const { room, kernel } = geo;
 
-    const isFile = p.phot === 'file';
-    const dirKey = [p.nx, p.ny, p.flux, p.hc, p.psi, p.phot, p.phot === 'directIndirect' ? p.fUp : 0, isFile ? p.fileKey : ''].join('|');
+    const isFile = type.phot === 'file';
+    const dirKey = lumsKey(type, p.lums);
     if (!dir || dir.key !== dirKey) {
-      const phot = createPhotometry({ type: p.phot, flux: p.flux, fUp: p.fUp, table: p.table });
-      const lums = luminaireGrid({ L: p.L, W: p.W, H: p.H, nx: p.nx, ny: p.ny, hc: p.hc, psi: p.psi });
+      const phot = createPhotometry({ type: type.phot, flux: type.flux, fUp: type.fUp, table: type.table });
+      const lums = p.lums.map((l) => Object.freeze({ pos: Object.freeze([l.pos[0], l.pos[1], l.pos[2]]), psi: l.psi }));
+      for (const l of lums) {
+        if (!(l.pos[2] > 0 && l.pos[2] <= H)) throw new RangeError(`calc: a luminaire at z = ${l.pos[2]} is outside (0, H]`);
+      }
       const t = now();
       const Edir = elementDirect(room, lums, phot);
       ms.direct = now() - t;
@@ -79,7 +118,7 @@ export function createCalc() {
     sol = { key: `${dirKey}|${p.rho.join('|')}`, Eind: s.Eind };
 
     // a luminaire in the ceiling plane (h_c = 0) cannot light upwards: its upward flux is lost
-    const emitted = lums.length * emittedFlux(phot, lums[0].pos[2], p.H);
+    const emitted = lums.length * emittedFlux(phot, lums[0].pos[2], H);
     const lost = lums.length * phot.flux - emitted;
     const balance = energyBalance(room, Edir, s.Eind, p.rho, emitted);
     const sp = sumpner(room, Edir, s.Eind, p.rho);
@@ -122,12 +161,12 @@ export function createCalc() {
       Edir: Float64Array.from(Edir), Eind: Float64Array.from(s.Eind),
       iterations: s.iterations, converged: s.converged, change: s.change,
       balance, sumpner: sp, ms, reused, lums: lums.map((l) => ({ pos: [...l.pos], psi: l.psi })),
-      planes, flux: phot.flux, lost, directStats: Edir.stats ?? null, fileKey: isFile ? p.fileKey : null,
+      planes, flux: phot.flux, lost, directStats: Edir.stats ?? null, fileKey: isFile ? type.fileKey : null,
     };
     if (p.checks !== false) {
       const t = now();
-      out.checks3 = stage3Checks(room, lums, phot, Edir, { hc: p.hc, psi: p.psi });
-      if (isFile) out.checks5 = stage5Checks(room, lums, phot, Edir, p.table);
+      out.checks3 = stage3Checks(room, lums, phot, Edir, { hc: H - lums[0].pos[2], psi: lums[0].psi });
+      if (isFile) out.checks5 = stage5Checks(room, lums, phot, Edir, type.table);
       out.checks4 = stage4Checks(kernel, { iterations: s.iterations, converged: s.converged, change: s.change, balance, sumpner: sp });
       ms.checks = now() - t;
     }

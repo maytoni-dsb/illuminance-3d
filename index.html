@@ -12,7 +12,7 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=6dcec3eb",
+      "./js/calc.js": "./js/calc.js?v=9d625cd8",
       "./js/checks2.js": "./js/checks2.js?v=6c5f10f2",
       "./js/checks3.js": "./js/checks3.js?v=2413caec",
       "./js/checks4.js": "./js/checks4.js?v=a4a67988",
@@ -22,15 +22,16 @@
       "./js/direct.js": "./js/direct.js?v=fa03c255",
       "./js/estimate.js": "./js/estimate.js?v=8e837379",
       "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
-      "./js/geometry.js": "./js/geometry.js?v=6e4af43c",
+      "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
       "./js/help.js": "./js/help.js?v=070403f0",
       "./js/hotkeys.js": "./js/hotkeys.js?v=82950a0c",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=730cfc9a",
-      "./js/lang-en.js": "./js/lang-en.js?v=ed0ab8a7",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=72ea23e6",
+      "./js/lang-de.js": "./js/lang-de.js?v=9b461ebf",
+      "./js/lang-en.js": "./js/lang-en.js?v=c5a63aa2",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=42847f33",
+      "./js/model.js": "./js/model.js?v=a5a14623",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -39,10 +40,10 @@
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=834ff87e",
       "./js/planview.js": "./js/planview.js?v=6c83bff0",
-      "./js/project.js": "./js/project.js?v=f514817c",
+      "./js/project.js": "./js/project.js?v=f4fd2849",
       "./js/report.js": "./js/report.js?v=5784e9bc",
       "./js/reportsvg.js": "./js/reportsvg.js?v=8b0d8a9f",
-      "./js/reportui.js": "./js/reportui.js?v=de8256d5",
+      "./js/reportui.js": "./js/reportui.js?v=4a4890e8",
       "./js/solver.js": "./js/solver.js?v=76236421",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=590120e9",
@@ -98,6 +99,10 @@
       border-radius:12px;padding:8px 14px 8px 20px;min-height:56px;flex:none}
     .brand{display:inline-flex;align-items:center;color:var(--ink);flex:none}
     .brand svg{height:18px;width:auto;display:block}
+    /* version 2 in development (spec v2, stage 2.0) */
+    .beta{flex:none;font-size:11px;font-weight:600;line-height:1;padding:5px 9px;border-radius:999px;background:#c2410c;color:#fff;white-space:nowrap;cursor:help}
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;max-width:min(560px,calc(100vw - 32px));
+      background:var(--ink);color:var(--card);font-size:13px;line-height:1.4;padding:10px 16px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
     .apptitle{font-size:12px;color:var(--ink3);line-height:1.3;flex:none}
     .stagebadge{margin-left:auto;font-size:12px;color:var(--ink3);background:var(--soft);border-radius:999px;padding:6px 12px;white-space:nowrap}
     .themebtn{flex:none;height:36px;width:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;
@@ -554,6 +559,7 @@
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle" data-i18n-html="app.appTitle"></span>
+    <span class="beta" data-i18n="app.beta" data-i18n-attr="title:app.betaTip"></span>
     <nav class="stnav" id="stnav" data-i18n-attr="aria-label:app.stages">
       <button type="button" class="gsst" data-s="1"><span class="gsn">1</span><span data-i18n="app.st1"></span></button>
       <span class="gsln" data-l="1"></span>
@@ -574,6 +580,8 @@
       <button type="button" class="themebtn tipr" id="themebtn" data-i18n-attr="data-tip:app.themeTip;aria-label:app.theme"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
     </div>
   </header>
+
+  <div class="toast" id="toast" role="status" hidden></div>
 
   <main class="stage pstage" id="stage1" hidden>
     <section class="gscard pcard" data-i18n-attr="aria-label:app.st1">
@@ -777,7 +785,8 @@
   import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D } from './js/planview.js';
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
-  import { createPhotometry, luminaireGrid } from './js/photometry.js';
+  import { createPhotometry } from './js/photometry.js';
+  import { formValues, applyFormValues, modelFromValues, modelFile, withFile, calcParams as modelCalcParams } from './js/model.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
   import { hotkeyAction } from './js/hotkeys.js';
   import { initNormDialog } from './js/normui.js';
@@ -953,12 +962,15 @@
   let autoCalc = true;        // recalculate on every change (switch above the results)
   try { autoCalc = localStorage.getItem('autoCalc') !== '0'; } catch (e) {}
   /** Key of the calculation inputs: MF, E_n and the developer checks are not part of it. */
-  const paramsKey = (p) => JSON.stringify({ ...p, table: undefined, checks: undefined });
+  const paramsKey = (p) => JSON.stringify({ ...p, types: p.types.map((ty) => ({ ...ty, table: undefined })), checks: undefined });
 
   let photFile = null;  // { table, phot, shape, key, name, set, values } of the loaded IES / LDT file
   // ---- project (stage 7): rooms, the active one, results kept per room ----
-  const STORE = 'lcalc.project';
-  let project = null;            // { info, rooms: [{ id, name, values, file }], active }
+  // version 2 keeps its project under its own key: the beta and the working version 1 may share an
+  // origin (GitHub Pages of one account), and version 1 cannot read a version 2 project; at the first
+  // start the project of version 1 is taken over (read only)
+  const STORE = 'lcalc.v2.project', STORE_V1 = 'lcalc.project';
+  let project = null;            // { info, rooms: [{ id, name, model, norm }], active } (js/project.js, js/model.js)
   let stage = 0;                 // 1 — project, 2 — rooms, 3 — results
   let switching = false;         // a room is being loaded into the form
   const roomResults = new Map(); // room id → { key, result } (the last result of every room)
@@ -974,14 +986,14 @@
     el.title = hh > 0 ? t('app.centreTip', { mm: mm(hh) }) : t('app.centreSame');
     el.classList.toggle('warn', z <= v.hwp + 1e-9);
   }
-  function calcParams(v, fileOf = photFile) {
-    const file = v.phot === 'file' && fileOf;
-    const p = {
-      L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: hcOf(v, fileOf), psi: v.psi * DEG,
-      phot: file ? 'file' : 'cosine', rho: faceRho(v), hwp: v.hwp,
-      checks: $('#dev').open, // the stage checks cost as much as the calculation: only when shown
-    };
-    if (file) { p.fileKey = file.key; p.table = file.table; }
+  /**
+   * Inputs of the calculation for form values: the model of the room (js/model.js) with these
+   * values, its outline and luminaire instances. Throws when the values give no valid luminaires.
+   */
+  function calcParams(v, fileOf = photFile, base = activeRoom()?.model) {
+    const m = base ? applyFormValues(base, v) : modelFromValues(v);
+    const p = modelCalcParams(m, () => fileOf || null);
+    p.checks = $('#dev').open; // the stage checks cost as much as the calculation: only when shown
     return p;
   }
 
@@ -989,7 +1001,7 @@
     current = values;
     const ar = activeRoom();
     if (ar && !switching) {
-      ar.values = { ...values };
+      ar.model = applyFormValues(ar.model, values);
       if (ar.norm && !normMatches(ar.norm, values)) ar.norm = null; // edited by hand
       autosave();
     }
@@ -1022,16 +1034,16 @@
     }
     if (!busy && !pending) setBusy('');
     // luminaires follow the form at once, with or without a result
-    if (view) {
-      try {
-        const lums = luminaireGrid({ L: values.L, W: values.W, H: values.H, nx: values.nx, ny: values.ny, hc: hcOf(values), psi: values.psi * DEG });
-        view.setLuminaires(lums, values.phot === 'file' && photFile ? photFile.shape : null);
-      } catch (e) { /* inconsistent values while typing */ }
+    let p;
+    try { p = calcParams(values); } catch (e) {
+      // the photometric centre would be at or below the floor: nothing to calculate
+      setBusy(t('app.calcError', { msg: e.message }), true);
+      return;
     }
+    view?.setLuminaires(p.lums, values.phot === 'file' && photFile ? photFile.shape : null);
     // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
     // The table itself is not part of the key: fileKey identifies it. Without the automatic update
     // a change drops the result until "Calculate" is pressed.
-    const p = calcParams(values);
     const key = paramsKey(p);
     // a result kept for this room (another room was shown meanwhile, or the report computed it)
     const kept = roomResults.get(project.active);
@@ -1050,7 +1062,8 @@
 
   function calculate() {
     if (!current) return;
-    const p = calcParams(current);
+    let p;
+    try { p = calcParams(current); } catch (e) { setBusy(t('app.calcError', { msg: e.message }), true); return; }
     sentKey.v = paramsKey(p);
     request(p);
     updateCalcButton();
@@ -1312,7 +1325,7 @@
     photFile = f;
     if (switching) return; // another room is being loaded: its values come with it
     const ar = activeRoom();
-    if (ar) { ar.file = f ? { name: f.name, text: f.text, set: f.set } : null; autosave(); }
+    if (ar) { ar.model = withFile(ar.model, f ? { name: f.name, text: f.text, set: f.set } : null); autosave(); }
     if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
     else { form.set({ phot: 'cosine', flux: 4000 }); $('#estnote').hidden = true; }
     // a new file: estimate the number of luminaires and place them; another lamp set does not move the grid
@@ -1366,7 +1379,9 @@
     try { localStorage.setItem(STORE, serializeProject(project)); localStorage.setItem(`${STORE}.stage`, String(stage)); } catch (e) { /* full or blocked */ }
   }
   function restoreProject() {
-    try { const t = localStorage.getItem(STORE); if (t) return parseProject(t); } catch (e) { /* none or broken */ }
+    for (const key of [STORE, STORE_V1]) {
+      try { const t = localStorage.getItem(key); if (t) return parseProject(t); } catch (e) { /* none or broken */ }
+    }
     return null;
   }
 
@@ -1446,12 +1461,13 @@
   /** Photometric file of a room, parsed (the active room: the file in the form). */
   function roomFile(r) {
     if (r.id === project.active) return photFile;
-    if (!r.file) return null;
-    const key = fileKey(r.file.name, r.file.text);
+    const file = modelFile(r.model);
+    if (!file) return null;
+    const key = fileKey(file.name, file.text);
     if (!roomFiles.has(key)) {
       try {
-        const table = parsePhotometryFile(r.file.text, r.file.name);
-        roomFiles.set(key, { table, phot: createPhotometry({ type: 'file', table }), shape: luminaireShape(table), key, name: r.file.name });
+        const table = parsePhotometryFile(file.text, file.name);
+        roomFiles.set(key, { table, phot: createPhotometry({ type: 'file', table }), shape: luminaireShape(table), key, name: file.name });
       } catch (e) { roomFiles.set(key, null); }
     }
     return roomFiles.get(key);
@@ -1462,10 +1478,11 @@
     switching = true;
     try {
       photUI.clear({ reason: 'room' });
-      if (r.file) photUI.load(r.file.text, r.file.name, { store: false, reason: 'room', set: r.file.set });
+      const file = modelFile(r.model);
+      if (file) photUI.load(file.text, file.name, { store: false, reason: 'room', set: file.set });
       photFile = photUI.current();
-      if (r.file && !photFile) r.file = null; // a file that no longer reads
-      const v = { ...r.values };
+      if (file && !photFile) r.model = withFile(r.model, null); // a file that no longer reads
+      const v = formValues(r.model);
       if (!photFile) v.phot = 'cosine';
       $('#roomname').value = r.name;
       $('#estnote').hidden = true;
@@ -1474,7 +1491,7 @@
       $('#planenote').textContent = '';
       form.set(v, { exact: true });
     } finally { switching = false; }
-    r.values = form.values();
+    r.model = applyFormValues(r.model, form.values());
   }
   function switchRoom(id) {
     if (!project.rooms.some((r) => r.id === id)) return;
@@ -1515,7 +1532,7 @@
     $('#stroomname').textContent = ar ? ar.name || t('app.untitled') : '—';
     const many = project.rooms.length > 1;
     $('#roommenu').innerHTML = `<div class="vmh">${t('app.rooms')}</div>` + project.rooms.map((r) => {
-      const on = r.id === project.active, v = r.values;
+      const on = r.id === project.active;
       return `<div class="vmroom"><button type="button" role="menuitemradio" aria-checked="${on}" data-room="${r.id}"><i>${on ? '✓' : ''}</i>${esc(r.name || t('app.untitled'))}</button>` +
         (many ? `<button type="button" class="vmdel" data-del="${r.id}" aria-label="${esc(t('app.delRoomAria', { name: r.name || t('rui.aRoom') }))}" title="${t('app.delRoom')}">×</button>` : '') + '</div>';
     }).join('') + `<div class="vmsep"></div><button type="button" class="vmadd" data-act="add"><i>+</i>${t('app.newRoom')}</button>`;
@@ -1584,6 +1601,15 @@
     a.href = URL.createObjectURL(blob); a.download = projectFileName(project);
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast(t('app.saved', { name: a.download }));
+  }
+  let toastTimer = 0;
+  /** A short message at the bottom of the page. */
+  function toast(text) {
+    const el = $('#toast');
+    el.textContent = text; el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 6000);
   }
   function useProject(p, stageAfter) {
     project = p;
@@ -1621,7 +1647,7 @@
     loadRoom(activeRoom());
     renderRoomNav();
     let st = 1;
-    try { st = Number(localStorage.getItem(`${STORE}.stage`)) || (saved ? 2 : 1); } catch (e) { /* storage unavailable */ }
+    try { st = Number(localStorage.getItem(`${STORE}.stage`) ?? localStorage.getItem(`${STORE_V1}.stage`)) || (saved ? 2 : 1); } catch (e) { /* storage unavailable */ }
     // after a switch of the language the page comes back to the stage it was on, the documentation too
     let back = 0;
     try { back = Number(sessionStorage.getItem('lcalc.langStage')) || 0; sessionStorage.removeItem('lcalc.langStage'); } catch (e) { /* storage unavailable */ }
@@ -1704,15 +1730,16 @@
   }
   /** Inputs and result of a room for the report (computed when not kept). */
   async function roomData(r) {
-    const file = r.values.phot === 'file' ? roomFile(r) : null;
-    const params = { ...calcParams(r.values, file), checks: false };
+    const values = formValues(r.model);
+    const file = values.phot === 'file' ? roomFile(r) : null;
+    const params = { ...calcParams(values, file, r.model), checks: false };
     const key = paramsKey(params);
     let kept = roomResults.get(r.id);
     if (!kept || kept.key !== key) {
       kept = { key, result: await reportRun(params) };
       roomResults.set(r.id, kept);
     }
-    return { id: r.id, name: r.name, values: { ...r.values }, norm: r.norm ?? null, file, params, key, result: kept.result };
+    return { id: r.id, name: r.name, values, norm: r.norm ?? null, file, params, key, result: kept.result };
   }
   const report = initReport({
     tree: $('#rtree'), iframe: $('#preview'), busy: $('#rbusy'), pdf: $('#pdfbtn'),

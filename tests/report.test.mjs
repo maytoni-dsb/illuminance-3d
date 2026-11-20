@@ -9,15 +9,16 @@ import { fmtLux } from '../js/planview.js';
 import { createCalc } from '../js/calc.js';
 import { parsePhotometryFile, luminaireShape } from '../js/photfile.js';
 import { createPhotometry } from '../js/photometry.js';
-import { DEFAULTS, faceRho, ceilingDrop } from '../js/ui.js';
+import { DEFAULTS } from '../js/ui.js';
+import { modelFromValues, calcParams } from '../js/model.js';
 
 const ldt = 'Focus-LED-TR032-2-12W3K-S-B.ldt';
 const table = parsePhotometryFile(readFileSync(new URL(`./fixtures/photometry/${ldt}`, import.meta.url), 'latin1'), ldt);
 const file = { table, phot: createPhotometry({ type: 'file', table }), shape: luminaireShape(table), key: 'k', set: 0 };
 
 function roomData(id, name, v) {
-  const params = { L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: ceilingDrop(v.H, v.hm, table.luminaire.height), psi: 0,
-    phot: 'file', table, fileKey: 'k', rho: faceRho(v), hwp: v.hwp };
+  // the page builds the inputs from the room model (js/model.js)
+  const params = calcParams(modelFromValues(v, { name: ldt, text: '', set: 0 }), () => ({ key: 'k', table }));
   return { id, name, values: v, file, params, key: id, result: createCalc().run(params) };
 }
 const v1 = { ...DEFAULTS, phot: 'file', flux: 840, nx: 4, ny: 2, hwp: 0.8 };

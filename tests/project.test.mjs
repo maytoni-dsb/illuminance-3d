@@ -8,38 +8,104 @@ import { toDecimal, DEFAULTS } from '../js/ui.js';
 import { HELP } from '../js/help.js';
 import { PARAMS } from '../js/ui.js';
 import { INFO_FIELDS } from '../js/project.js';
+import { formValues, applyFormValues, withFile, modelFile, lumCount } from '../js/model.js';
 
 test('rooms get the next free default name and copy the current room', () => {
   const p = createProject();
   assert.equal(p.rooms[0].name, 'Помещение 1');
-  p.rooms[0].values.L = 8;
-  p.rooms[0].file = { name: 'a.ldt', text: 'x', set: 1 };
+  p.rooms[0].model = withFile(applyFormValues(p.rooms[0].model, { ...formValues(p.rooms[0].model), L: 8 }), { name: 'a.ldt', text: 'x', set: 1 });
   const r = createRoomState(p.rooms, p.rooms[0]);
   assert.equal(r.name, 'Помещение 2');
-  assert.equal(r.values.L, 8);
-  assert.deepEqual(r.file, p.rooms[0].file);
-  assert.notEqual(r.file, p.rooms[0].file);
+  assert.equal(formValues(r.model).L, 8);
+  assert.deepEqual(modelFile(r.model), modelFile(p.rooms[0].model));
+  assert.notEqual(modelFile(r.model), modelFile(p.rooms[0].model));
+  assert.notEqual(r.model, p.rooms[0].model);
   assert.equal(nextRoomName([{ name: 'Помещение 2' }, { name: 'Холл' }]), 'Помещение 3');
 });
 
 test('a project survives the file round trip; broken values become defaults', () => {
   const p = createProject();
   p.info.name = 'Офис'; p.info.email = 'a@b.c';
-  p.rooms.push({ ...createRoomState(p.rooms), name: 'Холл', file: { name: 'f.ldt', text: 'LDT', set: 2 } });
-  p.rooms[1].values = { ...p.rooms[1].values, phot: 'file', L: 12.5 };
-  p.active = p.rooms[1].id;
-  const q = parseProject(serializeProject(p));
+  const hall = createRoomState(p.rooms);
+  hall.name = 'Холл';
+  hall.model = withFile(applyFormValues(hall.model, { ...formValues(hall.model), phot: 'file', L: 12.5 }), { name: 'f.ldt', text: 'LDT', set: 2 });
+  p.rooms.push(hall);
+  p.active = hall.id;
+  const text = serializeProject(p);
+  assert.equal(JSON.parse(text).version, 2);
+  const q = parseProject(text);
   assert.equal(q.info.name, 'Офис');
   assert.deepEqual(q.rooms.map((r) => r.name), ['Помещение 1', 'Холл']);
-  assert.equal(q.rooms[1].values.L, 12.5);
-  assert.equal(q.rooms[1].values.phot, 'file');
-  assert.deepEqual(q.rooms[1].file, { name: 'f.ldt', text: 'LDT', set: 2 });
+  assert.deepEqual(q.rooms.map((r) => r.model), p.rooms.map((r) => r.model));
+  assert.equal(formValues(q.rooms[1].model).phot, 'file');
   assert.equal(q.active, q.rooms[1].id);
-  const bad = JSON.parse(serializeProject(p));
-  bad.rooms[0].values.L = 'много'; bad.rooms[0].values.ny = 999;
+  const bad = JSON.parse(text);
+  bad.rooms[0].room.shape.L = 'много'; bad.rooms[0].groups[0].ny = 999;
   const r = parseProject(JSON.stringify(bad));
-  assert.equal(r.rooms[0].values.L, DEFAULTS.L);
-  assert.ok(r.rooms[0].values.nx * r.rooms[0].values.ny <= 500);
+  assert.equal(r.rooms[0].model.room.shape.L, DEFAULTS.L);
+  assert.ok(lumCount(r.rooms[0].model) <= 500);
+});
+
+// ---- stage 2.0: the format of version 2 and the files of version 1 ----
+
+/** A project file of version 1 as main writes it (js/project.js of main, serializeProject). */
+function fileV1(rooms) {
+  return JSON.stringify({ format: FILE_FORMAT, version: 1, saved: '2026-11-19T10:00:00.000Z',
+    info: { name: 'Офис', description: '', author: 'A', phone: '+7 912 345 6789', email: 'a@b.c', customer: 'C' },
+    rooms, active: rooms.length - 1 }, null, 1);
+}
+const NORM = { source: 'sp52', name: 'Кабинеты', set: 'sp52', ref: '4.1', En: 300, hwp: 0.8, U0n: null };
+const V1_ROOMS = [
+  { name: 'Кабинет', values: { ...DEFAULTS, L: 7.2, W: 4.8, H: 3.1, hm: 2.85, nx: 4, ny: 3, psi: 90, En: 300, hwp: 0.8, U0n: 0.4, mf: 0.8, rhoC: 0.8, rhoW: 0.6, rhoF: 0.3, flux: 3600 },
+    norm: NORM, file: null },
+  { name: 'Холл', values: { ...DEFAULTS, phot: 'file', flux: 840, cct: 4000, power: 12, nx: 2, ny: 5 }, norm: null,
+    file: { name: 'Focus.ldt', text: 'LDT text', set: 1 } },
+];
+
+test('a version 1 file opens: the grid becomes one group of one type, nothing is lost', () => {
+  const p = parseProject(fileV1(V1_ROOMS));
+  assert.equal(p.rooms.length, 2);
+  assert.equal(p.active, p.rooms[1].id);
+  assert.equal(p.info.phone, '+7 912 345 6789');
+  for (const [k, r] of p.rooms.entries()) {
+    const src = V1_ROOMS[k];
+    assert.equal(r.name, src.name);
+    assert.deepEqual(r.norm, src.norm);
+    assert.deepEqual(formValues(r.model), src.values, r.name);   // the form shows the same values
+    assert.deepEqual(modelFile(r.model), src.file);
+    assert.equal(r.model.types.length, 1);
+    assert.equal(r.model.groups.length, 1);
+    assert.equal(r.model.groups[0].kind, 'grid');
+    assert.equal(r.model.groups[0].type, r.model.types[0].id);
+    assert.equal(r.model.room.shape.kind, 'rect');
+  }
+  assert.equal(lumCount(p.rooms[0].model), 12);
+});
+
+test('a version 1 file saved as version 2 and opened again is the same project', () => {
+  const p = parseProject(fileV1(V1_ROOMS));
+  const text = serializeProject(p);
+  const d = JSON.parse(text);
+  assert.equal(d.version, 2);
+  assert.ok(d.rooms.every((r) => !('values' in r) && !('file' in r) && r.groups.length === 1));
+  const q = parseProject(text);
+  assert.deepEqual(q.info, p.info);
+  assert.deepEqual(q.rooms.map(({ id, ...r }) => r), p.rooms.map(({ id, ...r }) => r));
+  for (const [k, r] of q.rooms.entries()) assert.deepEqual(formValues(r.model), V1_ROOMS[k].values);
+  // and once more: the second save writes the same rooms
+  assert.deepEqual(JSON.parse(serializeProject(q)).rooms, d.rooms);
+});
+
+test('a version 2 room with several types or groups is refused until stage 2.1', () => {
+  const d = JSON.parse(serializeProject(createProject()));
+  d.rooms[0].groups.push({ ...d.rooms[0].groups[0], id: 'g2' });
+  assert.throws(() => parseProject(JSON.stringify(d)), /более новой версии/);
+  const e = JSON.parse(serializeProject(createProject()));
+  e.rooms[0].types = 'x';
+  assert.throws(() => parseProject(JSON.stringify(e)), /повреждено/);
+  const f = JSON.parse(serializeProject(createProject()));
+  f.version = 3;
+  assert.throws(() => parseProject(JSON.stringify(f)), /более новой версией/);
 });
 
 test('not a project: clear messages', () => {

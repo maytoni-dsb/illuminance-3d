@@ -1,14 +1,21 @@
 // Project: information about the project and its rooms (stage 7). Pure module: no DOM, tested in Node.
-// A room keeps the form values, its name and the photometric file (name, text and lamp set), so the
-// whole project can be saved to one file and opened again; results are not saved, they are
-// recalculated. User-facing strings come from the dictionaries (js/i18n.js).
+// A room keeps its name, the norm row and its model (js/model.js: the room, the design values, the
+// luminaire types with their photometric files and the groups), so the whole project can be saved to
+// one file and opened again; results are not saved, they are recalculated. User-facing strings come
+// from the dictionaries (js/i18n.js).
+//
+// File format (spec v2, "Data model"): version 2 keeps every room as its model,
+//   { name, norm, room, design, types, groups };
+// version 1 kept the form values and one file, { name, norm, values, file }: it is still read, its
+// grid becoming one group "grid" of one type. Version 1 of the calculator does not open version 2.
 
-import { DEFAULTS, validateParams } from './ui.js';
+import { DEFAULTS } from './ui.js';
+import { modelFromValues, cleanValues, cleanFile, cleanModel } from './model.js';
 import { t, raw } from './i18n.js';
 
 /** Format tag and version of the project file. */
 export const FILE_FORMAT = 'maytoni-lighting-calc';
-export const FILE_VERSION = 1;
+export const FILE_VERSION = 2;
 
 /** Fields of the stage "Project" in their order on the page (label and placeholder: info.<key>). */
 export const INFO_FIELDS = Object.freeze([
@@ -103,15 +110,14 @@ export function nextRoomName(rooms) {
 }
 
 /**
- * A new room. Without `from` it gets the defaults; with it, a copy of that room's values and file
+ * A new room. Without `from` it gets the defaults; with it, a copy of that room's model and file
  * (a new room usually has the same luminaire and norms as the one before).
  */
 export function createRoomState(rooms = [], from = null) {
   return {
     id: newId(),
     name: nextRoomName(rooms),
-    values: { ...(from ? from.values : DEFAULTS) },
-    file: from?.file ? { ...from.file } : null,
+    model: from ? structuredClone(from.model) : modelFromValues(DEFAULTS),
     norm: from?.norm ? { ...from.norm } : null, // the codifier row of the norms, null — set by the user
   };
 }
@@ -122,26 +128,29 @@ export function createProject() {
   return { info: emptyInfo(), rooms: [room], active: room.id };
 }
 
-/** Values of a saved room checked against the form rules; invalid or missing ones become defaults. */
-function cleanValues(v) {
-  const raw = { ...DEFAULTS, ...(v && typeof v === 'object' ? v : {}) };
-  const r = validateParams(raw);
-  if (r.ok) return { ...r.values, phot: raw.phot === 'file' ? 'file' : 'cosine' };
-  // drop the fields with errors one by one and keep the rest
-  const fixed = { ...raw };
-  for (const k of Object.keys(r.errors)) fixed[k] = DEFAULTS[k];
-  const r2 = validateParams(fixed);
-  return r2.ok ? r2.values : { ...DEFAULTS };
-}
-
-/** The project as a JSON string for the file. */
+/** The project as a JSON string for the file (format version 2). */
 export function serializeProject(p) {
   return JSON.stringify({
     format: FILE_FORMAT, version: FILE_VERSION, saved: new Date().toISOString(),
     info: { ...emptyInfo(), ...p.info },
-    rooms: p.rooms.map((r) => ({ name: r.name, values: r.values, norm: r.norm ?? null, file: r.file ? { name: r.file.name, text: r.file.text, set: r.file.set ?? 0 } : null })),
+    rooms: p.rooms.map((r) => ({ name: r.name, norm: r.norm ?? null, ...r.model })),
     active: Math.max(0, p.rooms.findIndex((r) => r.id === p.active)),
   }, null, 1);
+}
+
+/** Model of a room of a version 1 file: its form values and file. */
+function roomV1(r) {
+  const file = cleanFile(r.file);
+  const values = cleanValues(r.values);
+  if (!file) values.phot = 'cosine';
+  return modelFromValues(values, file);
+}
+
+/** Model of a room of a version 2 file. */
+function roomV2(r, k) {
+  try { return cleanModel(r); } catch (e) {
+    throw new Error(t(e.code === 'model.many' ? 'project.err.many' : 'project.err.room', { n: k + 1 }));
+  }
 }
 
 /**
@@ -155,14 +164,11 @@ export function parseProject(text) {
   if (!(d.version <= FILE_VERSION)) throw new Error(t('project.err.version', { v: d.version }));
   if (!Array.isArray(d.rooms) || !d.rooms.length) throw new Error(t('project.err.rooms'));
   const rooms = [];
-  for (const r of d.rooms) {
-    const file = r.file && typeof r.file.text === 'string' && typeof r.file.name === 'string'
-      ? { name: r.file.name, text: r.file.text, set: Number.isInteger(r.file.set) ? r.file.set : 0 } : null;
-    const values = cleanValues(r.values);
-    if (!file) values.phot = 'cosine';
-    const n = r.norm;
+  for (const [k, r] of d.rooms.entries()) {
+    const model = d.version >= 2 ? roomV2(r, k) : roomV1(r ?? {});
+    const n = r?.norm;
     const norm = n && typeof n.source === 'string' && Number.isFinite(n.En) ? { source: n.source, name: typeof n.name === 'string' ? n.name : '', set: String(n.set ?? ''), ref: String(n.ref ?? ''), En: n.En, hwp: n.hwp, U0n: n.U0n ?? null } : null;
-    rooms.push({ id: newId(), name: String(r.name ?? '').trim() || nextRoomName(rooms), values, file, norm });
+    rooms.push({ id: newId(), name: String(r?.name ?? '').trim() || nextRoomName(rooms), model, norm });
   }
   const info = emptyInfo();
   for (const f of INFO_FIELDS) if (typeof d.info?.[f.key] === 'string') info[f.key] = d.info[f.key];

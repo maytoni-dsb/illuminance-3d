@@ -18,6 +18,28 @@ export function divisions(a, h) {
 export const AUTO_STEP = Object.freeze({ targetElements: 4000, min: 0.1, max: 1 });
 
 /**
+ * Outline of a rectangular room in plan (version 2): vertices counter-clockwise seen from above,
+ * starting at the origin, sides along X and Y.
+ */
+export function rectOutline(L, W) {
+  return [[0, 0], [L, 0], [L, W], [0, W]];
+}
+
+/**
+ * Sizes of the rectangle an outline describes: { L, W }. Until stage 2.3 the calculation takes
+ * only this outline; any other polygon is refused.
+ */
+export function outlineRect(outline) {
+  const ok = Array.isArray(outline) && outline.length === 4 && outline.every((p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite));
+  if (ok) {
+    const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = outline;
+    const L = x1, W = y2;
+    if (x0 === 0 && y0 === 0 && y1 === 0 && x2 === L && x3 === 0 && y3 === W && L > 0 && W > 0) return { L, W };
+  }
+  throw new RangeError(`outlineRect: not a rectangle from the origin: ${JSON.stringify(outline)}`);
+}
+
+/**
  * Desired element step chosen from the room size, so the user never sets it:
  * h = sqrt(S / targetElements), clamped to [min, max], where S is the total face area.
  * The resulting N is close to targetElements unless the clamp is active.

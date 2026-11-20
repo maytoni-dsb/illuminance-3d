@@ -12,7 +12,7 @@ import { normSets, normSource, normFromRow, rowOf, NORM_SETS } from '../js/norms
 import { HELP, HELP_KEYS } from '../js/help.js';
 import { buildReport, typo } from '../js/report.js';
 import { prepareRoom, summaryRows } from '../js/reportui.js';
-import { createCalc } from '../js/calc.js';
+import { createCalc, normalizeParams } from '../js/calc.js';
 import { faceRho, ceilingDrop } from '../js/ui.js';
 import { parsePhotometryFile } from '../js/photfile.js';
 
@@ -236,7 +236,7 @@ test('report, help and messages in English and German have no Russian text', () 
   const ldt = 'Focus-LED-TR032-2-12W3K-S-B.ldt';
   const table = parsePhotometryFile(readFileSync(new URL(`./fixtures/photometry/${ldt}`, import.meta.url), 'latin1'), ldt);
   const v = { ...DEFAULTS, L: 4, W: 3, H: 3, nx: 2, ny: 2, hm: 3, hwp: 0.8, phot: 'cosine', flux: 2000 };
-  const params = { L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: ceilingDrop(v.H, v.hm), psi: 0, phot: 'cosine', rho: faceRho(v), hwp: v.hwp };
+  const params = normalizeParams({ L: v.L, W: v.W, H: v.H, nx: v.nx, ny: v.ny, flux: v.flux, hc: ceilingDrop(v.H, v.hm), psi: 0, phot: 'cosine', rho: faceRho(v), hwp: v.hwp });
   const result = createCalc().run(params);
   try {
     for (const id of ['en', 'de']) {

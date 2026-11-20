@@ -68,6 +68,8 @@ export default {
       format: 'This is not a lighting calculation project file.',
       version: 'The file was saved by a newer version of the program ({v}).',
       rooms: 'The project file has no rooms.',
+      room: 'Room {n} of the file is damaged.',
+      many: 'Room {n} uses features of a newer version of the program (several luminaire types or groups).',
     },
   },
 
@@ -303,6 +305,8 @@ export default {
     infoMsg: 'Fill in the required fields — the documentation cannot be made without them.',
     open: 'Open project…', newProject: 'New project', next: 'Next',
     opened: 'Opened “{name}”: {rooms}.',
+    saved: 'Saved “{name}” in the version 2 format: the working version 1 cannot open this file.',
+    beta: 'Test version 2', betaTip: 'A version in development: the calculation and the interface still change. Projects are saved in the version 2 format, which the working version 1 cannot open.',
     roomsN: { one: '{n} room', other: '{n} rooms' },
     newConfirm: 'Start a new project? The current one is lost unless it is saved to a file.',
     inputs: 'Input data', room: 'Room', roomName: 'Name',
