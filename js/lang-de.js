@@ -97,6 +97,7 @@ export default {
     snapTip: 'Eine gezogene Leuchte rastet an den Knoten des Planrasters ein',
     pg: { sx: 'Schritt X', sy: 'Schritt Y', ox: 'Ursprung X', oy: 'Ursprung Y' },
     editHint: 'Im Plan (F2): ein Klick wählt eine Gruppe, Umschalt fügt hinzu, ein Rechteck wählt mehrere; Ziehen oder die Pfeile verschieben, Entf löscht, Strg+Z macht rückgängig.',
+    reportBad: 'im Raum „{name}“ sind Leuchten falsch platziert; korrigieren Sie sie im Schritt „Berechnung“',
     lastLum: 'Ein Raum behält mindestens eine Leuchte',
   },
   gform: {
@@ -441,7 +442,7 @@ export default {
     maker: 'Hersteller', article: 'Artikel', cct: 'Farbtemp.', kit: 'Lampe', count: 'Anz., Stk.',
     surface: 'Fläche',
     refNote: '* Zur Information.', targetNote: `In${NB}Klammern — der Sollwert der Kenngröße.`,
-    norms: 'Beleuchtungsanforderungen', lum: 'Leuchte',
+    norms: 'Beleuchtungsanforderungen', lum: 'Leuchte', lumMany: 'Leuchten',
     normative: 'bewertete Fläche', reference: 'zur Information',
     height: ', Höhe {z}', floor: ', Boden',
     illReal: 'Visualisierung der Lichtverteilung',

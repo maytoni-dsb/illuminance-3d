@@ -88,8 +88,10 @@ export function buildReport(d) {
   for (let k = 0; k < tocPages; k++) plan.push({ kind: 'toc', node: nodeId.toc, part: k });
   // list of luminaires (a line per room) and the summary of results (two lines per room: planes 0.0 and 0.8)
   const rIn = roomsIn.map((x) => x.r).filter((r) => r.lum);
+  // a line per luminaire type of a room (stage 2.1); the room is named on its first line
+  const lumLines = rIn.flatMap((r) => (r.lums ?? [r.lum]).map((l, k) => ({ r, l, first: k === 0 })));
   const LUM_ROWS = 20, RES_ROOMS = 13;
-  const lumPages = inc(nodeId.lumlist) && rIn.length ? Math.ceil(rIn.length / LUM_ROWS) : 0;
+  const lumPages = inc(nodeId.lumlist) && lumLines.length ? Math.ceil(lumLines.length / LUM_ROWS) : 0;
   for (let k = 0; k < lumPages; k++) plan.push({ kind: 'lumlist', node: nodeId.lumlist, part: k });
   const resPages = inc(nodeId.restable) && rIn.length ? Math.ceil(rIn.length / RES_ROOMS) : 0;
   for (let k = 0; k < resPages; k++) plan.push({ kind: 'restable', node: nodeId.restable, part: k });
@@ -151,9 +153,9 @@ export function buildReport(d) {
         ${p.part === 0 ? `<h2 class="toch">${t('rep.toc')}</h2>` : ''}${body}</div>${foot(p.n)}</section>`;
     }
     if (p.kind === 'lumlist') {
-      const part = rIn.slice(p.part * LUM_ROWS, p.part * LUM_ROWS + LUM_ROWS);
+      const part = lumLines.slice(p.part * LUM_ROWS, p.part * LUM_ROWS + LUM_ROWS);
       const dash = '—';
-      const rows = part.map((r) => { const t = r.lum; return `<tr><td>${typo(r.name)}</td><td>${t.maker ? typo(t.maker) : dash}</td><td><b>${typo(t.article)}</b></td>
+      const rows = part.map(({ r, l: t, first }, k) => { return `<tr><td>${first || k === 0 ? typo(r.name) : ''}</td><td>${t.maker ? typo(t.maker) : dash}</td><td>${t.letter ? `<span>${esc(t.letter)}</span>${NB}` : ''}<b>${typo(t.article)}</b></td>
         <td class="n">${t.flux ? num(t.flux) : dash}</td><td class="n">${t.power ? num(t.power, 1) : dash}</td><td class="n">${t.cct ? num(t.cct) : dash}</td>
         <td>${t.kit ? typo(t.kit) : dash}</td><td class="n"><b>${t.count}</b></td></tr>`; }).join('');
       return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? t('rep.lumlist') : '')}<div class="frame">
@@ -190,7 +192,7 @@ export function buildReport(d) {
         <div class="cols quad">
           <div><h3>${t('rep.room')}</h3>${kv(r.roomRows)}</div>
           <div><h3>${t('rep.norms')}</h3>${kv(r.normRows ?? [])}</div>
-          <div><h3>${t('rep.lum')}</h3>${kv(r.lumRows)}</div>
+          <div><h3>${t((r.lums?.length ?? 1) > 1 ? 'rep.lumMany' : 'rep.lum')}</h3>${kv(r.lumRows)}</div>
           ${r.polar ? `<figure class="fig polarfig">${r.polar.svg}<figcaption>${r.polar.legend}</figcaption></figure>` : '<div></div>'}
         </div>
       </div>${foot(p.n)}</section>`;
@@ -236,9 +238,7 @@ export function buildReport(d) {
  */
 export function lumTypes(rooms) {
   const map = new Map();
-  for (const r of rooms) {
-    const l = r.lum;
-    if (!l) continue;
+  for (const r of rooms) for (const l of r.lums ?? (r.lum ? [r.lum] : [])) {
     const key = [l.maker, l.article, l.flux, l.power, l.cct].join('|');
     if (!map.has(key)) map.set(key, { ...l, count: 0, rooms: [] });
     const t = map.get(key);

@@ -95,6 +95,7 @@ export default {
     snapTip: 'A dragged luminaire snaps to the nodes of the plan grid',
     pg: { sx: 'Step X', sy: 'Step Y', ox: 'Origin X', oy: 'Origin Y' },
     editHint: 'On the plan (F2): a click selects a group, Shift adds, a rectangle selects several; drag or the arrows move, Delete deletes, Ctrl+Z undoes.',
+    reportBad: 'the room “{name}” has misplaced luminaires; fix them at the stage “Calculation”',
     lastLum: 'A room keeps at least one luminaire',
   },
   gform: {
@@ -439,7 +440,7 @@ export default {
     maker: 'Manufacturer', article: 'Article', cct: 'CCT', kit: 'Lamp', count: 'Qty, pcs',
     surface: 'Surface',
     refNote: '* For reference.', targetNote: `In${NB}brackets — the target value of the parameter.`,
-    norms: 'Lighting requirements', lum: 'Luminaire',
+    norms: 'Lighting requirements', lum: 'Luminaire', lumMany: 'Luminaires',
     normative: 'assessed surface', reference: 'for reference',
     height: ', height {z}', floor: ', floor',
     illReal: 'Visualisation of the light distribution',

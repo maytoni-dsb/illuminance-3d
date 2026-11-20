@@ -27,12 +27,28 @@ function transform(L, W, n, ox, oy) {
   return { k, x: (x) => ox + x * k, y: (y) => oy + (W - y) * k };
 }
 
-/** Luminaire outlines at the grid positions: housing (else luminous area) a × b turned by ψ. */
-function luminaires(T, d, { stroke = '#141414', fill = '#ffffff', glow = '#f6d64a', width = 0.22, opacity = 1 } = {}) {
+/**
+ * Luminaire outlines: housing (else luminous area) a × b turned by ψ, at the grid positions, or
+ * (stage 2.1) at the marks { x, y, psi, shape, letter } of every luminaire of every type; the
+ * letter of the type is written next to a luminaire when the room has several types.
+ */
+function luminaires(T, d, style = {}) {
+  if (!d.marks) return gridLuminaires(T, d, style);
+  const { opacity = 1 } = style;
+  let out = `<g opacity="${opacity}">`;
+  for (const mk of d.marks) {
+    out += gridLuminaires(T, { L: d.L, W: d.W, xs: [mk.x], ys: [mk.y], psi: mk.psi, shape: mk.shape, side: mk.side }, { ...style, opacity: 1, group: false });
+    if (mk.letter) out += `<text x="${r2(T.x(mk.x) + 1.6)}" y="${r2(T.y(mk.y) - 1.4)}" font-size="${r2(5.5 * PT)}" font-weight="600" fill="#141414">${esc(mk.letter)}</text>`;
+  }
+  return `${out}</g>`;
+}
+
+/** Outlines of one shape at the positions xs × ys. */
+function gridLuminaires(T, d, { stroke = '#141414', fill = '#ffffff', glow = '#f6d64a', width = 0.22, opacity = 1, group = true } = {}) {
   const s = d.shape?.housing ?? d.shape?.luminous ?? null;
   const lumA = d.shape?.luminous;
   // without a file: a small square, as in the 3D view
-  const side = Math.min(0.3, 0.35 * Math.min(d.L / d.xs.length, d.W / d.ys.length));
+  const side = d.side ?? Math.min(0.3, 0.35 * Math.min(d.L / d.xs.length, d.W / d.ys.length));
   const a = Math.max((s ? s.a : side) * T.k, 1.8), b = Math.max((s ? s.b : side) * T.k, 1.8);
   const round = !!s?.round;
   const deg = -(d.psi ?? 0) * 180 / Math.PI; // room CCW = page CW (y flipped)
@@ -40,9 +56,9 @@ function luminaires(T, d, { stroke = '#141414', fill = '#ffffff', glow = '#f6d64
   const inner = lumA && s && (lumA.a < s.a - 1e-6 || lumA.b < s.b - 1e-6)
     ? `<g fill="${glow}" stroke="none">${shapeOf(Math.max(lumA.a * T.k, 0.6), Math.max(lumA.b * T.k, 0.6), lumA.round)}</g>` : '';
   const one = `<g fill="${s ? fill : glow}" stroke="${stroke}" stroke-width="${width}">${shapeOf(a, b, round)}</g>${inner}`;
-  let out = `<g opacity="${opacity}">`;
+  let out = group ? `<g opacity="${opacity}">` : '';
   for (const y of d.ys) for (const x of d.xs) out += `<g transform="translate(${r2(T.x(x))} ${r2(T.y(y))}) rotate(${r2(deg)})">${one}</g>`;
-  return `${out}</g>`;
+  return group ? `${out}</g>` : out;
 }
 
 /** Dimension chains: horizontal below the room, vertical on its left (text turned), mm values. */

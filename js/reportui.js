@@ -33,8 +33,11 @@ const zKey = (z) => z.toFixed(3);
 /**
  * Rows of the summary tables of a room.
  * @param {object} v — form values; @param {object|null} file — the parsed photometric file
+ * @param {{ count?: number, grid?: boolean, hm?: number[], types?: object[] }} [lums] — stage 2.1:
+ *   the number of luminaires (not a grid: "n pcs"), their mounting heights, and for several types
+ *   a row per type instead of the description of one luminaire
  */
-export function summaryRows(v, file, norm = null, zc = null) {
+export function summaryRows(v, file, norm = null, zc = null, lums = {}) {
   const tb = file?.table ?? null;
   const m = t('unit.m');
   const roomRows = [
@@ -60,18 +63,27 @@ export function summaryRows(v, file, norm = null, zc = null) {
   }
   const ls = tb?.lampSets?.[file?.set ?? 0];
   const cri = ls?.cri ?? tb?.cri ?? null;
-  const n = v.nx * v.ny;
+  const grid = lums.grid ?? true, n = lums.count ?? v.nx * v.ny;
+  const hms = [...new Set(lums.hm ?? [v.hm])].sort((a, b) => a - b);
+  const hmText = hms.length > 1 ? `${n2(hms[0])}…${n2(hms[hms.length - 1])}${NB}${m}` : `${n2(hms[0])}${NB}${m}`;
+  if (lums.types?.length > 1) {
+    // several types: a row per type (letter and article: count and flux), the total and the heights
+    const lumRows = lums.types.map((ty) => [`${esc(ty.letter)} · ${esc(ty.article)}`,
+      `${ty.count}${NB}${t('unit.pcsDot')} · ${formatNumber(ty.flux, 0)}${NB}${t('unit.lm')}`]);
+    lumRows.push([t('rui.count'), `${n}${NB}${t('unit.pcsDot')}`], [t('rui.hm'), hmText]);
+    return { roomRows, normRows, lumRows };
+  }
   const lumRows = [
     [t('rui.maker'), tb?.manufacturer?.trim() ? esc(tb.manufacturer.trim()) : dash],
     [t('rui.article'), tb ? esc((tb.catalog || tb.name || '').trim()) || dash : t('rui.noFile')],
-    [t('rui.count'), `${v.nx}${NB}×${NB}${v.ny}${NB}=${NB}${n}${NB}${t('unit.pcsDot')}`],
+    [t('rui.count'), grid ? `${v.nx}${NB}×${NB}${v.ny}${NB}=${NB}${n}${NB}${t('unit.pcsDot')}` : `${n}${NB}${t('unit.pcsDot')}`],
     [t('rui.flux'), `${formatNumber(v.flux, 0)}${NB}${t('unit.lm')}`],
     [t('rui.cct'), tb && v.cct ? `${formatNumber(v.cct, 0)}${NB}K` : dash],
     [t('rui.power'), tb && v.power ? `${formatNumber(v.power, 1)}${NB}${t('unit.W')}` : dash],
     ['CRI', cri ? formatNumber(cri, 0) : dash],
     [t('rui.dims'), size],
-    [t('rui.hm'), `${n2(v.hm)}${NB}${m}`],
-    [t('rui.centre'), zc != null ? t('rui.at', { z: `${n2(zc)}${NB}${m}` }) : dash],
+    [t('rui.hm'), hmText],
+    [t('rui.centre'), zc != null && hms.length === 1 ? t('rui.at', { z: `${n2(zc)}${NB}${m}` }) : dash],
   ];
   return { roomRows, normRows, lumRows };
 }
@@ -85,12 +97,17 @@ export function lampKit(tb, set = 0) {
   return /\/\s*\S|\b(E27|E14|E40|GU10|GU5[.,]3|GX53|GX70|G9|G4|R7s|G13|G5|2G11)\b/i.test(type) ? type : '';
 }
 
-/** The luminaire of a room for the list of luminaires. */
-export function lumOf(v, file) {
+/**
+ * A luminaire type of a room for the list of luminaires.
+ * @param {{ count?: number, letter?: string, name?: string }} [o] — stage 2.1: the number of
+ *   luminaires of the type, its letter (several types) and its name (no file)
+ */
+export function lumOf(v, file, o = {}) {
   const tb = file?.table ?? null;
   return {
-    maker: tb?.manufacturer?.trim() || '', article: tb ? (tb.catalog || tb.name || '').trim() || t('rui.lum') : t('rui.noFileLum'),
-    flux: v.flux, power: tb ? v.power : null, cct: tb ? v.cct : null, count: v.nx * v.ny, kit: lampKit(tb, file?.set ?? 0),
+    maker: tb?.manufacturer?.trim() || '', article: tb ? (tb.catalog || tb.name || '').trim() || t('rui.lum') : (o.name || t('rui.noFileLum')),
+    flux: v.flux, power: tb ? v.power : null, cct: tb ? v.cct : null, count: o.count ?? v.nx * v.ny, kit: lampKit(tb, file?.set ?? 0),
+    letter: o.letter ?? '',
   };
 }
 
@@ -100,8 +117,20 @@ export function lumOf(v, file) {
  */
 export function prepareRoom(rd) {
   const v = rd.values, res = rd.result, mf = v.mf;
-  const xs = Array.from({ length: v.nx }, (_, i) => (i + 0.5) * v.L / v.nx);
-  const ys = Array.from({ length: v.ny }, (_, j) => (j + 0.5) * v.W / v.ny);
+  // stage 2.1: rd.types — the luminaire types of the room [{ id, letter, name, file, values, count, hm }]
+  // and rd.grid — true for one grid of one type over the whole room (the plan of version 1)
+  const types = rd.types ?? null, grid = rd.grid ?? !types;
+  const many = (types?.length ?? 1) > 1;
+  const xs = grid ? Array.from({ length: v.nx }, (_, i) => (i + 0.5) * v.L / v.nx) : [];
+  const ys = grid ? Array.from({ length: v.ny }, (_, j) => (j + 0.5) * v.W / v.ny) : [];
+  const typeOf = new Map((types ?? []).map((ty) => [ty.id, ty]));
+  const marks = grid ? null : rd.params.lums.map((l) => {
+    const ty = typeOf.get(l.type);
+    return { x: l.pos[0], y: l.pos[1], psi: l.psi, shape: ty?.file?.shape ?? null, side: 0.25, letter: many ? ty?.letter ?? '' : '' };
+  });
+  const lums = types ? types.map((ty) => lumOf(ty.values, ty.file, { count: ty.count, letter: many ? ty.letter : '', name: ty.name })) : [lumOf(v, rd.file)];
+  const count = types ? types.reduce((a, ty) => a + ty.count, 0) : v.nx * v.ny;
+  const hm = types ? types.flatMap((ty) => ty.hm) : [v.hm];
   const planes = res.planes.map((pl) => {
     const f = pl.field;
     const values = Float64Array.from(f.E, (x) => mf * x);
@@ -115,9 +144,10 @@ export function prepareRoom(rd) {
     };
   });
   return {
-    id: rd.id, name: rd.name?.trim() || t('app.untitled'), key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys,
-    psi: rd.params.lums[0].psi, shape: rd.file?.shape ?? null, planes, lum: lumOf(v, rd.file), ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2]), images: null,
-    polar: polarOf(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux })),
+    id: rd.id, name: rd.name?.trim() || t('app.untitled'), key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys, marks,
+    psi: rd.params.lums[0].psi, shape: rd.file?.shape ?? null, planes, lum: lums[0], lums,
+    ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2], { count, grid, hm, types: many ? lums.map((l, k) => ({ ...l, letter: types[k].letter })) : null }), images: null,
+    polar: many ? null : polarOf(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux })),
   };
 }
 

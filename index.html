@@ -32,9 +32,9 @@
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=eb9ad033",
-      "./js/lang-en.js": "./js/lang-en.js?v=857ec953",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=98b84db8",
+      "./js/lang-de.js": "./js/lang-de.js?v=5300eb14",
+      "./js/lang-en.js": "./js/lang-en.js?v=e733dc5b",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=790f7d9c",
       "./js/model.js": "./js/model.js?v=d6dfcba8",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
@@ -46,9 +46,9 @@
       "./js/planedit.js": "./js/planedit.js?v=8cee9dab",
       "./js/planview.js": "./js/planview.js?v=4da55d50",
       "./js/project.js": "./js/project.js?v=b41537ba",
-      "./js/report.js": "./js/report.js?v=5784e9bc",
-      "./js/reportsvg.js": "./js/reportsvg.js?v=8b0d8a9f",
-      "./js/reportui.js": "./js/reportui.js?v=4a4890e8",
+      "./js/report.js": "./js/report.js?v=28d31a24",
+      "./js/reportsvg.js": "./js/reportsvg.js?v=84be1ad7",
+      "./js/reportui.js": "./js/reportui.js?v=83b40b1a",
       "./js/solver.js": "./js/solver.js?v=76236421",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=1cd77bb9",
@@ -2153,16 +2153,28 @@
   }
   /** Inputs and result of a room for the report (computed when not kept). */
   async function roomData(r) {
-    const values = formValues(r.model);
-    const file = fileOfType(r.model.types[0]);
-    const params = { ...paramsOf(r.model), checks: false };
+    const m = r.model, size = { L: m.room.shape.L, W: m.room.shape.W };
+    // the types with luminaires: letter, name, file, values, count, mounting heights (stage 2.1)
+    const types = m.types.map((ty, k) => {
+      const gs = m.groups.filter((g) => g.type === ty.id);
+      const hm = gs.flatMap((g) => groupPoints(g, size).map((pt) => pt.hm));
+      return { id: ty.id, letter: typeLetter(k), name: nameOfType(ty, k), file: fileOfType(ty), values: typeValues(ty), count: hm.length, hm };
+    }).filter((ty) => ty.count);
+    // a room with misplaced luminaires is not calculated: the report says where to fix it
+    if (placementErrors(m, sizeOf).length) throw new Error(t('lum.reportBad', { name: r.name || t('app.untitled') }));
+    const g0 = m.groups[0];
+    const grid = m.groups.length === 1 && g0.kind === 'grid' && !g0.area;
+    const first = types.find((ty) => ty.id === g0.type) ?? types[0];
+    const values = { ...formValues(m), ...first.values, hm: first.hm[0] };
+    const file = first.file;
+    const params = { ...paramsOf(m), checks: false };
     const key = paramsKey(params);
     let kept = roomResults.get(r.id);
     if (!kept || kept.key !== key) {
       kept = { key, result: await reportRun(params) };
       roomResults.set(r.id, kept);
     }
-    return { id: r.id, name: r.name, values, norm: r.norm ?? null, file, params, key, result: kept.result };
+    return { id: r.id, name: r.name, values, norm: r.norm ?? null, file, params, key, result: kept.result, types, grid };
   }
   const report = initReport({
     tree: $('#rtree'), iframe: $('#preview'), busy: $('#rbusy'), pdf: $('#pdfbtn'),
