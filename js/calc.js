@@ -117,7 +117,7 @@ export function createCalc() {
     const { room, kernel } = geo;
 
     // direct component per type: a type whose set did not change keeps its part
-    const dirKey = sets.map((st) => `${st.type.id}:${lumsKey(st.type, st.lums)}`).join('#');
+    const dirKey = sets.map((st) => `${st.type.id}/${st.type.label ?? ''}:${lumsKey(st.type, st.lums)}`).join('#');
     if (!dir || dir.key !== dirKey) {
       const t = now();
       const next = new Map();
@@ -137,7 +137,7 @@ export function createCalc() {
           reused.direct = false;
         }
         next.set(key, part);
-        return { key, id: st.type.id, type: st.type, ...part, part };
+        return { key, id: st.type.id, label: st.type.label, type: st.type, ...part, part };
       });
       parts = next;
       // one type: its array as it is (results of version 1 bit for bit); several: the sum
@@ -160,7 +160,7 @@ export function createCalc() {
     sol = { key: `${dirKey}|${p.rho.join('|')}`, Eind: s.Eind };
 
     // a luminaire in the ceiling plane (h_c = 0) cannot light upwards: its upward flux is lost
-    const typeFlux = sources.map((src) => ({ id: src.id, count: src.lums.length, flux: src.phot.flux, emitted: setEmitted(src, H), onFaces: faceFlux(room, src.Edir).total, file: !src.phot.lobes }));
+    const typeFlux = sources.map((src) => ({ id: src.id, label: src.label, count: src.lums.length, flux: src.phot.flux, emitted: setEmitted(src, H), onFaces: faceFlux(room, src.Edir).total, file: !src.phot.lobes }));
     let emitted = 0, lost = 0;
     for (const tf of typeFlux) { emitted += tf.emitted; lost += tf.count * tf.flux - tf.emitted; }
     const balance = energyBalance(room, Edir, s.Eind, p.rho, emitted);
@@ -222,6 +222,12 @@ export function createCalc() {
         if (one.type.phot === 'file') out.checks5 = stage5Checks(room, one.lums, one.phot, Edir, one.type.table);
       } else {
         out.checks3 = mixChecks(room, typeFlux, Edir);
+        // the file checks of every type with a file, its letter before the name (decided on 20 Nov 2026)
+        const files = sources.filter((src) => src.type.phot === 'file');
+        if (files.length) {
+          out.checks5 = files.flatMap((src) => stage5Checks(room, src.lums, src.phot, src.Edir, src.type.table)
+            .map((c) => ({ ...c, name: `${src.label ?? src.id}: ${c.name}` })));
+        }
       }
       out.checks4 = stage4Checks(kernel, { iterations: s.iterations, converged: s.converged, change: s.change, balance, sumpner: sp });
       ms.checks = now() - t;

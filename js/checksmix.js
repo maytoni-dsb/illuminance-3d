@@ -24,7 +24,7 @@ export function mixChecks(room, types, Edir) {
   for (const ty of types) {
     const err = Math.abs(ty.onFaces / ty.emitted - 1);
     out.push({
-      name: t('chk.mix.type', { id: ty.id }),
+      name: t('chk.mix.type', { id: ty.label ?? ty.id }),
       ok: err <= (ty.file ? MIX_TOL.file : MIX_TOL.exact),
       detail: t(ty.file ? 'chk.mix.typeFile' : 'chk.mix.typeExact', { n: ty.count, x: exp(err) }),
     });

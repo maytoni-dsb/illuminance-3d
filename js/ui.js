@@ -125,12 +125,15 @@ export function stepValue(p, x, dir, values = {}) {
  * widest range. Choices are known up front, so any field may depend on them.
  * Fields hidden by `when` are not checked and keep their default in `values`.
  * @param {Record<string, string|number>} raw
+ * @param {string[]} [groups] — only the fields of these groups (stage 2.1: the form edits the room,
+ *        the norms and the selected type; the groups have their own form, js/groupform.js)
  * @returns {{ ok: boolean, values: Record<string, number|string>, errors: Record<string, string> }}
  */
-export function validateParams(raw) {
+export function validateParams(raw, groups = null) {
   const values = {}, errors = {};
-  const choices = Object.fromEntries(PARAMS.filter((p) => p.kind === 'choice').map((p) => [p.key, raw[p.key] ?? p.def]));
-  for (const p of PARAMS) {
+  const params = groups ? PARAMS.filter((p) => groups.includes(p.group)) : PARAMS;
+  const choices = Object.fromEntries(params.filter((p) => p.kind === 'choice').map((p) => [p.key, raw[p.key] ?? p.def]));
+  for (const p of params) {
     if (p.kind === 'choice') {
       const x = raw[p.key] ?? p.def;
       if (!p.options.some((o) => o.value === x)) errors[p.key] = t('form.err.choice');
@@ -171,13 +174,16 @@ const DOWN = '<svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><pa
  * Invalid input is flagged and ignored; the last valid values stay in effect.
  * @param {HTMLElement} root
  * @param {(values: Record<string, number|string>) => void} onChange
+ * @param {{ groups?: string[] }} [opts] — only the fields of these groups (validateParams)
  * @returns {{ values: () => Record<string, number|string>,
  *             set: (v: Record<string, number|string>) => void }} set — changes values from the page
  */
-export function initForm(root, onChange) {
+export function initForm(root, onChange, opts = {}) {
   const inputs = {}, errs = {}, flds = {};
   const choice = {};
-  for (const p of PARAMS) {
+  const groups = opts.groups ?? null;
+  const PARAMS_ = groups ? PARAMS.filter((p) => groups.includes(p.group)) : PARAMS;
+  for (const p of PARAMS_) {
     if (p.kind === 'choice') { choice[p.key] = p.def; continue; }
     const host = root.querySelector(`[data-group="${p.group}"]`);
     const fld = document.createElement('div');
@@ -212,24 +218,26 @@ export function initForm(root, onChange) {
     flds[p.key] = fld;
   }
 
-  let last = validateParams(readRaw()).values;
+  let last = validateParams(readRaw(), groups).values;
   let timer = 0;
   showWhen(last);
 
   function readRaw() {
-    return Object.fromEntries(PARAMS.map((p) => [p.key, p.kind === 'choice' ? choice[p.key] : inputs[p.key].value]));
+    return Object.fromEntries(PARAMS_.map((p) => [p.key, p.kind === 'choice' ? choice[p.key] : inputs[p.key].value]));
   }
   function showWhen(v) {
-    for (const p of PARAMS) if (p.when && flds[p.key]) flds[p.key].hidden = !p.when(v);
+    for (const p of PARAMS_) if (p.when && flds[p.key]) flds[p.key].hidden = !p.when(v);
   }
   function check(follow = true) {
     // the mounting height at the ceiling follows the room height (not when a room is loaded)
-    const h = parseNumber(inputs.H.value), m = parseNumber(inputs.hm.value);
-    if (follow && Number.isFinite(h) && h !== last.H && Number.isFinite(m) && Math.abs(m - last.H) < 1e-9) inputs.hm.value = formatNumber(h, 6);
+    if (inputs.H && inputs.hm) {
+      const h = parseNumber(inputs.H.value), m = parseNumber(inputs.hm.value);
+      if (follow && Number.isFinite(h) && h !== last.H && Number.isFinite(m) && Math.abs(m - last.H) < 1e-9) inputs.hm.value = formatNumber(h, 6);
+    }
     const raw = readRaw();
-    const r = validateParams(raw);
+    const r = validateParams(raw, groups);
     showWhen({ ...last, ...r.values, ...choice });
-    for (const p of PARAMS) {
+    for (const p of PARAMS_) {
       if (!errs[p.key]) continue;
       const e = r.errors[p.key] || '';
       errs[p.key].textContent = e;
@@ -247,7 +255,7 @@ export function initForm(root, onChange) {
   function set(v, { exact = false } = {}) {
     for (const [k, x] of Object.entries(v)) {
       if (k in choice) choice[k] = x;
-      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? shown(PARAMS.find((q) => q.key === k), x) : toDecimal(x);
+      else if (inputs[k]) inputs[k].value = x == null ? '' : typeof x === 'number' ? shown(PARAMS_.find((q) => q.key === k), x) : toDecimal(x);
     }
     clearTimeout(timer);
     check(!exact);

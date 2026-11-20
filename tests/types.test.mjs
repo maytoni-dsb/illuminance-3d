@@ -69,6 +69,10 @@ test('a type with a file next to a cosine type; a luminaire in the ceiling plane
   assert.ok(Math.abs(r.balance.emitted - (2 * ph.flux + 2000 * 0.7)) < 1e-9);
   assert.ok(r.checks3.every((c) => c.ok), JSON.stringify(r.checks3));
   assert.ok(Math.abs(r.types[0].onFaces / r.types[0].emitted - 1) < 1e-3);
+  // the file checks of stage 5 for the type with a file, named by the type
+  assert.ok(r.checks5.length >= 4 && r.checks5.every((c) => c.name.startsWith('f: ')), JSON.stringify(r.checks5.map((c) => c.name)));
+  const labelled = createCalc().run({ ...base, types: [{ ...T3, label: 'B' }, T4], lums });
+  assert.ok(labelled.checks5.every((c) => c.name.startsWith('B: ')));
 });
 
 test('a changed type recalculates only its own part; a type without luminaires is skipped', () => {

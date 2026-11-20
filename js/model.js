@@ -19,7 +19,7 @@
 
 import { DEFAULTS, validateParams, faceRho, ceilingDrop, photometricHeight, HM_MIN, MAX_LUMINAIRES } from './ui.js';
 import { rectOutline } from './geometry.js';
-import { GROUP_KINDS, CIRCLE_ORIENT, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg } from './groups.js';
+import { GROUP_KINDS, CIRCLE_ORIENT, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup } from './groups.js';
 
 /** Shapes of the room the model takes (stage 2.3 adds L, U and T). */
 export const SHAPES = Object.freeze(['rect']);
@@ -50,19 +50,74 @@ export function modelFromValues(v, file = null, ids = {}) {
   };
 }
 
-/** The values of the version 1 form that show a model (one rectangle, one grid of one type). */
+/**
+ * The values of the version 1 form that show a model: the room, the first type and the first grid
+ * (a model without a grid: the count of all luminaires along X and the height of the first one).
+ */
 export function formValues(m) {
-  const { room, design } = m, ty = m.types[0], g = m.groups[0];
+  const g = m.groups.find((x) => x.kind === 'grid');
+  const first = m.groups.length ? groupPoints(m.groups[0], roomSize(m))[0] : null;
+  return {
+    ...roomValues(m),
+    nx: g ? g.nx : lumCount(m), ny: g ? g.ny : 1, hm: g ? g.hm : first?.hm ?? m.room.H, psi: g ? g.psi : 0,
+    ...typeValues(m.types[0]),
+  };
+}
+
+/** Values of the room and the norms, as the form shows them. */
+export function roomValues(m) {
+  const { room, design } = m;
   return {
     L: room.shape.L, W: room.shape.W, H: room.H,
     rhoC: room.rho.ceiling, rhoW: room.rho.walls, rhoF: room.rho.floor,
     En: design.En, hwp: design.hwp, U0n: design.U0n, mf: design.mf,
-    nx: g.nx, ny: g.ny, hm: g.hm, psi: g.psi,
-    phot: ty.photometry, flux: ty.flux, cct: ty.cct, power: ty.power,
   };
 }
 
-/** The model after an edit of the form: the same ids and file, the new values. */
+/** Values of a luminaire type, as the form shows them. */
+export const typeValues = (ty) => ({ phot: ty.photometry, flux: ty.flux, cct: ty.cct, power: ty.power });
+
+/**
+ * The model with the room and the norms of the form values. A mounting height equal to the room
+ * height follows it (spec v1, "Luminaires": while h_m = H it follows the room height).
+ */
+export function applyRoomValues(m, v) {
+  const H0 = m.room.H, follow = (hm) => (Math.abs(hm - H0) < 1e-9 ? v.H : hm);
+  const groups = v.H === H0 ? m.groups : m.groups.map((g) => (g.kind === 'single'
+    ? { ...g, points: g.points.map((p) => ({ ...p, hm: follow(p.hm) })) }
+    : { ...g, hm: follow(g.hm) }));
+  return {
+    ...m,
+    room: { shape: { kind: 'rect', L: v.L, W: v.W }, H: v.H, rho: { ceiling: v.rhoC, walls: v.rhoW, floor: v.rhoF } },
+    design: { En: v.En, hwp: v.hwp, U0n: v.U0n ?? null, mf: v.mf },
+    groups,
+  };
+}
+
+/** The model with the values of the form for the type `id` (photometry, flux, colour temperature, power). */
+export function applyTypeValues(m, id, v) {
+  return { ...m, types: m.types.map((ty) => (ty.id === id ? { ...ty, photometry: v.phot === 'file' && ty.file ? 'file' : 'cosine', flux: v.flux, cct: v.cct, power: v.power } : ty)) };
+}
+
+/** The model with another photometric file of the type `id` (null removes it). */
+export function withTypeFile(m, id, file) {
+  return { ...m, types: m.types.map((ty) => (ty.id === id ? { ...ty, file: cleanFile(file), ...(file ? {} : { photometry: 'cosine' }) } : ty)) };
+}
+
+/** The model with the type `id` renamed (an empty name: the default name of the page). */
+export function renameType(m, id, name) {
+  const n = String(name ?? '').trim().slice(0, 80);
+  return { ...m, types: m.types.map((ty) => { if (ty.id !== id) return ty; const { name: _, ...rest } = ty; return n ? { ...rest, name: n } : rest; }) };
+}
+
+/** Letter of the k-th type on the plan and in the lists: A…Z, then AA, AB… */
+export function typeLetter(k) {
+  let s = '';
+  for (let n = k + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+
+/** The model after an edit of the version 1 form (one type, one grid): the same ids and file. */
 export function applyFormValues(m, v) {
   return modelFromValues(v, m.types[0].file, { type: m.types[0].id, group: m.groups[0].id });
 }
@@ -150,9 +205,10 @@ export function placementErrors(m, sizeOf = () => null) {
 export function calcParams(m, fileOf = () => null) {
   const files = new Map(m.types.map((ty) => [ty.id, ty.photometry === 'file' ? fileOf(ty) : null]));
   const housing = (ty) => files.get(ty.id)?.table?.luminaire?.height || 0;
-  const types = m.types.map((ty) => {
+  // label: the letter of the type in the checks of the calculation (not part of the result)
+  const types = m.types.map((ty, k) => {
     const f = files.get(ty.id);
-    return f ? { id: ty.id, phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, phot: 'cosine', flux: ty.flux };
+    return f ? { id: ty.id, label: typeLetter(k), phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, label: typeLetter(k), phot: 'cosine', flux: ty.flux };
   });
   const lums = instances(m, housing).map(({ type, pos, psi }) => ({ type, pos: [...pos], psi }));
   return { outline: outlineOf(m), H: m.room.H, rho: modelRho(m), hwp: m.design.hwp, types, lums };
@@ -163,6 +219,62 @@ export const lumCount = (m) => m.groups.reduce((n, g) => n + groupCount(g), 0);
 
 /** True when the version 1 form can show the model: one type and one grid over the whole room. */
 export const isFormModel = (m) => m.types.length === 1 && m.groups.length === 1 && m.groups[0].kind === 'grid' && !m.groups[0].area && m.groups[0].type === m.types[0].id;
+
+/** A new type after the others: the cosine model with the values of the form defaults. */
+export function addType(m) {
+  const id = newId(m.types, 't');
+  return { model: { ...m, types: [...m.types, { id, photometry: 'cosine', flux: DEFAULTS.flux, cct: DEFAULTS.cct, power: DEFAULTS.power, file: null }] }, id };
+}
+
+/** The model without the type `id`; a type used by a group, or the last one, stays (null). */
+export function removeType(m, id) {
+  if (m.types.length < 2 || m.groups.some((g) => g.type === id)) return null;
+  return { ...m, types: m.types.filter((ty) => ty.id !== id) };
+}
+
+/**
+ * A new group of the kind with the type: placed in the middle of the room, at the ceiling.
+ * @returns {{ model, id }}
+ */
+export function addGroup(m, kind, type) {
+  const { L, W } = roomSize(m), H = m.room.H, id = newId(m.groups, 'g');
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const base = { id, type, kind, hm: H, psi: 0 };
+  let g;
+  switch (kind) {
+    case 'grid': g = { ...base, nx: 2, ny: 2 }; break;
+    case 'line': g = { ...base, x0: r2(L * 0.2), y0: r2(W / 2), x1: r2(L * 0.8), y1: r2(W / 2), by: 'count', n: 3, step: 1, off: 0 }; break;
+    case 'lines': g = { ...base, x0: r2(L * 0.2), y0: r2(W / 3), x1: r2(L * 0.8), y1: r2(W / 3), by: 'count', n: 3, step: 1, off: 0, rows: 2, gap: r2(W / 3) }; break;
+    case 'circle': g = { ...base, cx: r2(L / 2), cy: r2(W / 2), r: r2(Math.min(L, W) / 4), n: 6, start: 0, orient: 'tangent' }; break;
+    case 'single': g = { id, type, kind, points: [{ x: r2(L / 2), y: r2(W / 2), hm: H, psi: 0 }] }; break;
+    default: throw new RangeError(`addGroup: group kind ${kind}`);
+  }
+  return { model: { ...m, groups: [...m.groups, g] }, id };
+}
+
+/** The model with the group `id` replaced. */
+export const replaceGroup = (m, id, g) => ({ ...m, groups: m.groups.map((x) => (x.id === id ? { ...g, id } : x)) });
+
+/** The model without the group `id` (the last group stays: null). */
+export function removeGroup(m, id) {
+  if (m.groups.length < 2) return null;
+  return { ...m, groups: m.groups.filter((g) => g.id !== id) };
+}
+
+/** A copy of the group `id` moved by (dx, dy), after it: { model, id }. */
+export function duplicateGroup(m, id, dx = 0, dy = 0) {
+  const g = m.groups.find((x) => x.id === id);
+  if (!g) return null;
+  const nid = newId(m.groups, 'g'), k = m.groups.indexOf(g);
+  const copy = { ...moveGroup(structuredClone(g), dx, dy, roomSize(m)), id: nid };
+  return { model: { ...m, groups: [...m.groups.slice(0, k + 1), copy, ...m.groups.slice(k + 1)] }, id: nid };
+}
+
+/** The model with the group `id` turned into single luminaires (groups.ungroup). */
+export function ungroupGroup(m, id) {
+  const g = m.groups.find((x) => x.id === id);
+  return g ? replaceGroup(m, id, ungroup(g, roomSize(m))) : m;
+}
 
 /** A new id with the prefix that no item of the list has: t1, t2… */
 export function newId(list, prefix) {

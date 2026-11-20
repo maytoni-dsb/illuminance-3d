@@ -714,9 +714,23 @@ export function createView(container, opts = {}) {
   }
 
   /** Luminaires (photometry.luminaireGrid) with an optional shape (photfile.luminaireShape). */
+  /**
+   * Luminaires of the view: a list of instances with one shape, or (stage 2.1) the sets of the
+   * types [{ lums, shape }]; luminaires of a set at different heights are drawn by height.
+   */
   function setLuminaires(lums, shape = null) {
     if (lumGroup) { scene.remove(lumGroup); disposeTree(lumGroup); }
-    lumGroup = room ? buildLuminaires(room, lums, cssColor('--view-edge', '#444444'), shape) : null;
+    const sets = lums.length && lums[0].lums ? lums : [{ lums, shape }];
+    lumGroup = null;
+    if (room) {
+      lumGroup = new THREE.Group();
+      const edge = cssColor('--view-edge', '#444444');
+      for (const set of sets) {
+        const byZ = new Map();
+        for (const l of set.lums) { const k = l.pos[2]; if (!byZ.has(k)) byZ.set(k, []); byZ.get(k).push(l); }
+        for (const sub of byZ.values()) lumGroup.add(buildLuminaires(room, sub, edge, set.shape));
+      }
+    }
     if (lumGroup) scene.add(lumGroup);
     applyPlaneDisplay();
   }

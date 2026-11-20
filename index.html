@@ -12,28 +12,30 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=529ea10d",
+      "./js/calc.js": "./js/calc.js?v=d26d7630",
       "./js/checks2.js": "./js/checks2.js?v=6c5f10f2",
       "./js/checks3.js": "./js/checks3.js?v=2413caec",
       "./js/checks4.js": "./js/checks4.js?v=a4a67988",
       "./js/checks5.js": "./js/checks5.js?v=1b712ff6",
       "./js/checks6.js": "./js/checks6.js?v=b10cab3b",
-      "./js/checksmix.js": "./js/checksmix.js?v=d1d482b5",
+      "./js/checksmix.js": "./js/checksmix.js?v=cd2ed23d",
       "./js/colorscale.js": "./js/colorscale.js?v=07318c6f",
       "./js/direct.js": "./js/direct.js?v=ca118499",
       "./js/estimate.js": "./js/estimate.js?v=8e837379",
       "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
+      "./js/groupform.js": "./js/groupform.js?v=44a9a357",
       "./js/groups.js": "./js/groups.js?v=0bf40a48",
+      "./js/groupui.js": "./js/groupui.js?v=46b6e1fc",
       "./js/help.js": "./js/help.js?v=070403f0",
       "./js/hotkeys.js": "./js/hotkeys.js?v=82950a0c",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=9b461ebf",
-      "./js/lang-en.js": "./js/lang-en.js?v=209bf0eb",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=51e3a661",
-      "./js/model.js": "./js/model.js?v=07fc5c57",
+      "./js/lang-de.js": "./js/lang-de.js?v=5b649b69",
+      "./js/lang-en.js": "./js/lang-en.js?v=57528f0a",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=39d0e84e",
+      "./js/model.js": "./js/model.js?v=e56074d1",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -42,14 +44,14 @@
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=834ff87e",
       "./js/planview.js": "./js/planview.js?v=6c83bff0",
-      "./js/project.js": "./js/project.js?v=76d6a490",
+      "./js/project.js": "./js/project.js?v=b41537ba",
       "./js/report.js": "./js/report.js?v=5784e9bc",
       "./js/reportsvg.js": "./js/reportsvg.js?v=8b0d8a9f",
       "./js/reportui.js": "./js/reportui.js?v=4a4890e8",
       "./js/solver.js": "./js/solver.js?v=76236421",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
-      "./js/ui.js": "./js/ui.js?v=590120e9",
-      "./js/view3d.js": "./js/view3d.js?v=d2a8696e",
+      "./js/ui.js": "./js/ui.js?v=1cd77bb9",
+      "./js/view3d.js": "./js/view3d.js?v=3ee518f3",
       "./js/worker.js": "./js/worker.js?v=a2071819",
       "./js/workplane.js": "./js/workplane.js?v=2c3e96f7"
     }
@@ -545,6 +547,34 @@
     @media (max-width:600px){
       .fsec{padding-left:14px;padding-right:14px}
     }
+    /* stage 2.1: luminaire types and groups */
+    .tylist{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .tyitem{display:inline-flex;align-items:center;border:1px solid var(--rule);border-radius:999px;background:var(--card);max-width:100%}
+    .tyitem.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+    .tybtn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 4px;border:0;background:none;color:var(--ink2);font-size:12.5px;cursor:pointer;min-width:0}
+    .tyitem.on .tybtn{color:var(--ink);font-weight:600}
+    .tyname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+    .tycount{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:400}
+    .tymark{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 3px;border-radius:5px;background:var(--ty);color:#fff;font-size:11px;font-weight:700;flex:none}
+    .tydel{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 8px 0 2px;cursor:pointer}
+    .tydel:hover{color:var(--err)}
+    .tydel:disabled{opacity:.35;cursor:not-allowed}
+    .grlist{display:flex;flex-direction:column;gap:3px}
+    .gritem{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border:1px solid var(--rule);border-radius:8px;background:var(--card);color:var(--ink2);font-size:12.5px;cursor:pointer;text-align:left}
+    .gritem:hover{border-color:var(--ink3)}
+    .gritem.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);color:var(--ink);font-weight:600}
+    .gritem.bad .grlabel{color:var(--err)}
+    .grlabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .gricon{display:inline-grid;place-items:center;width:16px;height:16px;flex:none;color:var(--ink3)}
+    .gricon svg{width:16px;height:16px}
+    .gracts,.gradd,.gpoint{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+    .gradd > span,.gpoint > span{font-size:12px;color:var(--ink3)}
+    .gradd .gschipb.sm{padding:0 6px}
+    .gfields{margin-top:8px}
+    .gfields .fsub.wide,.gfields .fld.wide{grid-column:1 / -1}
+    .gfields .fsub small{font-weight:400;color:var(--muted)}
+    .gchoice .seg button{height:26px;padding:0 10px;font-size:12px}
+    #placenote{color:var(--err)}
   </style>
 </head>
 <body>
@@ -619,16 +649,23 @@
           <div class="normsrc" id="normsrc"></div>
         </div>
         <div class="fsec">
-          <div class="shd"><span data-i18n="app.lum"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button></div>
+          <div class="shd"><span data-i18n="lum.types"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button></div>
+          <div class="tylist" id="types"></div>
+          <div class="fld text wide" id="w-tyname"><label class="fl" for="tyname"><span class="t" data-i18n="lum.typeName"></span></label>
+            <div class="ibox"><input id="tyname" autocomplete="off" spellcheck="false" maxlength="80"></div></div>
           <div id="photfile"></div>
           <div class="pfcard" id="lumcard"></div>
           <div class="fld wide" id="lampsets" hidden></div>
           <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
-          <div class="fsub"><span data-i18n="app.grid"></span> <button type="button" class="help" data-help="grid" data-i18n-attr="aria-label:app.helpGrid" aria-expanded="false">?</button>
+        </div>
+        <div class="fsec">
+          <div class="shd"><span data-i18n="lum.place"></span> <button type="button" class="help" data-help="grid" data-i18n-attr="aria-label:app.helpGrid" aria-expanded="false">?</button>
             <button type="button" class="gschipb sm" id="suggest" data-i18n-attr="title:app.suggestTip" data-i18n="app.suggest"></button></div>
-          <div class="fgrid" data-group="grid" style="--cols:2"></div>
+          <div id="groups"></div>
+          <div id="gform"></div>
           <div class="gshint" id="hmnote"></div>
           <div class="gshint" id="estnote" hidden></div>
+          <div class="gshint warn" id="placenote" role="alert" hidden></div>
         </div>
       </form>
 
@@ -788,7 +825,12 @@
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry } from './js/photometry.js';
-  import { formValues, applyFormValues, modelFromValues, modelFile, withFile, calcParams as modelCalcParams } from './js/model.js';
+  import {
+    formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
+    addGroup, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, placementErrors, lumCount, calcParams as modelCalcParams,
+  } from './js/model.js';
+  import { groupPoints, groupCount } from './js/groups.js';
+  import { renderTypes, renderGroups, initGroupForm, typeName } from './js/groupui.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
   import { hotkeyAction } from './js/hotkeys.js';
   import { initNormDialog } from './js/normui.js';
@@ -850,9 +892,11 @@
       onOverlay(ctx, info, size) {
         if (!room || !current) return;
         if (info.mode === '2d') {
-          const v = current;
-          const xs = Array.from({ length: v.nx }, (_, i) => (i + 0.5) * v.L / v.nx);
-          const ys = Array.from({ length: v.ny }, (_, j) => (j + 0.5) * v.W / v.ny);
+          // the axes of the selected grid (stage 2.1; the plan editor draws every luminaire)
+          const m = activeRoom()?.model, g = m?.groups.find((x) => x.id === selGroup);
+          const a = g?.kind === 'grid' ? g.area ?? { x0: 0, y0: 0, x1: room.L, y1: room.W } : null;
+          const xs = a ? Array.from({ length: g.nx }, (_, i) => a.x0 + (i + 0.5) * (a.x1 - a.x0) / g.nx) : [];
+          const ys = a ? Array.from({ length: g.ny }, (_, j) => a.y0 + (j + 0.5) * (a.y1 - a.y0) / g.ny) : [];
           const css = getComputedStyle($('.viewcard'));
           drawRoomPlan(ctx, info.T, size, { L: room.L, W: room.W, xs, ys, ink: css.getPropertyValue('--ink2').trim() || '#2e2e2e' });
           if (planDraw) drawPlaneOnPlan(ctx, info.T, size, planDraw);
@@ -976,39 +1020,108 @@
   let stage = 0;                 // 1 — project, 2 — rooms, 3 — results
   let switching = false;         // a room is being loaded into the form
   const roomResults = new Map(); // room id → { key, result } (the last result of every room)
-  /** Housing height of the loaded file, m (0 without a file): the photometric centre is that much below h_m. */
-  const housingOf = (v, file = photFile) => (v.phot === 'file' && file ? file.table.luminaire?.height || 0 : 0);
-  /** Distance from the ceiling to the photometric centre for the calculation. */
-  const hcOf = (v, file = photFile) => ceilingDrop(v.H, v.hm, housingOf(v, file));
-  /** The note under the grid: where the photometric centre is. */
-  function showCentre(v) {
-    const hh = housingOf(v), z = photometricHeight(v.hm, hh), el = $('#hmnote');
-    const mm = (x) => String(Math.round(x * 1000));
-    el.innerHTML = t('app.centre', { z: formatNumber(z, 3) }) + (z <= v.hwp + 1e-9 ? t('app.centreLow') : '');
-    el.title = hh > 0 ? t('app.centreTip', { mm: mm(hh) }) : t('app.centreSame');
-    el.classList.toggle('warn', z <= v.hwp + 1e-9);
+  // ---- luminaire types and groups of the active room (stage 2.1) ----
+  let selType = null;    // id of the type shown in the form (its file, flux…)
+  let selGroup = null;   // id of the group whose fields are shown
+  let selPoint = 0;      // the luminaire of a group of single luminaires shown in its fields
+  const fileCache = new Map(); // file key → { table, phot, shape, key, name } (null: does not read)
+  /** Parsed photometric file of a type, or null (cosine model, or a file that does not read). */
+  function fileOfType(ty) {
+    if (!ty || ty.photometry !== 'file' || !ty.file) return null;
+    const key = fileKey(ty.file.name, ty.file.text);
+    if (!fileCache.has(key)) {
+      try {
+        const table = parsePhotometryFile(ty.file.text, ty.file.name);
+        fileCache.set(key, { table, phot: createPhotometry({ type: 'file', table }), shape: luminaireShape(table), key, name: ty.file.name });
+      } catch (e) { fileCache.set(key, null); }
+    }
+    return fileCache.get(key);
   }
-  /**
-   * Inputs of the calculation for form values: the model of the room (js/model.js) with these
-   * values, its outline and luminaire instances. Throws when the values give no valid luminaires.
-   */
-  function calcParams(v, fileOf = photFile, base = activeRoom()?.model) {
-    const m = base ? applyFormValues(base, v) : modelFromValues(v);
-    const p = modelCalcParams(m, () => fileOf || null);
+  /** Housing height of a type, m (0 without a file): the photometric centre is that much below h_m. */
+  const housingOf = (ty) => fileOfType(ty)?.table.luminaire?.height || 0;
+  /** Housing of a type in plan for the placement check: a along C0, b along C90, height h. */
+  function sizeOf(ty) {
+    const f = fileOfType(ty);
+    if (!f) return null;
+    const h = f.shape.housing ?? f.shape.luminous;
+    return { a: h?.a ?? 0, b: h?.b ?? 0, h: f.table.luminaire?.height || 0 };
+  }
+  const model = () => activeRoom().model;
+  const typeIndex = (m, id) => Math.max(0, m.types.findIndex((ty) => ty.id === id));
+  const nameOfType = (ty, k) => typeName(ty, k, fileOfType(ty));
+  /** The note under the group: where the photometric centre of the selected group is. */
+  function showCentre(m) {
+    const el = $('#hmnote'), g = m.groups.find((x) => x.id === selGroup);
+    if (!g) { el.innerHTML = ''; return; }
+    const ty = m.types.find((x) => x.id === g.type);
+    const pt = groupPoints(g, { L: m.room.shape.L, W: m.room.shape.W })[g.kind === 'single' ? Math.min(selPoint, g.points.length - 1) : 0];
+    if (!pt) { el.innerHTML = ''; return; }
+    const hh = housingOf(ty), z = photometricHeight(pt.hm, hh);
+    const mm = (x) => String(Math.round(x * 1000));
+    el.innerHTML = t('app.centre', { z: formatNumber(z, 3) }) + (z <= m.design.hwp + 1e-9 ? t('app.centreLow') : '');
+    el.title = hh > 0 ? t('app.centreTip', { mm: mm(hh) }) : t('app.centreSame');
+    el.classList.toggle('warn', z <= m.design.hwp + 1e-9);
+  }
+  /** Inputs of the calculation for a model: its outline and the luminaire instances of all types. */
+  function paramsOf(m) {
+    const p = modelCalcParams(m, fileOfType);
     p.checks = $('#dev').open; // the stage checks cost as much as the calculation: only when shown
     return p;
   }
+  /** Luminaires of the view: a set per type with the shape of its file. */
+  function viewSets(m, p) {
+    return m.types.map((ty) => ({ lums: p.lums.filter((l) => l.type === ty.id), shape: fileOfType(ty)?.shape ?? null })).filter((x) => x.lums.length);
+  }
+  /** Placement errors of the model, shown under the groups; true when there are none. */
+  function showPlacement(m) {
+    const errs = placementErrors(m, sizeOf);
+    const by = { outside: 0, height: 0, low: 0 };
+    for (const e of errs) by[e.code]++;
+    const el = $('#placenote');
+    el.innerHTML = Object.entries(by).filter(([, n]) => n).map(([k, n]) => t(`lum.err.${k}`, { lums: t('app.lums', { n }) })).join('<br>');
+    el.hidden = !errs.length;
+    const per = new Map();
+    for (const e of errs) per.set(e.group, (per.get(e.group) ?? 0) + 1);
+    return { ok: !errs.length, per };
+  }
+  /** The lists of types and groups and the fields of the selected group. */
+  function renderLum(m, per = new Map()) {
+    renderTypes($('#types'), m, selType, nameOfType);
+    renderGroups($('#groups'), m, selGroup, per);
+    const g = m.groups.find((x) => x.id === selGroup);
+    $('#suggest').hidden = g?.kind !== 'grid';
+  }
+  /** Loads the selected group into its fields. */
+  function loadGroupForm() {
+    const m = model(), g = m.groups.find((x) => x.id === selGroup);
+    gform.load(g ?? null, gctx(m, g));
+  }
+  const gctx = (m, g) => ({ H: m.room.H, L: m.room.shape.L, W: m.room.shape.W, others: g ? lumCount(m) - groupCount(g) : lumCount(m), at: selPoint });
 
+  /** The room form changed (the room, the norms, the selected type). */
   function update(values) {
     current = values;
     const ar = activeRoom();
     if (ar && !switching) {
-      ar.model = applyFormValues(ar.model, values);
+      const H0 = ar.model.room.H;
+      ar.model = applyTypeValues(applyRoomValues(ar.model, values), selType, values);
       if (ar.norm && !normMatches(ar.norm, values)) ar.norm = null; // edited by hand
+      if (values.H !== H0) loadGroupForm();                           // a height may have followed the room
+      else gform.context(gctx(ar.model, ar.model.groups.find((g) => g.id === selGroup)));
       autosave();
     }
+    refresh();
+  }
+
+  /** The model of the active room changed: the lists, the view, the placement check, the calculation. */
+  function refresh() {
+    const ar = activeRoom();
+    if (!ar || !current) return;
+    const m = ar.model, values = current;
     renderNormSrc();
-    showCentre(values);
+    showCentre(m);
+    const place = showPlacement(m);
+    renderLum(m, place.per);
     const roomKey = `${values.L}|${values.W}|${values.H}`;
     if (roomKey !== lastRoomKey) {
       const h = autoStep(values.L, values.W, values.H); // the subdivision step is automatic
@@ -1037,12 +1150,20 @@
     if (!busy && !pending) setBusy('');
     // luminaires follow the form at once, with or without a result
     let p;
-    try { p = calcParams(values); } catch (e) {
-      // the photometric centre would be at or below the floor: nothing to calculate
+    try { p = paramsOf(m); } catch (e) {
       setBusy(t('app.calcError', { msg: e.message }), true);
       return;
     }
-    view?.setLuminaires(p.lums, values.phot === 'file' && photFile ? photFile.shape : null);
+    view?.setLuminaires(viewSets(m, p));
+    view?.refresh();
+    // a luminaire outside the room or too low: nothing is calculated until it is moved
+    if (!place.ok) {
+      sentKey.v = '';
+      clearResult();
+      setBusy(t('lum.notCalc'), true);
+      updateCalcButton();
+      return;
+    }
     // Recalculate only when the calculation inputs changed; MF is applied here (E = MF · E₀).
     // The table itself is not part of the key: fileKey identifies it. Without the automatic update
     // a change drops the result until "Calculate" is pressed.
@@ -1065,7 +1186,8 @@
   function calculate() {
     if (!current) return;
     let p;
-    try { p = calcParams(current); } catch (e) { setBusy(t('app.calcError', { msg: e.message }), true); return; }
+    if (placementErrors(model(), sizeOf).length) { setBusy(t('lum.notCalc'), true); return; }
+    try { p = paramsOf(model()); } catch (e) { setBusy(t('app.calcError', { msg: e.message }), true); return; }
     sentKey.v = paramsKey(p);
     request(p);
     updateCalcButton();
@@ -1096,7 +1218,8 @@
     if (job.roomId) roomResults.set(job.roomId, { key, result: r });
     // without the automatic update a result for parameters changed meanwhile is dropped; a result of
     // another room is only kept for it
-    const fresh = autoCalc || (current && key === paramsKey(calcParams(current)));
+    let fresh = autoCalc;
+    if (!fresh && current) { try { fresh = key === paramsKey(paramsOf(model())); } catch (e) { fresh = false; } }
     if (job.roomId === project.active && rk === lastRoomKey && room && r.N === room.N && fresh) adopt(r, key);
     flush();
   }
@@ -1266,27 +1389,41 @@
    * enough when the grid holds more.
    */
   function suggestGrid() {
-    const v = form.values();
+    const m = model(), g = m.groups.find((x) => x.id === selGroup);
     const note = $('#estnote');
-    const phot = photFile && v.phot === 'file' ? photFile.phot : createPhotometry({ type: 'cosine', flux: 1000 });
+    if (!g || g.kind !== 'grid') { note.hidden = true; return; }
+    const ty = m.types.find((x) => x.id === g.type), f = fileOfType(ty), v = current;
+    const phot = f ? f.phot : createPhotometry({ type: 'cosine', flux: 1000 });
+    const flux = f ? f.phot.flux : ty.flux;
+    const a = g.area ?? { x0: 0, y0: 0, x1: v.L, y1: v.W };
     let e;
     try {
-      e = estimate(meanCurve(phot), { L: v.L, W: v.W, H: v.H, hu: v.H - hcOf(v), hr: v.hwp, rp: v.rhoC, rc: v.rhoW, rr: v.rhoF, E: v.En, Ke: v.mf }, v.flux);
+      e = estimate(meanCurve(phot), { L: v.L, W: v.W, H: v.H, hu: photometricHeight(g.hm, housingOf(ty)), hr: v.hwp, rp: v.rhoC, rc: v.rhoW, rr: v.rhoF, E: v.En, Ke: v.mf }, flux);
     } catch (err) {
       note.textContent = t('app.estNone');
       note.hidden = false; return;
     }
-    const g = gridFor(e.N, v.L, v.W, 30, MAX_LUMINAIRES);
-    if (e.N > MAX_LUMINAIRES || !g || g.n < e.N) {
+    // the other groups count against the limit of the room
+    const max = MAX_LUMINAIRES - (lumCount(m) - groupCount(g));
+    const grid = gridFor(e.N, a.x1 - a.x0, a.y1 - a.y0, 30, max);
+    if (e.N > max || !grid || grid.n < e.N) {
       // a wrong flux in the file is the usual cause: say so and leave the grid as it is
-      note.innerHTML = t('app.estTooMany', { lums: t('app.lums', { n: e.N }), raw: formatNumber(e.raw, 1), max: MAX_LUMINAIRES, flux: formatNumber(v.flux, 0) });
+      note.innerHTML = t('app.estTooMany', { lums: t('app.lums', { n: e.N }), raw: formatNumber(e.raw, 1), max, flux: formatNumber(flux, 0) });
       note.classList.add('warn'); note.hidden = false; return;
     }
     note.classList.remove('warn');
-    note.innerHTML = t(g.n > e.N ? 'app.estEnough' : 'app.estNeed', { n: e.N });
-    note.title = t('app.estTip', { raw: formatNumber(e.raw, 1), u: formatNumber(e.u, 2), nx: g.nx, ny: g.ny, n: g.n });
+    note.innerHTML = t(grid.n > e.N ? 'app.estEnough' : 'app.estNeed', { n: e.N });
+    note.title = t('app.estTip', { raw: formatNumber(e.raw, 1), u: formatNumber(e.u, 2), nx: grid.nx, ny: grid.ny, n: grid.n });
     note.hidden = false;
-    form.set({ nx: g.nx, ny: g.ny });
+    setModel(replaceGroup(m, g.id, { ...g, nx: grid.nx, ny: grid.ny }), { form: true });
+  }
+
+  /** Puts an edited model of the active room in place; form: the group fields are loaded again. */
+  function setModel(m, { form = false } = {}) {
+    activeRoom().model = m;
+    if (form) loadGroupForm();
+    autosave();
+    refresh();
   }
 
   /** Applies MF, the map mode and the exposure to the last result (no recalculation). */
@@ -1321,18 +1458,103 @@
     }
   }
 
-  const form = initForm($('#form'), update);
-  // a file sets the photometry and fills flux, colour temperature and power from its lamp set
+  const form = initForm($('#form'), update, { groups: ['room', 'refl', 'norm', 'lumdata'] });
+  // fields of the selected group (js/groupui.js): every valid change goes to the model
+  const gform = initGroupForm($('#gform'), (g, extra) => {
+    if (extra?.at != null) selPoint = extra.at;
+    const m = model();
+    if (!m.groups.some((x) => x.id === g.id)) return;
+    activeRoom().model = replaceGroup(m, g.id, g);
+    $('#estnote').hidden = true;
+    autosave();
+    refresh();
+  });
+  // a file sets the photometry of the selected type and fills flux, colour temperature and power
+  // from its lamp set
   const photUI = initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('.form') }, (f) => {
     photFile = f;
-    if (switching) return; // another room is being loaded: its values come with it
+    if (switching) return; // another room or type is being loaded: its values come with it
     const ar = activeRoom();
-    if (ar) { ar.model = withFile(ar.model, f ? { name: f.name, text: f.text, set: f.set } : null); autosave(); }
+    if (ar) { ar.model = withTypeFile(ar.model, selType, f ? { name: f.name, text: f.text, set: f.set } : null); autosave(); }
     if (f) form.set({ phot: 'file', flux: f.values.flux, ...(f.values.cct ? { cct: f.values.cct } : {}), ...(f.values.power ? { power: f.values.power } : {}) });
     else { form.set({ phot: 'cosine', flux: 4000 }); $('#estnote').hidden = true; }
-    // a new file: estimate the number of luminaires and place them; another lamp set does not move the grid
-    if (f && f.reason !== 'set') suggestGrid();
+    // a new file: estimate the number of luminaires of the selected grid of this type; another lamp
+    // set does not move the grid
+    const g = model().groups.find((x) => x.id === selGroup);
+    if (f && f.reason !== 'set' && g?.kind === 'grid' && g.type === selType) suggestGrid();
   }, { restore: false });
+
+  /** Shows a type in the form: its name, file and values. */
+  function showType(id) {
+    const m = model();
+    const ty = m.types.find((x) => x.id === id) ?? m.types[0];
+    selType = ty.id;
+    switching = true;
+    try {
+      photUI.clear({ reason: 'type' });
+      if (ty.file) photUI.load(ty.file.text, ty.file.name, { store: false, reason: 'type', set: ty.file.set });
+      photFile = photUI.current();
+      if (ty.file && !photFile) activeRoom().model = withTypeFile(m, ty.id, null); // a file that no longer reads
+      const v = { ...roomValues(model()), ...typeValues(model().types.find((x) => x.id === ty.id)) };
+      if (!photFile) v.phot = 'cosine';
+      $('#tyname').value = ty.name ?? '';
+      $('#tyname').placeholder = nameOfType({ ...ty, name: undefined }, typeIndex(model(), ty.id));
+      form.set(v, { exact: true });
+    } finally { switching = false; }
+    current = form.values();
+    activeRoom().model = applyTypeValues(model(), selType, current);
+  }
+  /** Selects a group: its fields, and its type in the form. */
+  function selectGroup(id, { point = 0 } = {}) {
+    const m = model(), g = m.groups.find((x) => x.id === id) ?? m.groups[0];
+    selGroup = g?.id ?? null; selPoint = point;
+    $('#estnote').hidden = true;
+    if (g && g.type !== selType) showType(g.type);
+    loadGroupForm();
+    refresh();
+  }
+
+  $('#types').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    let m = model();
+    if (b.dataset.type) { showType(b.dataset.type); refresh(); return; }
+    if (b.dataset.addtype) { const r = addType(m); activeRoom().model = r.model; showType(r.id); autosave(); refresh(); return; }
+    if (b.dataset.deltype) {
+      const next = removeType(m, b.dataset.deltype);
+      if (!next) return;
+      activeRoom().model = next;
+      if (selType === b.dataset.deltype) showType(next.types[0].id);
+      autosave(); refresh();
+    }
+  });
+  $('#tyname').addEventListener('input', (e) => {
+    e.stopPropagation(); // not a calculation input
+    activeRoom().model = renameType(model(), selType, e.target.value);
+    renderLum(model()); report.invalidate('rooms'); autosave();
+  });
+  $('#tyname').addEventListener('change', (e) => e.stopPropagation());
+  $('#groups').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    const m = model();
+    if (b.dataset.group) { selectGroup(b.dataset.group); return; }
+    if (b.dataset.add) {
+      const r = addGroup(m, b.dataset.add, selType);
+      activeRoom().model = r.model; autosave(); selectGroup(r.id); return;
+    }
+    const act = b.dataset.act;
+    if (act === 'dup') {
+      const r = duplicateGroup(m, selGroup, 0.5, 0.5);
+      if (r) { activeRoom().model = r.model; autosave(); selectGroup(r.id); }
+    } else if (act === 'ungroup') {
+      activeRoom().model = ungroupGroup(m, selGroup); autosave(); selectGroup(selGroup);
+    } else if (act === 'del') {
+      const k = m.groups.findIndex((g) => g.id === selGroup), next = removeGroup(m, selGroup);
+      if (!next) return;
+      activeRoom().model = next; autosave(); selectGroup(next.groups[Math.max(0, k - 1)].id);
+    }
+  });
   $('#suggest').addEventListener('click', suggestGrid);
   $('#planes').addEventListener('click', (e) => {
     const b = e.target.closest('.pplan');
@@ -1459,41 +1681,20 @@
     autosave();
   });
 
-  const roomFiles = new Map(); // file key → { table, phot, shape, key } of rooms that are not shown
-  /** Photometric file of a room, parsed (the active room: the file in the form). */
-  function roomFile(r) {
-    if (r.id === project.active) return photFile;
-    const file = modelFile(r.model);
-    if (!file) return null;
-    const key = fileKey(file.name, file.text);
-    if (!roomFiles.has(key)) {
-      try {
-        const table = parsePhotometryFile(file.text, file.name);
-        roomFiles.set(key, { table, phot: createPhotometry({ type: 'file', table }), shape: luminaireShape(table), key, name: file.name });
-      } catch (e) { roomFiles.set(key, null); }
-    }
-    return roomFiles.get(key);
-  }
-
-  /** Loads a room into the form, the photometric file and the view. */
+  /** Loads a room into the form: its first type, its first group, the view. */
   function loadRoom(r) {
     switching = true;
     try {
-      photUI.clear({ reason: 'room' });
-      const file = modelFile(r.model);
-      if (file) photUI.load(file.text, file.name, { store: false, reason: 'room', set: file.set });
-      photFile = photUI.current();
-      if (file && !photFile) r.model = withFile(r.model, null); // a file that no longer reads
-      const v = formValues(r.model);
-      if (!photFile) v.phot = 'cosine';
       $('#roomname').value = r.name;
       $('#estnote').hidden = true;
       planeZ = null; planePick = null;
       clearResult();
       $('#planenote').textContent = '';
-      form.set(v, { exact: true });
     } finally { switching = false; }
-    r.model = applyFormValues(r.model, form.values());
+    selGroup = r.model.groups[0]?.id ?? null; selPoint = 0;
+    showType(r.model.groups[0]?.type ?? r.model.types[0].id);
+    loadGroupForm();
+    refresh();
   }
   function switchRoom(id) {
     if (!project.rooms.some((r) => r.id === id)) return;
@@ -1733,8 +1934,8 @@
   /** Inputs and result of a room for the report (computed when not kept). */
   async function roomData(r) {
     const values = formValues(r.model);
-    const file = values.phot === 'file' ? roomFile(r) : null;
-    const params = { ...calcParams(values, file, r.model), checks: false };
+    const file = fileOfType(r.model.types[0]);
+    const params = { ...paramsOf(r.model), checks: false };
     const key = paramsKey(params);
     let kept = roomResults.get(r.id);
     if (!kept || kept.key !== key) {
