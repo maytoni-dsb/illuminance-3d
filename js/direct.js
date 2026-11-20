@@ -21,6 +21,17 @@ import { pointToElement } from './formfactor.js';
 const TWO_PI = 2 * Math.PI;
 
 /**
+ * Direct illuminance at a point from several luminaire sets of different photometry
+ * (stage 2.1: one set per luminaire type).
+ * @param {{ lums: {pos:number[], psi:number}[], phot: import('./photometry.js').Photometry }[]} sources
+ */
+export function directFromSources(x, n, sources) {
+  let E = 0;
+  for (const s of sources) E += directAtPoint(x, n, s.lums, s.phot);
+  return E;
+}
+
+/**
  * Direct illuminance at a point.
  * @param {ArrayLike<number>} x — point, m
  * @param {ArrayLike<number>} n — unit normal of the receiving surface

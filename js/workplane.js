@@ -11,7 +11,7 @@
 // All values are initial values E₀ (no maintenance factor).
 
 import { pointToElements } from './formfactor.js';
-import { directAtPoint } from './direct.js';
+import { directAtPoint, directFromSources } from './direct.js';
 
 /** Step of the calculation grid for a room whose larger size is d, m. */
 export const gridStep = (d) => 0.2 * 5 ** Math.log10(d);
@@ -53,15 +53,16 @@ export function gridFormFactors(room, grid) {
  * Illuminance at the grid points: direct and reflected.
  * @param {Float64Array} F — gridFormFactors(room, grid)
  * @param {Float64Array} M — exitance of the elements ρ (E_dir + E_ind), lm/m²
+ * @param {{ lums, phot }[]} sources — luminaire sets, one per type (direct.directFromSources)
  * @returns {{ Edir: Float64Array, Eref: Float64Array, E: Float64Array }}
  */
-export function planeIlluminance(room, grid, F, M, lums, phot) {
+export function planeIlluminance(room, grid, F, M, sources) {
   const n = grid.pts.length / 3, N = room.N;
   const Edir = new Float64Array(n), Eref = new Float64Array(n), E = new Float64Array(n);
   const x = [0, 0, 0], up = [0, 0, 1];
   for (let k = 0; k < n; k++) {
     x[0] = grid.pts[3 * k]; x[1] = grid.pts[3 * k + 1]; x[2] = grid.pts[3 * k + 2];
-    Edir[k] = directAtPoint(x, up, lums, phot);
+    Edir[k] = directFromSources(x, up, sources);
     let s = 0;
     const o = k * N;
     for (let j = 0; j < N; j++) s += F[o + j] * M[j];
@@ -366,6 +367,7 @@ export function bilinear(V, nx, ny, dx, dy, x, y) {
 /**
  * Field of the plan of the plane at height z: values at the nodes of the auxiliary grid, exact
  * values at the points of the GOST grid and the extremes of all point values. Initial values E₀.
+ * @param {{ lums, phot }[]} sources — luminaire sets, one per type (stage 2.1)
  * @param {object} cache — kept between calls for this room and height:
  *        { vt?: vertexTables, gost?: { grid, F }, dir?: { key, Edir } (direct at the nodes) }
  * @param {string} [dirKey] — identifies the luminaires and photometry: the direct part at the nodes
@@ -379,7 +381,7 @@ export function bilinear(V, nx, ny, dx, dy, x, y) {
  * under every luminaire — so no number on the plan lies outside [E_min, E_max]. Ē stays the exact
  * area mean of the cells.
  */
-export function planeField(room, z, lums, phot, M, cache = {}, dirKey = null) {
+export function planeField(room, z, sources, M, cache = {}, dirKey = null) {
   const ms = { tables: 0, reflected: 0, direct: 0, gost: 0 };
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   let t = now();
@@ -398,24 +400,26 @@ export function planeField(room, z, lums, phot, M, cache = {}, dirKey = null) {
   if (!cache.dir || dirKey === null || cache.dir.key !== dirKey) {
     // the nodes are symmetric about the centre too: node (i, j) ↔ (ax − i, j) ↔ (i, ay − j)
     const Ed = new Float64Array(nn), tmp = new Float64Array(nn), one = [null];
-    const sym = lums.length > 1 ? mirrorSymmetry(phot, lums[0].psi) : { x: false, y: false };
-    const orbits = luminaireOrbits(lums, sym, room.L, room.W);
     const w = grid.ax + 1;
     const perms = {
       x: Int32Array.from({ length: nn }, (_, k) => grid.ax - (k % w) + Math.floor(k / w) * w),
       y: Int32Array.from({ length: nn }, (_, k) => (k % w) + (grid.ay - Math.floor(k / w)) * w),
     };
     perms.xy = Int32Array.from(perms.x, (v) => perms.y[v]);
-    for (const { lum, images } of orbits) {
-      one[0] = lum;
-      for (let j = 0; j <= grid.ay; j++) {
-        x[1] = Math.min(Math.max(j * grid.dy, eps), room.W - eps);
-        for (let i = 0; i <= grid.ax; i++) {
-          x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
-          tmp[i + j * w] = directAtPoint(x, up, one, phot);
+    // mirror symmetry per set: a set is symmetric only with the photometry of its own type
+    for (const { lums, phot } of sources) {
+      const sym = lums.length > 1 ? mirrorSymmetry(phot, lums[0].psi) : { x: false, y: false };
+      for (const { lum, images } of luminaireOrbits(lums, sym, room.L, room.W)) {
+        one[0] = lum;
+        for (let j = 0; j <= grid.ay; j++) {
+          x[1] = Math.min(Math.max(j * grid.dy, eps), room.W - eps);
+          for (let i = 0; i <= grid.ax; i++) {
+            x[0] = Math.min(Math.max(i * grid.dx, eps), room.L - eps);
+            tmp[i + j * w] = directAtPoint(x, up, one, phot);
+          }
         }
+        addOrbit(Ed, tmp, images, perms);
       }
-      addOrbit(Ed, tmp, images, perms);
     }
     cache.dir = { key: dirKey, Edir: Ed };
   }
@@ -435,7 +439,7 @@ export function planeField(room, z, lums, phot, M, cache = {}, dirKey = null) {
     cache.gost = { grid: g, F: gridFormFactors(room, g) };
   }
   const g = cache.gost.grid;
-  const pl = planeIlluminance(room, g, cache.gost.F, M, lums, phot);
+  const pl = planeIlluminance(room, g, cache.gost.F, M, sources);
   ms.gost = now() - t;
 
   // extremes of the point values
@@ -446,10 +450,12 @@ export function planeField(room, z, lums, phot, M, cache = {}, dirKey = null) {
   };
   for (let j = 0; j <= grid.ay; j++) for (let i = 0; i <= grid.ax; i++) see(E[i + j * (grid.ax + 1)], i * grid.dx, j * grid.dy);
   for (let k = 0; k < pl.E.length; k++) see(pl.E[k], g.pts[3 * k], g.pts[3 * k + 1]);
-  for (const s of lums) {
-    if (s.pos[2] <= z) continue;
-    x[0] = s.pos[0]; x[1] = s.pos[1];
-    see(directAtPoint(x, up, lums, phot) + bilinear(Rv, nL, nW, dL, dW, x[0], x[1]), x[0], x[1]);
+  for (const { lums } of sources) {
+    for (const s of lums) {
+      if (s.pos[2] <= z) continue;
+      x[0] = s.pos[0]; x[1] = s.pos[1];
+      see(directFromSources(x, up, sources) + bilinear(Rv, nL, nW, dL, dW, x[0], x[1]), x[0], x[1]);
+    }
   }
   return {
     z, grid, E, Edir, Eref, vertices: { nx: nL, ny: nW, dx: dL, dy: dW, E: Rv },

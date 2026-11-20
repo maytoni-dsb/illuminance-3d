@@ -68,7 +68,7 @@ test('plan nodes: symmetric direct equals the point formula', () => {
   const room = createRoom({ L: 6, W: 4, H: 3, h: 0.3 });
   const phot = createPhotometry({ type: 'file', table: fixture('Focus-LED-TR032-2-12W3K-S-B.ldt') });
   const lums = luminaireGrid({ L: 6, W: 4, H: 3, nx: 4, ny: 2, hc: 0.125 });
-  const f = planeField(room, 0.8, lums, phot, new Float64Array(room.N));
+  const f = planeField(room, 0.8, [{ lums, phot }], new Float64Array(room.N));
   const w = f.grid.ax + 1;
   let m = 0;
   for (let k = 0; k < f.Edir.length; k += 37) {

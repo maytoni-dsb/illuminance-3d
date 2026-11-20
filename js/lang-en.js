@@ -424,6 +424,13 @@ export default {
       coax: 'Coaxial squares: table values',
       coaxDetail: '0.0686 · 0.1998 · 0.4153; difference from the exact formula {x}',
     },
+    mix: {
+      type: 'Type {id}: the flux on all faces equals the flux of its luminaires',
+      typeExact: '{n} pcs; element averages: |ΣE·A / ΣΦ − 1| = {x}',
+      typeFile: '{n} pcs; element averages (adaptive cubature): |ΣE·A / ΣΦ − 1| = {x}',
+      total: 'The flux on all faces equals the sum of the fluxes of all types',
+      totalDetail: '{k} types, {n} luminaires: |ΣE·A / ΣΦ − 1| = {x} at N = {N}',
+    },
     s3: {
       under: 'Below a luminaire E = I(0)/d²',
       one: 'one luminaire; {d}',

@@ -92,10 +92,11 @@ test('the calculator reuses the kernel and the direct part with the new inputs',
   assert.deepEqual(calc.run(moved).reused, { kernel: true, direct: false });
 });
 
-test('the calculation refuses what stage 2.0 does not take', () => {
+test('the calculation refuses wrong inputs', () => {
   const p = { ...calcParams(modelFromValues({ ...DEFAULTS })), checks: false };
   const calc = createCalc();
-  assert.throws(() => calc.run({ ...p, types: [...p.types, { ...p.types[0], id: 't2' }] }), /one luminaire type/);
+  assert.throws(() => calc.run({ ...p, types: [...p.types, { ...p.types[0] }] }), /same id/);
+  assert.throws(() => calc.run({ ...p, types: [] }), /no luminaire types/);
   assert.throws(() => calc.run({ ...p, lums: [] }), /no luminaires/);
   assert.throws(() => calc.run({ ...p, lums: p.lums.map((l) => ({ ...l, type: 'x' })) }), /unknown type/);
   assert.throws(() => calc.run({ ...p, lums: p.lums.map((l) => ({ ...l, pos: [l.pos[0], l.pos[1], 0] })) }), /outside/);
