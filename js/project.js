@@ -10,7 +10,7 @@
 // grid becoming one group "grid" of one type. Version 1 of the calculator does not open version 2.
 
 import { DEFAULTS } from './ui.js';
-import { modelFromValues, cleanValues, cleanFile, cleanModel } from './model.js';
+import { modelFromValues, cleanValues, cleanFile, cleanModel, isFormModel } from './model.js';
 import { t, raw } from './i18n.js';
 
 /** Format tag and version of the project file. */
@@ -148,9 +148,13 @@ function roomV1(r) {
 
 /** Model of a room of a version 2 file. */
 function roomV2(r, k) {
-  try { return cleanModel(r); } catch (e) {
-    throw new Error(t(e.code === 'model.many' ? 'project.err.many' : 'project.err.room', { n: k + 1 }));
+  let m;
+  try { m = cleanModel(r); } catch (e) {
+    throw new Error(t('project.err.room', { n: k + 1 }));
   }
+  // until the editor of stage 2.1 is on the page, only what the version 1 form shows
+  if (!isFormModel(m)) throw new Error(t('project.err.many', { n: k + 1 }));
+  return m;
 }
 
 /**

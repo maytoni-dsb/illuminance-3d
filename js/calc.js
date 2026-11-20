@@ -13,6 +13,7 @@ import { solve, coarseData, energyBalance, sumpner, SOLVER_EPS } from './solver.
 import { createPhotometry, luminaireGrid } from './photometry.js';
 import { elementDirect, emittedFlux, faceFlux } from './direct.js';
 import { mixChecks } from './checksmix.js';
+import { pointInOutline } from './groups.js';
 import { stage3Checks } from './checks3.js';
 import { stage4Checks } from './checks4.js';
 import { stage5Checks } from './checks5.js';
@@ -129,6 +130,7 @@ export function createCalc() {
           const lums = st.lums.map((l) => Object.freeze({ pos: Object.freeze([l.pos[0], l.pos[1], l.pos[2]]), psi: l.psi }));
           for (const l of lums) {
             if (!(l.pos[2] > 0 && l.pos[2] <= H)) throw new RangeError(`calc: a luminaire at z = ${l.pos[2]} is outside (0, H]`);
+            if (!pointInOutline(p.outline, l.pos[0], l.pos[1])) throw new RangeError(`calc: a luminaire at (${l.pos[0]}, ${l.pos[1]}) is outside the room`);
           }
           const E = elementDirect(room, lums, phot);
           part = { lums, phot, Edir: E, stats: E.stats ?? null, planes: new Map() };
