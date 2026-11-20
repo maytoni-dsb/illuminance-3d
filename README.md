@@ -5,6 +5,11 @@ computed with radiosity (gathering with a form-factor kernel). Everything runs i
 
 Specification (living document, in Russian): https://claude.ai/artifact/911Gfh2dzzs71fY7wyDCSB
 
+**Version 2** is developed in branch `v2` (rooms of complex shape, several luminaire types and
+arrangements, LED strip, cylindrical illuminance, colour); its specification:
+https://claude.ai/artifact/S1aw3sRV8axRtFsVwhr8Lw. Branch `main` is the working version 1 and gets
+bug fixes only, each merged into `v2` at once.
+
 ## Run locally
 
 ```
@@ -39,6 +44,26 @@ npm test
 ```
 
 Node 18+, no dependencies (`node:test`). Calculation modules use neither the DOM nor Three.js.
+
+### Comparison with the working version
+
+```
+npm run compare            # or: node scripts/compare-main.mjs [ref] [--runs N]
+```
+
+takes the calculation modules of `main` (or another ref) from git and runs them and the working
+tree on the same version 1 rooms (the v2 side through the project file and the model, as the page
+does); prints the largest relative difference and the times. Exit code 1 when a value differs by
+more than 1e-9 or version 2 is more than 15 % slower.
+
+## Data model of version 2
+
+`js/model.js`: a room is an outline in plan (a rectangle until stage 2.3) with a height and
+reflectances; luminaires are types → groups → instances. Types and groups are stored in the project
+file (format version 2, `js/project.js`), instances are generated and go to the calculation with the
+outline (`calc.js`, `CalcParams`). Project files of version 1 are read: the grid becomes one group
+"grid" of one type. Until stage 2.1 a room has one type and one grid, and the version 1 form edits
+the model. The browser keeps the project of version 2 under its own key (`lcalc.v2.project`).
 
 ## Conventions
 
