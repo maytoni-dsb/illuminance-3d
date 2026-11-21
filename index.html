@@ -580,7 +580,6 @@
     #placenote{color:var(--err)}
     /* stage 2.1: the luminaire, its placement and the editor (styles of v1 and the Track Configurator) */
     .shd .gschipb.sm{margin-left:auto;font-weight:500}
-    .lumact{display:flex;align-items:center;gap:10px;margin:4px 0 2px;min-width:0}
     .lumtxt{display:flex;flex-direction:column;min-width:0}
     .lumtxt b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .lumtxt small{font-size:11.5px;color:var(--muted);margin-top:2px}
@@ -720,7 +719,6 @@
         <div class="fsec">
           <div class="shd"><span data-i18n="app.lum"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button>
             <button type="button" class="gschipb sm" id="lumlistbtn" aria-haspopup="dialog" data-i18n="lum.list" data-i18n-attr="title:lum.listTip"></button></div>
-          <div class="lumact" id="lumact"></div>
           <div id="lumedit">
             <div class="pfcard" id="lumcard"></div>
             <div class="fld wide" id="lampsets" hidden></div>
@@ -1216,10 +1214,6 @@
   }
   /** The active luminaire line, the placement buttons and "Suggest" (a grid in focus). */
   function renderLum(m, per = new Map()) {
-    const k = typeIndex(m, selType), ty = m.types[k], f = fileOfType(ty);
-    const n = m.groups.filter((g) => g.type === ty.id).reduce((a, g) => a + groupCount(g), 0);
-    const v = typeValues(ty);
-    $('#lumact').innerHTML = `${typeMark(k)}<div class="lumtxt"><b>${esc(nameOfType(ty, k))}</b><small>${esc(t('app.lums', { n }))}</small></div>`;
     renderKinds($('#kinds'), kind, drawing);
     const g = m.groups.find((x) => x.id === selGroup);
     $('#suggest').hidden = !(g?.kind === 'grid' && !isEmpty(sel));
