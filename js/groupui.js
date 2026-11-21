@@ -35,9 +35,11 @@ export function setText(file, set) {
 }
 
 /** The swatches of the colour of a type: the palette and a colour of one's own. */
-export function renderSwatches(host, color) {
+export function renderSwatches(host, color) { host.innerHTML = swatchesHtml(color); }
+/** The HTML of the swatches of the colour of a type. */
+export function swatchesHtml(color) {
   const own = !TYPE_COLORS.includes(color);
-  host.innerHTML = `<div class="swrow">${TYPE_COLORS.map((c) => `<button type="button" class="sw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
+  return `<div class="swrow">${TYPE_COLORS.map((c) => `<button type="button" class="sw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
     <label class="sw own${own ? ' sel' : ''}" style="--ty:${own ? color : '#ffffff'}" data-tip="${esc(t('lum.colorOwn'))}"><input type="color" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></label></div>`;
 }
 

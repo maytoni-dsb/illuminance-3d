@@ -26,7 +26,7 @@
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
       "./js/groupform.js": "./js/groupform.js?v=fe9956af",
       "./js/groups.js": "./js/groups.js?v=06614448",
-      "./js/groupui.js": "./js/groupui.js?v=7cf1b8a2",
+      "./js/groupui.js": "./js/groupui.js?v=4a989918",
       "./js/help.js": "./js/help.js?v=98159935",
       "./js/hotkeys.js": "./js/hotkeys.js?v=e9d8ff5c",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
@@ -42,7 +42,7 @@
       "./js/orbit.js": "./js/orbit.js?v=502539fe",
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
-      "./js/photui.js": "./js/photui.js?v=9ec708fb",
+      "./js/photui.js": "./js/photui.js?v=51d36bb9",
       "./js/planedit.js": "./js/planedit.js?v=a8b13d74",
       "./js/planview.js": "./js/planview.js?v=6bac9b7b",
       "./js/project.js": "./js/project.js?v=b41537ba",
@@ -559,15 +559,11 @@
     .tymark{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--ty);flex:none;vertical-align:middle}
     #lumedit{position:relative;display:flex;flex-direction:column;gap:12px}
     .pfdesc.top{justify-content:flex-start}
-    .pfhead{display:flex;align-items:flex-start;gap:9px;min-width:0}
-    .pfhead .pfmid{min-width:0;gap:2px}
+    .pfdesc.top .pfmid{gap:2px}
     .pfsize{margin-top:6px}
-    .tycolor{flex:none;width:16px;height:16px;margin-top:1px;border-radius:50%;border:2px solid #fff;padding:0;background:var(--ty);
-      box-shadow:0 0 0 1px var(--rule);cursor:pointer}
-    .tycolor:hover,.tycolor[aria-expanded="true"]{box-shadow:0 0 0 1.5px var(--ink)}
-    #colorpop{top:26px;left:-4px;width:auto;padding:10px 12px}
-    .swrow{display:flex;gap:6px;align-items:center}
-    .sw{width:19px;height:19px;border-radius:50%;border:2px solid #fff;padding:0;background:var(--ty);box-shadow:0 0 0 1px var(--rule);cursor:pointer;position:relative;flex:none}
+    .swhost{margin-top:-2px}
+    .swrow{display:flex;gap:8px;align-items:center}
+    .sw{width:20px;height:20px;border-radius:50%;border:2px solid #fff;padding:0;background:var(--ty);box-shadow:0 0 0 1px var(--rule);cursor:pointer;position:relative;flex:none}
     .sw.sel{box-shadow:0 0 0 2px var(--ink)}
     .sw.own{background:conic-gradient(#e03131,#f5b700,#2f9e44,#1c7ed6,#9c36b5,#e03131)}
     .sw.own.sel{background:var(--ty)}
@@ -736,7 +732,7 @@
             <button type="button" class="gschipb sm" id="lumlistbtn" aria-haspopup="dialog" data-i18n="lum.list" data-i18n-attr="title:lum.listTip"></button></div>
           <div id="lumedit">
             <div class="pfcard" id="lumcard"></div>
-            <div class="epop" id="colorpop" hidden></div>
+            <div class="swhost" id="tycolors" data-i18n-attr="title:lum.color"></div>
             <div class="fld wide" id="lampsets" hidden></div>
             <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
           </div>
@@ -1655,37 +1651,23 @@
     const g = model().groups.find((x) => x.id === selGroup);
     if (f && f.reason !== 'set' && g?.kind === 'grid' && g.type === selType) suggestGrid();
     renderLumList();
-  }, { restore: false, lead: () => {
-    const m = activeRoom()?.model, k = m ? typeIndex(m, selType) : 0;
-    return `<button type="button" class="tycolor" id="tycolor" aria-haspopup="true" aria-expanded="false" style="--ty:${m ? typeColorOf(m, k) : '#e8590c'}" title="${t('lum.color').replace(/"/g, '&quot;')}" aria-label="${t('lum.color').replace(/"/g, '&quot;')}"></button>`;
-  } });
+  }, { restore: false, tail: () => '' });
 
-  // the colour of the active luminaire (21 Nov 2026: a type is told by its colour): the swatch of
-  // the card opens the palette and a colour of one's own
-  const colorPop = $('#colorpop');
+  // the colour of the active luminaire (21 Nov 2026: a type is told by its colour): the palette and
+  // a colour of one's own, under the name and the article of the card
+  function showColors() {
+    const host = $('#tycolors'), m = activeRoom()?.model;
+    if (host && m) renderSwatches(host, typeColorOf(m, typeIndex(m, selType)));
+  }
   function setColor(c) {
     const m = model(), next = setTypeColor(m, selType, c);
-    if (next === m || next.types.every((ty, k) => ty.color === m.types[k].color)) return;
+    if (next.types.every((ty, k) => ty.color === m.types[k].color)) return;
     remember(m); activeRoom().model = next; autosave();
-    const k = typeIndex(next, selType);
-    $('#tycolor')?.style.setProperty('--ty', typeColorOf(next, k));
-    renderSwatches(colorPop, typeColorOf(next, k));
-    report.invalidate('rooms'); renderLumList(); view?.refresh();
+    showColors(); report.invalidate('rooms'); renderLumList(); view?.refresh();
   }
-  $('#lumcard').addEventListener('click', (e) => {
-    const b = e.target.closest('#tycolor');
-    if (!b) return;
-    e.stopPropagation();
-    const open = colorPop.hidden;
-    if (open) { const m = model(); renderSwatches(colorPop, typeColorOf(m, typeIndex(m, selType))); }
-    colorPop.hidden = !open; b.setAttribute('aria-expanded', String(open));
-  });
-  colorPop.addEventListener('click', (e) => { const b = e.target.closest('button[data-color]'); if (b) setColor(b.dataset.color); });
-  colorPop.addEventListener('input', (e) => { if (e.target.type === 'color') setColor(e.target.value); });
-  document.addEventListener('pointerdown', (e) => {
-    if (colorPop.hidden || e.target.closest('#colorpop, #tycolor')) return;
-    colorPop.hidden = true; $('#tycolor')?.setAttribute('aria-expanded', 'false');
-  });
+  $('#tycolors').addEventListener('click', (e) => { const b = e.target.closest('button[data-color]'); if (b) setColor(b.dataset.color); });
+  $('#tycolors').addEventListener('input', (e) => { if (e.target.type === 'color') { e.stopPropagation(); setColor(e.target.value); } });
+  $('#tycolors').addEventListener('change', (e) => { if (e.target.type === 'color') e.stopPropagation(); });
 
   /** Makes a luminaire type the active one: its file and values in the form. */
   function showType(id) {
@@ -1706,6 +1688,7 @@
     current = { ...form.values(), ...typeForm.values() };
     activeRoom().model = applyTypeValues(model(), selType, current);
     renderLumList();
+    showColors();
   }
   /** Shows the fields of a group (it becomes the focus; its luminaire the active one). */
   function focusGroup(id, point = 0) {

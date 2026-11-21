@@ -125,25 +125,25 @@ export function initPhotFile(el, onChange, opts = {}) {
 
   function showCosine() {
     const p = createPhotometry({ type: 'cosine', flux: 1000 });
-    const lead = opts.lead?.() ?? '';
-    el.card.innerHTML = `<div class="pfdesc">${lead ? `<div class="pfhead">${lead}<div class="pfmid"><div class="pfl2">${t('phot.none')}</div><div class="pfl3">${t('phot.cosine')}</div></div></div>`
+    const tail = opts.tail?.() ?? null;
+    el.card.innerHTML = `<div class="pfdesc${tail != null ? ' top' : ''}">${tail != null ? `<div class="pfmid"><div class="pfl2">${t('phot.none')}</div><div class="pfl3">${t('phot.cosine')}</div></div>${tail}`
       : `<div class="pfl1">${t('phot.none')}</div><div class="pfl2">${t('phot.cosine')}</div>`}</div>${polarSvg(p)}`;
     el.sets.innerHTML = ''; el.sets.hidden = true;
   }
   function show(f) {
     const tb = f.table;
     // manufacturer at the top, name and article together, sizes at the bottom: as high as the polar
-    // diagram; with opts.lead (version 2: the colour of the type) no manufacturer, the name, article
-    // and sizes at the top (decided on 21 Nov 2026)
+    // diagram; with opts.tail (version 2: the colour of the type under the name and the article) no
+    // manufacturer and no notices, the name, article and sizes at the top (decided on 21 Nov 2026)
     const mid = [tb.name, tb.catalog].filter((x) => x && x.trim());
     const names = mid.map((x, i) => `<div class="pfl${i ? 3 : 2}">${esc(x)}</div>`).join('');
-    const lead = opts.lead?.() ?? '';
-    el.card.innerHTML = `<div class="pfdesc${lead ? ' top' : ''}">${lead
-      ? `<div class="pfhead">${lead}<div class="pfmid">${names}<div class="pfl3 pfsize">${sizeText(tb) || ' '}</div></div></div>`
+    const tail = opts.tail?.() ?? null;
+    el.card.innerHTML = `<div class="pfdesc${tail != null ? ' top' : ''}">${tail != null
+      ? `<div class="pfmid">${names}<div class="pfl3 pfsize">${sizeText(tb) || ' '}</div></div>${tail}`
       : `<div class="pfl1">${esc(tb.manufacturer?.trim() || ' ')}</div>
       <div class="pfmid">${names}</div>
       <div class="pfl3">${sizeText(tb) || ' '}</div>`}
-      ${tb.warnings.length ? `<ul class="pfwarn">${tb.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}</div>${polarSvg(f.phot)}`;
+      ${tb.warnings.length && tail == null ? `<ul class="pfwarn">${tb.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}</div>${polarSvg(f.phot)}`;
     const sets = tb.lampSets ?? [];
     el.sets.hidden = sets.length < 2;
     el.sets.innerHTML = sets.length < 2 ? '' : `<label class="fl" for="lampset"><span class="t">${t('phot.source')}</span></label>
