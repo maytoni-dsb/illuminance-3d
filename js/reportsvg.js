@@ -29,16 +29,16 @@ function transform(L, W, n, ox, oy) {
 
 /**
  * Luminaire outlines: housing (else luminous area) a × b turned by ψ, at the grid positions, or
- * (stage 2.1) at the marks { x, y, psi, shape, letter } of every luminaire of every type; the
- * letter of the type is written next to a luminaire when the room has several types.
+ * (stage 2.1) at the marks { x, y, psi, shape, color } of every luminaire of every type; with
+ * several types the outline is drawn in the colour of its type (no letters, 21 Nov 2026).
  */
 function luminaires(T, d, style = {}) {
   if (!d.marks) return gridLuminaires(T, d, style);
   const { opacity = 1 } = style;
   let out = `<g opacity="${opacity}">`;
   for (const mk of d.marks) {
-    out += gridLuminaires(T, { L: d.L, W: d.W, xs: [mk.x], ys: [mk.y], psi: mk.psi, shape: mk.shape, side: mk.side }, { ...style, opacity: 1, group: false });
-    if (mk.letter) out += `<text x="${r2(T.x(mk.x) + 1.6)}" y="${r2(T.y(mk.y) - 1.4)}" font-size="${r2(5.5 * PT)}" font-weight="600" fill="#141414">${esc(mk.letter)}</text>`;
+    const own = mk.color ? { stroke: mk.color, width: Math.max(style.width ?? 0.22, 0.45) } : {};
+    out += gridLuminaires(T, { L: d.L, W: d.W, xs: [mk.x], ys: [mk.y], psi: mk.psi, shape: mk.shape, side: mk.side }, { ...style, ...own, opacity: 1, group: false });
   }
   return `${out}</g>`;
 }

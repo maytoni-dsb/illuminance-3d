@@ -269,7 +269,7 @@ function poly(ctx, P, pts) {
  * wireframes (the housing and the luminous area; a small circle with a cross without a file) in the
  * colour of their type — all of them on the plan, the selected ones in 3D — the selected in the
  * accent colour, misplaced in red; the snapped point, the selection rectangle and the gizmo.
- * @param {{ mode: '2d' | '3d', P: (x, y, z) => [px, py] | null, k: number, items, color, letter,
+ * @param {{ mode: '2d' | '3d', P: (x, y, z) => [px, py] | null, k: number, items, color,
  *   selected, grid, L, W, guides, box, accent, bad: Set<string>, snap, gizmo }} d
  *   P — room point → view px; k — metres per px (plan); gizmo — { tool, o, x, y, ring, active }
  */
@@ -331,7 +331,6 @@ export function drawEditor(ctx, size, d) {
       ctx.beginPath(); ctx.moveTo(c[0] + ux / l * (e - 3), c[1] + uy / l * (e - 3)); ctx.lineTo(c[0] + ux / l * (e + 4), c[1] + uy / l * (e + 4));
       ctx.lineWidth = 1; ctx.stroke();
     }
-    if (plan && Math.min(it.a, it.b) / d.k >= 16) halo(ctx, d.letter(it.type), c[0], c[1], '#111');
   }
   // the snapped point
   if (d.snap) {

@@ -4,13 +4,11 @@
 
 import { rowsOf, fieldValues, draftValues, validateGroup, validateDraft } from './groupform.js';
 import { groupCount } from './groups.js';
-import { typeLetter } from './model.js';
+import { TYPE_COLORS, typeColorOf } from './model.js';
 import { stepValue, parseNumber, toDecimal, formatNumber } from './ui.js';
 import { t, decimal } from './i18n.js';
 
-/** Colours of the types on the plan and in the lists (A, B, C…; repeated after eight). */
-export const TYPE_COLORS = Object.freeze(['#e8590c', '#1971c2', '#2f9e44', '#9c36b5', '#c2255c', '#0c8599', '#e67700', '#5f3dc4']);
-export const typeColor = (k) => TYPE_COLORS[k % TYPE_COLORS.length];
+export { TYPE_COLORS, typeColorOf };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -26,8 +24,22 @@ export function typeName(ty, k, file = null) {
   return t('lum.typeN', { n: k + 1 });
 }
 
-/** Mark of a type: its letter on its colour. */
-export const typeMark = (k) => `<span class="tymark" style="--ty:${typeColor(k)}">${typeLetter(k)}</span>`;
+/** Mark of a type: a dot of its colour (no letters, decided on 21 Nov 2026). */
+export const typeMark = (color) => `<span class="tymark" style="--ty:${color}" aria-hidden="true"></span>`;
+
+/** The lamp set of a type's file in words ("LED / 7190"), when the file has several. */
+export function setText(file, set) {
+  const s = file?.table?.lampSets;
+  if (!s || s.length < 2 || !s[set]) return '';
+  return s[set].type || t('phot.set', { n: set + 1 });
+}
+
+/** The swatches of the colour of a type: the palette and a colour of one's own. */
+export function renderSwatches(host, color) {
+  const own = !TYPE_COLORS.includes(color);
+  host.innerHTML = `<div class="swrow">${TYPE_COLORS.map((c) => `<button type="button" class="sw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
+    <label class="sw own${own ? ' sel' : ''}" style="--ty:${own ? color : '#ffffff'}" data-tip="${esc(t('lum.colorOwn'))}"><input type="color" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></label></div>`;
+}
 
 const SVG = (d, extra = '') => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"${extra}>${d}</svg>`;
 const DOT = (x, y, r = 1.7) => `<circle cx="${x}" cy="${y}" r="${r}" fill="currentColor" stroke="none"/>`;
@@ -160,13 +172,15 @@ export function renderLumList(host, m, o) {
   for (const g of m.groups) counts.set(g.type, (counts.get(g.type) ?? 0) + groupCount(g));
   const rows = m.types.map((ty, k) => {
     const f = o.fileOf(ty), n = counts.get(ty.id), on = ty.id === o.active;
-    const file = f ? `${esc(f.table.manufacturer?.trim() || '')} ${esc(f.name)}`.trim() : esc(t('rui.noFileLum'));
+    const st = f ? setText(f, ty.file?.set ?? 0) : '';
+    const file = f ? `${esc(f.name)}${st ? ` · ${esc(st)}` : ''}` : esc(t('rui.noFileLum'));
     const flux = `${formatNumber(f ? f.phot.flux : ty.flux, 0)} ${t('unit.lm')}`;
     return `<tr class="${on ? 'on' : ''}" data-type="${ty.id}">
-      <td>${typeMark(k)}</td>
+      <td>${typeMark(typeColorOf(m, k))}</td>
       <td><input class="lname" data-name="${ty.id}" value="${esc(ty.name ?? '')}" placeholder="${esc(typeName({ ...ty, name: undefined }, k, f))}" maxlength="80" aria-label="${esc(t('lum.typeName'))}"><small>${file} · ${esc(flux)}</small></td>
       <td class="n">${n}</td>
       <td class="acts">${o.canReplace ? `<button type="button" class="gschipb sm" data-replace="${ty.id}" data-tip="${esc(t('lum.replaceTip'))}">${esc(t('lum.replace'))}</button>` : ''}
+        <button type="button" class="gschipb sm" data-dup="${ty.id}" data-tip="${esc(t('lum.dupTip'))}">${esc(t('lum.dup'))}</button>
         <button type="button" class="ldel" data-del="${ty.id}"${n || m.types.length < 2 ? ` disabled data-tip="${esc(t('lum.typeUsed'))}"` : ''} aria-label="${esc(t('lum.typeDel'))}">×</button></td></tr>`;
   }).join('');
   host.innerHTML = `<table class="ltable"><thead><tr><th></th><th>${esc(t('lum.typeName'))}</th><th class="n">${esc(t('unit.pcs'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table>

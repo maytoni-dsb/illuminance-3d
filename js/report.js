@@ -155,7 +155,7 @@ export function buildReport(d) {
     if (p.kind === 'lumlist') {
       const part = lumLines.slice(p.part * LUM_ROWS, p.part * LUM_ROWS + LUM_ROWS);
       const dash = '—';
-      const rows = part.map(({ r, l: t, first }, k) => { return `<tr><td>${first || k === 0 ? typo(r.name) : ''}</td><td>${t.maker ? typo(t.maker) : dash}</td><td>${t.letter ? `<span>${esc(t.letter)}</span>${NB}` : ''}<b>${typo(t.article)}</b></td>
+      const rows = part.map(({ r, l: t, first }, k) => { return `<tr><td>${first || k === 0 ? typo(r.name) : ''}</td><td>${t.maker ? typo(t.maker) : dash}</td><td>${t.color ? `<i class="tyc" style="background:${esc(t.color)}"></i>` : ''}<b>${typo(t.article)}</b></td>
         <td class="n">${t.flux ? num(t.flux) : dash}</td><td class="n">${t.power ? num(t.power, 1) : dash}</td><td class="n">${t.cct ? num(t.cct) : dash}</td>
         <td>${t.kit ? typo(t.kit) : dash}</td><td class="n"><b>${t.count}</b></td></tr>`; }).join('');
       return `<section class="page" id="${id}" data-node="${p.node}">${head(p.part ? t('rep.lumlist') : '')}<div class="frame">
@@ -343,6 +343,7 @@ sub{font-size:.72em;line-height:0;vertical-align:-.25em}
 .lum th{font-size:7.5pt;font-weight:500;color:#555;text-align:left;padding:0 3mm 1.6mm 0;border-bottom:.5pt solid #141414;vertical-align:bottom}
 .lum td{font-size:8.5pt;padding:2mm 3mm 2mm 0;border-bottom:.35pt solid #cfcfcf;vertical-align:top;line-height:1.35}
 .lum td span{color:#6b6b6b;font-size:7.5pt}
+.tyc{display:inline-block;width:2.4mm;height:2.4mm;border-radius:50%;margin:0 1.4mm .2mm 0;vertical-align:middle;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .lum .n{text-align:right;white-space:nowrap}
 .lum .c{width:9mm;color:#6b6b6b}
 .lum tfoot td{border-bottom:0;border-top:.5pt solid #141414;font-weight:500}

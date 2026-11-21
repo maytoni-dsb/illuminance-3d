@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   modelFromValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-  addGroup, addPoint, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, formValues, lumCount, typeLetter, cleanModel, placementErrors,
+  addGroup, addPoint, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, formValues, lumCount, typeColorOf, setTypeColor, duplicateType, TYPE_COLORS, cleanModel, placementErrors,
 } from '../js/model.js';
 import { validateGroup, validateDraft, fieldValues, draftValues, rowsOf, GROUP_ROWS } from '../js/groupform.js';
 import { groupPoints } from '../js/groups.js';
@@ -29,7 +29,28 @@ test('types: add, values, file, name, remove only when unused', () => {
   assert.equal(removeType(m, 't1'), null);                 // used by the grid
   assert.deepEqual(removeType(m, 't2').types.map((t) => t.id), ['t1']);
   assert.equal(removeType(modelFromValues(DEFAULTS), 't1'), null); // the last one
-  assert.deepEqual([0, 1, 25, 26, 27, 701, 702].map(typeLetter), ['A', 'B', 'Z', 'AA', 'AB', 'ZZ', 'AAA']);
+});
+
+test('types: a colour of their own, a copy for another lamp set (21 Nov 2026)', () => {
+  let m = modelFromValues(DEFAULTS);
+  assert.equal(typeColorOf(m, 0), TYPE_COLORS[0]);          // no colour stored: the palette by place
+  m = setTypeColor(m, 't1', '#1971C2');
+  assert.equal(m.types[0].color, '#1971c2');
+  assert.equal(setTypeColor(m, 't1', 'red'), m);            // not a colour: unchanged
+  m = addType(m).model;                                     // the first colour nobody shows
+  assert.equal(m.types[1].color, TYPE_COLORS[0]);
+  m = renameType(m, 't1', 'Downlight');
+  m = withTypeFile(m, 't1', { name: 'a.ldt', text: 'x', set: 0 });
+  const d = duplicateType(m, 't1');
+  assert.deepEqual(d.model.types.map((t) => t.id), ['t1', d.id, 't2']);
+  const copy = d.model.types[1];
+  assert.equal(copy.name, undefined);
+  assert.deepEqual(copy.file, m.types[0].file);
+  assert.equal(copy.color, TYPE_COLORS[2]);
+  assert.equal(duplicateType(m, 'nope'), null);
+  // kept by a project file
+  assert.equal(cleanModel(JSON.parse(JSON.stringify(d.model))).types[1].color, TYPE_COLORS[2]);
+  assert.equal(cleanModel({ ...d.model, types: [{ ...d.model.types[0], color: 'blue' }, ...d.model.types.slice(1)] }).types[0].color, undefined);
 });
 
 test('room values: the mounting heights equal to the room height follow it', () => {

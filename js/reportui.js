@@ -67,8 +67,8 @@ export function summaryRows(v, file, norm = null, zc = null, lums = {}) {
   const hms = [...new Set(lums.hm ?? [v.hm])].sort((a, b) => a - b);
   const hmText = hms.length > 1 ? `${n2(hms[0])}…${n2(hms[hms.length - 1])}${NB}${m}` : `${n2(hms[0])}${NB}${m}`;
   if (lums.types?.length > 1) {
-    // several types: a row per type (letter and article: count and flux), the total and the heights
-    const lumRows = lums.types.map((ty) => [`${esc(ty.letter)} · ${esc(ty.article)}`,
+    // several types: a row per type (colour and article: count and flux), the total and the heights
+    const lumRows = lums.types.map((ty) => [`${ty.color ? `<i class="tyc" style="background:${esc(ty.color)}"></i>` : ''}${esc(ty.article)}`,
       `${ty.count}${NB}${t('unit.pcsDot')} · ${formatNumber(ty.flux, 0)}${NB}${t('unit.lm')}`]);
     lumRows.push([t('rui.count'), `${n}${NB}${t('unit.pcsDot')}`], [t('rui.hm'), hmText]);
     return { roomRows, normRows, lumRows };
@@ -99,15 +99,15 @@ export function lampKit(tb, set = 0) {
 
 /**
  * A luminaire type of a room for the list of luminaires.
- * @param {{ count?: number, letter?: string, name?: string }} [o] — stage 2.1: the number of
- *   luminaires of the type, its letter (several types) and its name (no file)
+ * @param {{ count?: number, color?: string, name?: string }} [o] — stage 2.1: the number of
+ *   luminaires of the type, its colour (several types) and its name (no file)
  */
 export function lumOf(v, file, o = {}) {
   const tb = file?.table ?? null;
   return {
     maker: tb?.manufacturer?.trim() || '', article: tb ? (tb.catalog || tb.name || '').trim() || t('rui.lum') : (o.name || t('rui.noFileLum')),
     flux: v.flux, power: tb ? v.power : null, cct: tb ? v.cct : null, count: o.count ?? v.nx * v.ny, kit: lampKit(tb, file?.set ?? 0),
-    letter: o.letter ?? '',
+    color: o.color ?? '',
   };
 }
 
@@ -117,7 +117,7 @@ export function lumOf(v, file, o = {}) {
  */
 export function prepareRoom(rd) {
   const v = rd.values, res = rd.result, mf = v.mf;
-  // stage 2.1: rd.types — the luminaire types of the room [{ id, letter, name, file, values, count, hm }]
+  // stage 2.1: rd.types — the luminaire types of the room [{ id, color, name, file, values, count, hm }]
   // and rd.grid — true for one grid of one type over the whole room (the plan of version 1)
   const types = rd.types ?? null, grid = rd.grid ?? !types;
   const many = (types?.length ?? 1) > 1;
@@ -126,9 +126,9 @@ export function prepareRoom(rd) {
   const typeOf = new Map((types ?? []).map((ty) => [ty.id, ty]));
   const marks = grid ? null : rd.params.lums.map((l) => {
     const ty = typeOf.get(l.type);
-    return { x: l.pos[0], y: l.pos[1], psi: l.psi, shape: ty?.file?.shape ?? null, side: 0.25, letter: many ? ty?.letter ?? '' : '' };
+    return { x: l.pos[0], y: l.pos[1], psi: l.psi, shape: ty?.file?.shape ?? null, side: 0.25, color: many ? ty?.color ?? '' : '' };
   });
-  const lums = types ? types.map((ty) => lumOf(ty.values, ty.file, { count: ty.count, letter: many ? ty.letter : '', name: ty.name })) : [lumOf(v, rd.file)];
+  const lums = types ? types.map((ty) => lumOf(ty.values, ty.file, { count: ty.count, color: many ? ty.color : '', name: ty.name })) : [lumOf(v, rd.file)];
   const count = types ? types.reduce((a, ty) => a + ty.count, 0) : v.nx * v.ny;
   const hm = types ? types.flatMap((ty) => ty.hm) : [v.hm];
   const planes = res.planes.map((pl) => {
@@ -146,7 +146,7 @@ export function prepareRoom(rd) {
   return {
     id: rd.id, name: rd.name?.trim() || t('app.untitled'), key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys, marks,
     psi: rd.params.lums[0].psi, shape: rd.file?.shape ?? null, planes, lum: lums[0], lums,
-    ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2], { count, grid, hm, types: many ? lums.map((l, k) => ({ ...l, letter: types[k].letter })) : null }), images: null,
+    ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2], { count, grid, hm, types: many ? lums : null }), images: null,
     polar: many ? null : polarOf(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux })),
   };
 }

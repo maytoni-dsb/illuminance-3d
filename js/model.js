@@ -111,11 +111,37 @@ export function renameType(m, id, name) {
   return { ...m, types: m.types.map((ty) => { if (ty.id !== id) return ty; const { name: _, ...rest } = ty; return n ? { ...rest, name: n } : rest; }) };
 }
 
-/** Letter of the k-th type on the plan and in the lists: A…Z, then AA, AB… */
-export function typeLetter(k) {
-  let s = '';
-  for (let n = k + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
-  return s;
+/**
+ * Colours of the luminaire types (decided on 21 Nov 2026: a type is told by its colour alone, no
+ * letters). A type keeps the colour chosen for it (ty.color); a type without one takes the colour
+ * of its place in the list.
+ */
+export const TYPE_COLORS = Object.freeze(['#e8590c', '#1971c2', '#2f9e44', '#9c36b5', '#c2255c', '#0c8599', '#e67700', '#5f3dc4']);
+const isColor = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+/** Colour of the k-th type of a model. */
+export const typeColorOf = (m, k) => m.types[k]?.color ?? TYPE_COLORS[k % TYPE_COLORS.length];
+/** The first colour of the palette no type of the model shows (the first one when all are used). */
+function freeColor(m) {
+  const used = new Set(m.types.map((_, k) => typeColorOf(m, k)));
+  return TYPE_COLORS.find((c) => !used.has(c)) ?? TYPE_COLORS[m.types.length % TYPE_COLORS.length];
+}
+/** The model with the colour of the type `id` set (not a colour: the model as it is). */
+export function setTypeColor(m, id, color) {
+  if (!isColor(color)) return m;
+  return { ...m, types: m.types.map((ty) => (ty.id === id ? { ...ty, color: color.toLowerCase() } : ty)) };
+}
+/**
+ * A copy of the type `id` with its own colour: the same luminaire with another lamp set is another
+ * type (decided on 21 Nov 2026). The name of the copy is not copied.
+ */
+export function duplicateType(m, id) {
+  const ty = m.types.find((x) => x.id === id);
+  if (!ty) return null;
+  const nid = newId(m.types, 't');
+  const { name: _, ...rest } = ty;
+  const copy = { ...structuredClone(rest), id: nid, color: freeColor(m) };
+  const k = m.types.indexOf(ty);
+  return { model: { ...m, types: [...m.types.slice(0, k + 1), copy, ...m.types.slice(k + 1)] }, id: nid };
 }
 
 /** The model after an edit of the version 1 form (one type, one grid): the same ids and file. */
@@ -206,10 +232,11 @@ export function placementErrors(m, sizeOf = () => null) {
 export function calcParams(m, fileOf = () => null) {
   const files = new Map(m.types.map((ty) => [ty.id, ty.photometry === 'file' ? fileOf(ty) : null]));
   const housing = (ty) => files.get(ty.id)?.table?.luminaire?.height || 0;
-  // label: the letter of the type in the checks of the calculation (not part of the result)
+  // label: the name of the type in the checks of the calculation (not part of the result)
   const types = m.types.map((ty, k) => {
     const f = files.get(ty.id);
-    return f ? { id: ty.id, label: typeLetter(k), phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, label: typeLetter(k), phot: 'cosine', flux: ty.flux };
+    const label = ty.name || String(f?.table?.catalog || f?.table?.name || '').trim() || `#${k + 1}`;
+    return f ? { id: ty.id, label, phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, label, phot: 'cosine', flux: ty.flux };
   });
   const lums = instances(m, housing).map(({ type, pos, psi }) => ({ type, pos: [...pos], psi }));
   return { outline: outlineOf(m), H: m.room.H, rho: modelRho(m), hwp: m.design.hwp, types, lums };
@@ -224,7 +251,7 @@ export const isFormModel = (m) => m.types.length === 1 && m.groups.length === 1 
 /** A new type after the others: the cosine model with the values of the form defaults. */
 export function addType(m) {
   const id = newId(m.types, 't');
-  return { model: { ...m, types: [...m.types, { id, photometry: 'cosine', flux: DEFAULTS.flux, cct: DEFAULTS.cct, power: DEFAULTS.power, file: null }] }, id };
+  return { model: { ...m, types: [...m.types, { id, photometry: 'cosine', flux: DEFAULTS.flux, cct: DEFAULTS.cct, power: DEFAULTS.power, file: null, color: freeColor(m) }] }, id };
 }
 
 /** The model without the type `id`; a type used by a group, or the last one, stays (null). */
@@ -345,6 +372,7 @@ function cleanType(ty, id) {
     file,
   };
   if (typeof ty.name === 'string' && ty.name.trim()) out.name = ty.name.trim().slice(0, 80);
+  if (isColor(ty.color)) out.color = ty.color.toLowerCase();
   return out;
 }
 
