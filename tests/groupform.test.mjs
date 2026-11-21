@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   modelFromValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-  addGroup, addPoint, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, formValues, lumCount, typeColorOf, setTypeColor, duplicateType, TYPE_COLORS, cleanModel, placementErrors,
+  addGroup, addPoint, replaceGroup, removeGroup, duplicateGroup, ungroupGroup, formValues, lumCount, typeColorOf, setTypeColor, duplicateType, freeColors, TYPE_COLORS, cleanModel, placementErrors,
 } from '../js/model.js';
 import { validateGroup, validateDraft, fieldValues, draftValues, rowsOf, GROUP_ROWS } from '../js/groupform.js';
 import { groupPoints } from '../js/groups.js';
@@ -48,6 +48,8 @@ test('types: a colour of their own, a copy for another lamp set (21 Nov 2026)', 
   assert.deepEqual(copy.file, m.types[0].file);
   assert.equal(copy.color, TYPE_COLORS[2]);
   assert.equal(duplicateType(m, 'nope'), null);
+  // the card offers the colours no other type shows
+  assert.deepEqual(freeColors(d.model, 't1'), TYPE_COLORS.filter((c) => c !== TYPE_COLORS[0] && c !== TYPE_COLORS[2]));
   // kept by a project file
   assert.equal(cleanModel(JSON.parse(JSON.stringify(d.model))).types[1].color, TYPE_COLORS[2]);
   assert.equal(cleanModel({ ...d.model, types: [{ ...d.model.types[0], color: 'blue' }, ...d.model.types.slice(1)] }).types[0].color, undefined);

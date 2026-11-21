@@ -70,7 +70,7 @@ export default {
     typeDel: 'Leuchte löschen',
     list: 'Liste',
     color: 'Farbe der Leuchte im Plan, in 3D und im Bericht',
-    colorOwn: 'Eigene Farbe',
+    colorOwn: 'Andere Farbe',
     dup: 'Kopie',
     dupTip: 'Dieselbe Leuchte als neuer Typ mit eigener Farbe: etwa mit einer anderen Lichtquelle',
     listTip: 'Leuchten des Projekts: aktive wählen, bei den gewählten ersetzen, hinzufügen, löschen',

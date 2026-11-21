@@ -125,6 +125,14 @@ function freeColor(m) {
   const used = new Set(m.types.map((_, k) => typeColorOf(m, k)));
   return TYPE_COLORS.find((c) => !used.has(c)) ?? TYPE_COLORS[m.types.length % TYPE_COLORS.length];
 }
+/**
+ * The colours of the palette no other type of the model shows (the type `id` itself excluded), in
+ * the order of the palette: what the card offers next to the colour of the type.
+ */
+export function freeColors(m, id) {
+  const used = new Set(m.types.map((ty, k) => (ty.id === id ? null : typeColorOf(m, k))));
+  return TYPE_COLORS.filter((c) => !used.has(c));
+}
 /** The model with the colour of the type `id` set (not a colour: the model as it is). */
 export function setTypeColor(m, id, color) {
   if (!isColor(color)) return m;

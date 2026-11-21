@@ -68,7 +68,7 @@ export default {
     typeDel: 'Delete the luminaire',
     list: 'List',
     color: 'Colour of the luminaire on the plan, in 3D and in the report',
-    colorOwn: 'Own colour',
+    colorOwn: 'Another colour',
     dup: 'Copy',
     dupTip: 'The same luminaire as a new type with its own colour: for example with another light source',
     listTip: 'Luminaires of the project: choose the active one, replace for the selected, add, delete',

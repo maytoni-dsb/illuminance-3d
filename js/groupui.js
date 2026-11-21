@@ -34,13 +34,16 @@ export function setText(file, set) {
   return s[set].type || t('phot.set', { n: set + 1 });
 }
 
-/** The swatches of the colour of a type: the palette and a colour of one's own. */
-export function renderSwatches(host, color) { host.innerHTML = swatchesHtml(color); }
-/** The HTML of the swatches of the colour of a type. */
-export function swatchesHtml(color) {
-  const own = !TYPE_COLORS.includes(color);
-  return `<div class="swrow">${TYPE_COLORS.map((c) => `<button type="button" class="tsw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
-    <label class="tsw own${own ? ' sel' : ''}" style="--ty:${own ? color : '#ffffff'}" data-tip="${esc(t('lum.colorOwn'))}"><input type="color" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></label></div>`;
+/**
+ * The swatches of the colour of a type (21 Nov 2026): its colour, up to three colours of the palette
+ * no other type of the project shows, and the full choice (the colour picker of the browser).
+ * @param {string} color — the colour of the type
+ * @param {string[]} free — the free colours of the palette (model.freeColors)
+ */
+export function swatchesHtml(color, free = []) {
+  const offer = [color, ...free.filter((c) => c !== color).slice(0, 3)];
+  return `<div class="swrow">${offer.map((c) => `<button type="button" class="tsw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
+    <label class="tsw own" data-tip="${esc(t('lum.colorOwn'))}"><input type="color" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></label></div>`;
 }
 
 const SVG = (d, extra = '') => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"${extra}>${d}</svg>`;
