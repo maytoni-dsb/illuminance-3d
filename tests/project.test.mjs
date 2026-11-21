@@ -8,18 +8,20 @@ import { toDecimal, DEFAULTS } from '../js/ui.js';
 import { HELP } from '../js/help.js';
 import { PARAMS } from '../js/ui.js';
 import { INFO_FIELDS } from '../js/project.js';
-import { formValues, applyFormValues, withFile, modelFile, lumCount } from '../js/model.js';
+import { formValues, applyFormValues, withFile, modelFile, lumCount, modelFromValues } from '../js/model.js';
 
-test('rooms get the next free default name and copy the current room', () => {
+
+test('rooms get the next free default name and copy the current room without its luminaires', () => {
   const p = createProject();
   assert.equal(p.rooms[0].name, 'Помещение 1');
-  p.rooms[0].model = withFile(applyFormValues(p.rooms[0].model, { ...formValues(p.rooms[0].model), L: 8 }), { name: 'a.ldt', text: 'x', set: 1 });
+  // a new project has no luminaires (21 Nov 2026)
+  assert.deepEqual([p.rooms[0].model.types, p.rooms[0].model.groups], [[], []]);
+  p.rooms[0].model = withFile(modelFromValues({ ...DEFAULTS, L: 8 }), { name: 'a.ldt', text: 'x', set: 1 });
   const r = createRoomState(p.rooms, p.rooms[0]);
   assert.equal(r.name, 'Помещение 2');
   assert.equal(formValues(r.model).L, 8);
-  assert.deepEqual(modelFile(r.model), modelFile(p.rooms[0].model));
-  assert.notEqual(modelFile(r.model), modelFile(p.rooms[0].model));
-  assert.notEqual(r.model, p.rooms[0].model);
+  assert.deepEqual([r.model.types, r.model.groups], [[], []]);
+  assert.notEqual(r.model.room, p.rooms[0].model.room);
   assert.equal(nextRoomName([{ name: 'Помещение 2' }, { name: 'Холл' }]), 'Помещение 3');
 });
 
@@ -28,7 +30,7 @@ test('a project survives the file round trip; broken values become defaults', ()
   p.info.name = 'Офис'; p.info.email = 'a@b.c';
   const hall = createRoomState(p.rooms);
   hall.name = 'Холл';
-  hall.model = withFile(applyFormValues(hall.model, { ...formValues(hall.model), phot: 'file', L: 12.5 }), { name: 'f.ldt', text: 'LDT', set: 2 });
+  hall.model = withFile(modelFromValues({ ...DEFAULTS, phot: 'file', L: 12.5 }), { name: 'f.ldt', text: 'LDT', set: 2 });
   p.rooms.push(hall);
   p.active = hall.id;
   const text = serializeProject(p);
@@ -40,10 +42,10 @@ test('a project survives the file round trip; broken values become defaults', ()
   assert.equal(formValues(q.rooms[1].model).phot, 'file');
   assert.equal(q.active, q.rooms[1].id);
   const bad = JSON.parse(text);
-  bad.rooms[0].room.shape.L = 'много'; bad.rooms[0].groups[0].ny = 999;
+  bad.rooms[0].room.shape.L = 'много'; bad.rooms[1].groups[0].ny = 999;
   const r = parseProject(JSON.stringify(bad));
   assert.equal(r.rooms[0].model.room.shape.L, DEFAULTS.L);
-  assert.ok(lumCount(r.rooms[0].model) <= 500);
+  assert.ok(lumCount(r.rooms[1].model) <= 500);
 });
 
 // ---- stage 2.0: the format of version 2 and the files of version 1 ----
@@ -97,7 +99,9 @@ test('a version 1 file saved as version 2 and opened again is the same project',
 });
 
 test('a version 2 room with several types and groups is read (stage 2.1); a broken one is refused', () => {
-  const d = JSON.parse(serializeProject(createProject()));
+  const p0 = createProject();
+  p0.rooms[0].model = modelFromValues(DEFAULTS);
+  const d = JSON.parse(serializeProject(p0));
   d.rooms[0].types.push({ ...d.rooms[0].types[0], id: 't2' });
   d.rooms[0].groups.push({ id: 'g2', type: 't2', kind: 'circle', cx: 3, cy: 2, r: 1, n: 8, hm: 3, psi: 90 });
   const p = parseProject(JSON.stringify(d));
@@ -105,7 +109,7 @@ test('a version 2 room with several types and groups is read (stage 2.1); a brok
   assert.equal(JSON.parse(serializeProject(p)).rooms[0].groups[1].psi, 90);
   d.rooms[0].groups[1].n = 495;
   assert.throws(() => parseProject(JSON.stringify(d)), /больше 500/);
-  const e = JSON.parse(serializeProject(createProject()));
+  const e = JSON.parse(serializeProject(p0));
   e.rooms[0].types = 'x';
   assert.throws(() => parseProject(JSON.stringify(e)), /повреждено/);
   const f = JSON.parse(serializeProject(createProject()));

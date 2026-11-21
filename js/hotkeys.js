@@ -19,6 +19,7 @@ export const HOTKEYS = Object.freeze({
  */
 export function hotkeyAction(e) {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 's' || e.key === 'S' || e.code === 'KeyS')) return 'save';
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'o' || e.key === 'O' || e.code === 'KeyO')) return 'open';
   if (e.ctrlKey || e.metaKey || e.altKey) return null;
   return HOTKEYS[e.key] ?? null;
 }

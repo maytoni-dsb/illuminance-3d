@@ -19,7 +19,8 @@
 
 import { DEFAULTS, validateParams, faceRho, ceilingDrop, photometricHeight, HM_MIN, MAX_LUMINAIRES } from './ui.js';
 import { rectOutline } from './geometry.js';
-import { GROUP_KINDS, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup } from './groups.js';
+import { luminaireShape } from './photfile.js';
+import { GROUP_KINDS, SPACINGS, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup, normArc } from './groups.js';
 import { cleanPlanGrid, PLAN_GRID } from './planedit.js';
 
 /** Shapes of the room the model takes (stage 2.3 adds L, U and T). */
@@ -61,8 +62,17 @@ export function formValues(m) {
   return {
     ...roomValues(m),
     nx: g ? g.nx : lumCount(m), ny: g ? g.ny : 1, hm: g ? g.hm : first?.hm ?? m.room.H, psi: g ? g.psi : 0,
-    ...typeValues(m.types[0]),
+    ...(m.types[0] ? typeValues(m.types[0]) : { phot: 'cosine', flux: DEFAULTS.flux, cct: DEFAULTS.cct, power: DEFAULTS.power }),
   };
+}
+
+/**
+ * A room without luminaires (21 Nov 2026: a new project and a new room have none; the panel asks
+ * for a photometric file): the room and the norms of the values, no types, no groups.
+ */
+export function emptyModel(v) {
+  const m = modelFromValues(v);
+  return { ...m, types: [], groups: [] };
 }
 
 /** Values of the room and the norms, as the form shows them. */
@@ -183,7 +193,7 @@ export const modelRho = (m) => faceRho({ rhoC: m.room.rho.ceiling, rhoW: m.room.
  * @param {RoomModel} m
  * @param {(type) => number} housing — housing height of a type, m (0 without a file)
  */
-export function instances(m, housing = () => 0) {
+export function instances(m, housing = () => 0, sizeOf = () => null) {
   const out = [];
   const H = m.room.H, size = roomSize(m);
   const types = new Map(m.types.map((ty) => [ty.id, ty]));
@@ -191,7 +201,7 @@ export function instances(m, housing = () => 0) {
     const ty = types.get(g.type);
     if (!ty) throw new RangeError(`instances: group ${g.id} has no type ${g.type}`);
     const hh = housing(ty);
-    groupPoints(g, size).forEach((p, index) => {
+    groupPoints(g, size, sizeOf(ty)).forEach((p, index) => {
       const z = H - ceilingDrop(H, p.hm, hh);
       out.push({ type: ty.id, group: g.id, index, pos: [p.x, p.y, z], psi: p.psi * DEG, at: [p.x, p.y], hm: p.hm });
     });
@@ -221,7 +231,7 @@ export function placementErrors(m, sizeOf = () => null) {
   for (const g of m.groups) {
     const ty = types.get(g.type);
     const hs = ty ? sizeOf(ty) : null;
-    groupPoints(g, size).forEach((p, index) => {
+    groupPoints(g, size, hs).forEach((p, index) => {
       const [hx, hy] = housingHalf(hs, p.psi);
       if (!boxInOutline(outline, p.x, p.y, hx, hy)) out.push({ group: g.id, index, code: 'outside' });
       if (!(p.hm >= HM_MIN - 1e-12 && p.hm <= H + 1e-12)) out.push({ group: g.id, index, code: 'height' });
@@ -240,13 +250,15 @@ export function placementErrors(m, sizeOf = () => null) {
 export function calcParams(m, fileOf = () => null) {
   const files = new Map(m.types.map((ty) => [ty.id, ty.photometry === 'file' ? fileOf(ty) : null]));
   const housing = (ty) => files.get(ty.id)?.table?.luminaire?.height || 0;
+  // the housing in plan: the way 'edge' of grids and lines keeps it inside (21 Nov 2026)
+  const plan = (ty) => { const t = files.get(ty.id)?.table; return t ? luminaireShape(t).housing : null; };
   // label: the name of the type in the checks of the calculation (not part of the result)
   const types = m.types.map((ty, k) => {
     const f = files.get(ty.id);
     const label = ty.name || String(f?.table?.catalog || f?.table?.name || '').trim() || `#${k + 1}`;
     return f ? { id: ty.id, label, phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, label, phot: 'cosine', flux: ty.flux };
   });
-  const lums = instances(m, housing).map(({ type, pos, psi }) => ({ type, pos: [...pos], psi }));
+  const lums = instances(m, housing, plan).map(({ type, pos, psi }) => ({ type, pos: [...pos], psi }));
   return { outline: outlineOf(m), H: m.room.H, rho: modelRho(m), hwp: m.design.hwp, types, lums };
 }
 
@@ -262,9 +274,9 @@ export function addType(m) {
   return { model: { ...m, types: [...m.types, { id, photometry: 'cosine', flux: DEFAULTS.flux, cct: DEFAULTS.cct, power: DEFAULTS.power, file: null, color: freeColor(m) }] }, id };
 }
 
-/** The model without the type `id`; a type used by a group, or the last one, stays (null). */
+/** The model without the type `id`; a type used by a group stays (null). The last one may go (21 Nov 2026). */
 export function removeType(m, id) {
-  if (m.types.length < 2 || m.groups.some((g) => g.type === id)) return null;
+  if (!m.types.some((ty) => ty.id === id) || m.groups.some((g) => g.type === id)) return null;
   return { ...m, types: m.types.filter((ty) => ty.id !== id) };
 }
 
@@ -284,11 +296,13 @@ export function addGroup(m, kind, type, geo = null, draft = {}) {
       const a = geo ?? { x0: 0, y0: 0, x1: L, y1: W };
       g = { id, type, kind, nx: draft.nx ?? 2, ny: draft.ny ?? 2, hm, psi };
       if (geo) g.area = { x0: r2(Math.min(a.x0, a.x1)), y0: r2(Math.min(a.y0, a.y1)), x1: r2(Math.max(a.x0, a.x1)), y1: r2(Math.max(a.y0, a.y1)) };
+      for (const k of ['mx', 'my']) if (draft[k] && draft[k] !== 'in') g[k] = draft[k];
       break;
     }
     case 'line': {
       const a = geo ?? { x0: L * 0.2, y0: W / 2, x1: L * 0.8, y1: W / 2 };
       g = { id, type, kind, x0: r2(a.x0), y0: r2(a.y0), x1: r2(a.x1), y1: r2(a.y1), n: draft.n ?? 3, hm, hm1: Math.min(H, draft.hm1 ?? hm), psi };
+      if (draft.m && draft.m !== 'axis') g.m = draft.m;
       break;
     }
     case 'circle': {
@@ -381,6 +395,7 @@ function cleanType(ty, id) {
   };
   if (typeof ty.name === 'string' && ty.name.trim()) out.name = ty.name.trim().slice(0, 80);
   if (isColor(ty.color)) out.color = ty.color.toLowerCase();
+  if (ty.copy === true) out.copy = true; // a copy: another luminaire with the same file (its own colour)
   return out;
 }
 
@@ -396,6 +411,8 @@ function cleanGroup(g, id, type, room) {
   switch (g.kind) {
     case 'grid': {
       const out = { ...base, nx: int(g.nx, 1, 30, DEFAULTS.nx), ny: int(g.ny, 1, 30, DEFAULTS.ny), hm: hm(g.hm), psi: angle(g.psi) };
+      // the ways along X and Y (21 Nov 2026); 'in' — version 1 — is not written
+      for (const k of ['mx', 'my']) if (SPACINGS.includes(g[k]) && g[k] !== 'in') out[k] = g[k];
       const a = g.area;
       if (a && [a.x0, a.y0, a.x1, a.y1].every((v) => coord(v, NaN) === v) && a.x1 > a.x0 && a.y1 > a.y0) out.area = { x0: a.x0, y0: a.y0, x1: a.x1, y1: a.y1 };
       return out;
@@ -406,6 +423,7 @@ function cleanGroup(g, id, type, room) {
         n: int(g.n, 1, MAX_LUMINAIRES, 2), hm: hm(g.hm), hm1: 0, psi: angle(g.psi),
       };
       out.hm1 = g.hm1 === undefined ? out.hm : hm(g.hm1);
+      if (SPACINGS.includes(g.m) && g.m !== 'axis') out.m = g.m;
       if (g.hm1 === undefined && (g.by === 'step' || g.off > 0)) {
         // the first editor: luminaires by step between offsets — the same luminaires as single ones
         return { ...base, kind: 'single', points: legacyPoints(g, room) };
@@ -420,6 +438,11 @@ function cleanGroup(g, id, type, room) {
         n: int(g.n, 1, MAX_LUMINAIRES, 6), hm: hm(g.hm), psi: angle(g.psi),
       };
       if (g.orient === 'tangent') out.psi = angle(out.psi + 90);
+      // the arc (21 Nov 2026): the full circle from 0° is not written
+      if (Number.isFinite(g.a0) || Number.isFinite(g.a1)) {
+        const [a0, a1] = normArc(Number.isFinite(g.a0) ? g.a0 : 0, Number.isFinite(g.a1) ? g.a1 : 360);
+        if (!(a0 === 0 && a1 === 360)) Object.assign(out, { a0, a1 });
+      }
       if (g.start || g.orient === 'fixed') return { ...base, kind: 'single', points: legacyPoints(g, room) };
       return out;
     }
@@ -472,7 +495,7 @@ function legacyPoints(g, room) {
  */
 export function cleanModel(d) {
   const fail = (code) => { const e = new Error(code); e.code = code; throw e; };
-  if (!d || typeof d !== 'object' || !d.room || !Array.isArray(d.types) || !Array.isArray(d.groups) || !d.types.length) fail('model');
+  if (!d || typeof d !== 'object' || !d.room || !Array.isArray(d.types) || !Array.isArray(d.groups) || (!d.types.length && d.groups.length)) fail('model');
   if (!SHAPES.includes(d.room.shape?.kind)) fail('model.kind');
   const g0 = d.groups.find((g) => g?.kind === 'grid') ?? {};
   const raw = {

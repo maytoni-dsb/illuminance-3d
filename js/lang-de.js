@@ -63,6 +63,10 @@ export default {
   },
 
   lum: {
+    kindOff: 'Zuerst eine Leuchte hinzufügen', pick: 'Anzahl ermitteln', pickTip: 'Anzahl nach dem Wirkungsgradverfahren, wie in Version 1',
+    colorMore: 'Weitere Farben', dropTitle: 'IES- oder LDT-Datei hierher ziehen', dropSub: 'oder klicken, um zu wählen', dropAdd: 'Loslassen, um die Leuchte hinzuzufügen',
+    dropList: 'IES- oder LDT-Dateien hierher ziehen', modeRoom: 'Raum', modeProject: 'Projekt', none: 'Noch keine Leuchten', cosine: 'Ohne Datei',
+    act: { add: 'Leuchte aus Datei hinzufügen', file: 'Datei der aktiven ersetzen', copy: 'Kopie: andere Lichtquelle', replace: 'An Stelle der ausgewählten setzen', del: 'Löschen (nur unbenutzte)' },
     typeName: 'Name',
     typeN: 'Typ {n}',
     typeAdd: 'Leuchte',
@@ -75,14 +79,14 @@ export default {
     dupTip: 'Dieselbe Leuchte als neuer Typ mit eigener Farbe: etwa mit einer anderen Lichtquelle',
     listTip: 'Leuchten des Projekts: aktive wählen, bei den gewählten ersetzen, hinzufügen, löschen',
     listKick: 'Raum',
-    listTitle: 'Leuchtenliste',
+    listTitle: 'Leuchten',
     listLead: 'Ein Klick auf eine Zeile macht die Leuchte aktiv: sie wird als Nächste platziert, rechts wird ihre Datei geladen; Karte und Werte stehen links im Bereich. Ersetzen gibt diese Leuchte den im Plan gewählten.',
     active: 'aktiv',
     use: 'Wählen',
     replace: 'Ersetzen',
     replaceTip: 'Diese Leuchte den im Plan gewählten geben',
     place: 'Platzierung',
-    kind: { single: 'Einzeln', grid: 'Raster', line: 'Linie', circle: 'Kreis' },
+    kind: { auto: 'Automatisch', single: 'Einzeln', grid: 'Raster', line: 'Linie', circle: 'Kreis' },
     draw: {
       single: 'Klicken Sie in den Plan, um eine Leuchte zu setzen; Esc zum Beenden.',
       grid: 'Ziehen Sie im Plan das Rechteck des Rasters auf.',
@@ -128,7 +132,14 @@ export default {
     lastLum: 'Ein Raum behält mindestens eine Leuchte',
   },
   gform: {
+    way: {
+      grid: { in: 'Im Feld: gleiche Zellen, halber Abstand am Rand', edge: 'An der Kante: Gehäuse der äußeren Leuchten am Rand', axis: 'Auf den Achsen: Achsen der äußeren Leuchten am Rand' },
+      line: { in: 'Innerhalb der Linie: halber Abstand an den Enden', edge: 'An der Kante: Gehäuse der äußeren Leuchten an den Enden', axis: 'Auf den Achsen: Achsen der äußeren Leuchten an den Enden' },
+    },
+    measure: { r: 'Radius', d: 'Durchmesser', p: 'Länge des Kreises oder Bogens' },
     tip: {
+      countX: 'Anzahl in X und Anordnung', countY: 'Anzahl in Y und Anordnung', count: 'Anzahl und Anordnung', countArc: 'Anzahl, Start- und Endwinkel, °',
+      measure: 'Radius, Durchmesser oder Länge (Kreis oder Bogen), m', tilt: 'Neigung — in Phase 2.1a', fit: 'An den Raum anpassen',
       pos: 'Position: X, Y und Montagehöhe Z (Oberkante des Gehäuses), m',
       rot: 'Drehung der Leuchte um Z, °',
       countXY: 'Anzahl entlang X und entlang Y',
@@ -387,6 +398,7 @@ export default {
     stages: 'Phasen', st1: 'Projekt', st2: 'Berechnung', st3: 'Dokumentation',
     rooms: 'Räume', lang: 'Sprache der Oberfläche',
     save: 'Speichern', saveTip: 'Projekt in eine Datei speichern',
+    fileTools: 'Datei und Verlauf', openTip: 'Projekt öffnen', undo: 'Rückgängig', redo: 'Wiederholen', saveFirst: 'Das Projekt hat ungespeicherte Änderungen. Vor dem Öffnen eines anderen Projekts in eine Datei speichern?\n\nOK — speichern, Abbrechen — ohne Speichern öffnen.',
     theme: 'Farbschema wechseln', themeTip: 'Helles oder dunkles Farbschema',
     step1: 'Schritt 1 von 3',
     st1Lead: 'Diese Angaben stehen auf dem Titelblatt des Berichts. Die Felder mit Sternchen werden für die Dokumentation benötigt; die Räume lassen sich auch ohne sie berechnen.',

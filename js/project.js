@@ -10,7 +10,7 @@
 // grid becoming one group "grid" of one type. Version 1 of the calculator does not open version 2.
 
 import { DEFAULTS } from './ui.js';
-import { modelFromValues, cleanValues, cleanFile, cleanModel } from './model.js';
+import { modelFromValues, emptyModel, cleanValues, cleanFile, cleanModel } from './model.js';
 import { t, raw } from './i18n.js';
 
 /** Format tag and version of the project file. */
@@ -117,7 +117,8 @@ export function createRoomState(rooms = [], from = null) {
   return {
     id: newId(),
     name: nextRoomName(rooms),
-    model: from ? structuredClone(from.model) : modelFromValues(DEFAULTS),
+    // no luminaires in a new room (21 Nov 2026): the room, its norms and the plan grid of `from`
+    model: from ? { ...structuredClone(from.model), types: [], groups: [] } : emptyModel(DEFAULTS),
     norm: from?.norm ? { ...from.norm } : null, // the codifier row of the norms, null — set by the user
   };
 }

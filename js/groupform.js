@@ -1,6 +1,7 @@
-// Fields of the placement of luminaires (stage 2.1, the editor after DIALux): rows of an icon and up
-// to three fields, the axis letter inside the field; the fields of the selected group, or of the
-// next group to draw (`draft`: no geometry, it comes from the drawing). Pure module: no DOM,
+// Fields of the placement of luminaires (stage 2.1; the interface pass of 21 Nov 2026): rows of an
+// icon and up to three fields, the axis letter inside the field, and an extra control of the row
+// (the ways of spacing, "fit to the room", the measure of a circle); the fields of the selected
+// group only — the next group takes the values of the last one drawn. Pure module: no DOM,
 // tested in Node (tests/groupform.test.mjs); js/groupui.js builds the rows. Tips and messages come
 // from the dictionaries (gform.*, form.err.*).
 //
@@ -8,7 +9,7 @@
 // geo?: part of the drawn geometry (not in the draft) }; max may be a function of { H }.
 
 import { HM_MIN, MAX_LUMINAIRES, parseNumber, formatNumber } from './ui.js';
-import { groupCount, areaCentre, areaOf } from './groups.js';
+import { groupCount, areaCentre, areaOf, normArc } from './groups.js';
 import { t } from './i18n.js';
 
 const C = (key, ax) => ({ key, ax, unit: 'm', min: -1000, max: 1000, step: 0.1, geo: true });
@@ -16,31 +17,45 @@ const HM = (key = 'hm') => ({ key, ax: 'Z', unit: 'm', min: HM_MIN, max: (c) => 
 const PSI = { key: 'psi', ax: 'Z', unit: '°', min: 0, max: 360, step: 15 };
 const N = (key, ax, max = MAX_LUMINAIRES) => ({ key, ax, unit: 'pcs', int: true, min: 1, max, step: 1 });
 const LEN = (key, ax) => ({ key, ax, unit: 'm', gt: 0, max: 1000, step: 0.1, geo: true });
+const ANG = (key, ax) => ({ key, ax, unit: '°', min: -720, max: 720, step: 15 });
+// the tilt about X and Y comes with stage 2.1a: shown, not editable
+const TILT = (key, ax) => ({ key, ax, unit: '°', off: true });
+const ROT = (tip) => ({ icon: 'rot', tip, fields: [TILT('rx', 'X'), TILT('ry', 'Y'), PSI] });
 
-/** Rows of every kind: { icon, tip, fields }. */
+/**
+ * Rows of every kind: { icon, tip, fields, extra? } — extra: 'mx' | 'my' | 'm' (the ways of spacing
+ * along X, Y, the line), 'fit' (the grid over the room), 'measure' (radius, diameter or length).
+ */
 export const GROUP_ROWS = Object.freeze({
   single: [
     { icon: 'pos', tip: 'pos', fields: [C('x', 'X'), C('y', 'Y'), HM()] },
-    { icon: 'rot', tip: 'rot', fields: [PSI] },
+    ROT('rot'),
   ],
   grid: [
-    { icon: 'count', tip: 'countXY', fields: [N('nx', 'X', 30), N('ny', 'Y', 30)] },
-    { icon: 'size', tip: 'size', fields: [LEN('gw', 'X'), LEN('gh', 'Y')] },
+    { icon: 'count', tip: 'countX', fields: [N('nx', 'X', 30)], extra: 'mx' },
+    { icon: null, tip: 'countY', fields: [N('ny', 'Y', 30)], extra: 'my' },
+    { icon: 'size', tip: 'size', fields: [LEN('gw', 'X'), LEN('gh', 'Y')], extra: 'fit' },
     { icon: 'centre', tip: 'gridPos', fields: [C('gx', 'X'), C('gy', 'Y'), HM()] },
-    { icon: 'rot', tip: 'rotEach', fields: [PSI] },
+    ROT('rotEach'),
   ],
   line: [
-    { icon: 'count', tip: 'countLen', fields: [N('n', 'N'), LEN('len', 'L')] },
+    { icon: 'count', tip: 'count', fields: [N('n', 'N')], extra: 'm' },
     { icon: 'start', tip: 'start', fields: [C('x0', 'X'), C('y0', 'Y'), HM('hm')] },
     { icon: 'end', tip: 'end', fields: [C('x1', 'X'), C('y1', 'Y'), HM('hm1')] },
-    { icon: 'rot', tip: 'rotLine', fields: [PSI] },
+    ROT('rotLine'),
   ],
   circle: [
-    { icon: 'count', tip: 'countR', fields: [N('n', 'N'), LEN('r', 'R')] },
+    { icon: 'count', tip: 'countArc', fields: [N('n', 'N'), ANG('a0', 'α₁'), ANG('a1', 'α₂')] },
+    { icon: 'size', tip: 'measure', fields: [LEN('sz', 'R')], extra: 'measure' },
     { icon: 'centre', tip: 'centre', fields: [C('cx', 'X'), C('cy', 'Y'), HM()] },
-    { icon: 'rot', tip: 'rotCircle', fields: [PSI] },
+    ROT('rotCircle'),
   ],
 });
+
+/** The measure of a circle (21 Nov 2026): radius, diameter, length of the circle or the arc. */
+export const MEASURES = Object.freeze(['r', 'd', 'p']);
+const measureOf = (g, m) => (m === 'd' ? 2 * g.r : m === 'p' ? g.r * ((g.a1 ?? 360) - (g.a0 ?? 0)) * Math.PI / 180 : g.r);
+const radiusOf = (g, m, v) => (m === 'd' ? v / 2 : m === 'p' ? v / (((g.a1 ?? 360) - (g.a0 ?? 0)) * Math.PI / 180) : v);
 
 /** Rows shown: of the group, or of the next group to draw (no geometry). */
 export function rowsOf(kind, draft = false) {
@@ -49,6 +64,9 @@ export function rowsOf(kind, draft = false) {
 
 /** Defaults of the next group to draw. */
 export const DRAFT = Object.freeze({ single: { hm: null, psi: 0 }, grid: { nx: 2, ny: 2, hm: null, psi: 0 }, line: { n: 3, hm: null, hm1: null, psi: 0 }, circle: { n: 6, hm: null, psi: 0 } });
+
+/** The selection of a grid over the whole room (it gets "Pick the count"). */
+export const gridOverRoom = (g, L, W) => g.kind === 'grid' && (!g.area || (Math.abs(g.area.x0) < 1e-9 && Math.abs(g.area.y0) < 1e-9 && Math.abs(g.area.x1 - L) < 1e-9 && Math.abs(g.area.y1 - W) < 1e-9));
 
 /**
  * Values the fields show. A group: its parameters (a grid: centre and size of its area, the room
@@ -65,7 +83,8 @@ export function fieldValues(g, ctx) {
     const a = areaCentre(g.area ?? { x0: 0, y0: 0, x1: ctx.L, y1: ctx.W });
     Object.assign(v, { gx: a.cx, gy: a.cy, gw: a.w, gh: a.h });
   }
-  if (g.kind === 'line') v.len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);
+  if (g.kind === 'circle') Object.assign(v, { a0: g.a0 ?? 0, a1: g.a1 ?? 360, sz: measureOf(g, ctx.measure ?? 'r') });
+  v.rx = 0; v.ry = 0;
   return v;
 }
 
@@ -79,6 +98,9 @@ export const draftValues = (kind, d, ctx) => {
 function parseFields(fields, raw, ctx, errors) {
   const v = {};
   for (const f of fields) {
+    if (f.off) continue;
+    // several luminaires with different values: the empty field changes nothing
+    if (ctx.multi && String(raw[f.key] ?? '').trim() === '') continue;
     const x = parseNumber(raw[f.key] ?? '');
     if (!Number.isFinite(x)) { errors[f.key] = t('form.err.number'); continue; }
     if (f.int && !Number.isInteger(x)) { errors[f.key] = t('form.err.int'); continue; }
@@ -121,19 +143,23 @@ export function validateGroup(g, raw, ctx) {
     }
     case 'line': {
       for (const k of ['n', 'hm', 'hm1', 'psi', 'x0', 'y0', 'x1', 'y1']) if (has(k)) out[k] = v[k];
-      // the length moves the end point along the line (a new end point gives a new length)
-      const cur = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);
-      if (has('len') && Math.abs(v.len - cur) > 1e-9 && out.x1 === g.x1 && out.y1 === g.y1) {
-        const dx = out.x1 - out.x0, dy = out.y1 - out.y0, l = Math.hypot(dx, dy);
-        const ux = l > 0 ? dx / l : 1, uy = l > 0 ? dy / l : 0;
-        out.x1 = out.x0 + ux * v.len; out.y1 = out.y0 + uy * v.len;
-      }
       if (out.x0 === out.x1 && out.y0 === out.y1 && !errors.x1) errors.x1 = t('gform.err.line');
       break;
     }
-    case 'circle':
-      for (const k of ['n', 'r', 'cx', 'cy', 'hm', 'psi']) if (has(k)) out[k] = v[k];
+    case 'circle': {
+      for (const k of ['n', 'cx', 'cy', 'hm', 'psi']) if (has(k)) out[k] = v[k];
+      if (has('a0') && has('a1')) {
+        const [a0, a1] = normArc(v.a0, v.a1);
+        if (a0 === 0 && a1 === 360) { delete out.a0; delete out.a1; } else Object.assign(out, { a0, a1 });
+      }
+      // the measure typed: of the arc as it is now
+      if (has('sz')) {
+        const r = radiusOf(out, ctx.measure ?? 'r', v.sz);
+        const cur = measureOf(g, ctx.measure ?? 'r');
+        if (Math.abs(v.sz - cur) > 1e-9) out.r = r;
+      }
       break;
+    }
     default:
   }
   if (!Object.keys(errors).length) {

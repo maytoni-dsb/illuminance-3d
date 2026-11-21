@@ -9,7 +9,8 @@
 // A selection is { groups: Set<groupId>, points: Map<groupId, Set<index>> } — whole groups, and
 // luminaires of groups of single luminaires.
 
-import { groupPoints, housingHalf, moveGroup, movePoints, turnLuminaires } from './groups.js';
+import { groupPoints, housingHalf, moveGroup, movePoints, turnLuminaires, turnArc } from './groups.js';
+import { HM_MIN } from './ui.js';
 
 /**
  * Defaults of the plan grid and snapping: steps along X and Y, origin (m), the grid shown, snapping
@@ -39,9 +40,9 @@ export function planItems(m, sizeOf = () => null) {
   const out = [];
   for (const g of m.groups) {
     const size = sizeOf(types.get(g.type)) ?? null;
-    groupPoints(g, room).forEach((p, index) => {
+    groupPoints(g, room, size).forEach((p, index) => {
       const [hx, hy] = housingHalf(size, p.psi);
-      out.push({ group: g.id, kind: g.kind, type: g.type, index, x: p.x, y: p.y, hm: p.hm, psi: p.psi, hx, hy, a: size?.a ?? 0, b: size?.b ?? 0, la: size?.la ?? 0, lb: size?.lb ?? 0, round: !!size?.round });
+      out.push({ group: g.id, kind: g.kind, type: g.type, index, x: p.x, y: p.y, hm: p.hm, psi: p.psi, hx, hy, a: size?.a ?? 0, b: size?.b ?? 0, h: size?.h ?? 0, la: size?.la ?? 0, lb: size?.lb ?? 0, round: !!size?.round });
     });
   }
   return out;
@@ -209,13 +210,36 @@ export function snapPoint(x, y, grid, L, W, centres, tol) {
   return { x, y, kind: null };
 }
 
-/** The model with the luminaires of the selection turned by dpsi degrees about their own axes. */
+/**
+ * The model with the mounting heights of the selection raised by dz metres (the Z arrow of the move
+ * gizmo in 3D, 21 Nov 2026); every height stays between HM_MIN and the ceiling.
+ */
+export function liftSelection(m, s, dz) {
+  if (!dz) return m;
+  const H = m.room.H, h = (v) => Math.min(H, Math.max(HM_MIN, v + dz));
+  return {
+    ...m,
+    groups: m.groups.map((g) => {
+      if (s.groups.has(g.id)) {
+        if (g.kind === 'single') return { ...g, points: g.points.map((p) => ({ ...p, hm: h(p.hm) })) };
+        return g.kind === 'line' ? { ...g, hm: h(g.hm), hm1: h(g.hm1) } : { ...g, hm: h(g.hm) };
+      }
+      const idx = s.points.get(g.id);
+      return idx?.size && g.kind === 'single' ? { ...g, points: g.points.map((p, k) => (idx.has(k) ? { ...p, hm: h(p.hm) } : p)) } : g;
+    }),
+  };
+}
+
+/**
+ * The model with the luminaires of the selection turned by dpsi degrees about their own axes; a
+ * circle turns as a whole about its centre: its angles move (decided on 21 Nov 2026).
+ */
 export function rotateSelection(m, s, dpsi) {
   if (!dpsi) return m;
   return {
     ...m,
     groups: m.groups.map((g) => {
-      if (s.groups.has(g.id)) return turnLuminaires(g, dpsi);
+      if (s.groups.has(g.id)) return g.kind === 'circle' ? turnArc(g, dpsi) : turnLuminaires(g, dpsi);
       const idx = s.points.get(g.id);
       return idx?.size && g.kind === 'single' ? turnLuminaires(g, dpsi, [...idx]) : g;
     }),
@@ -293,9 +317,10 @@ function inConvex(p, poly) {
 export function gizmoHit(tool, p, g, hit = GIZMO.hit) {
   if (tool === 'move') {
     if (inConvex(p, planeSquare(g.o, g.x, g.y))) return 'xy';
-    const dx = segDist(p, g.o, g.x), dy = segDist(p, g.o, g.y);
-    if (Math.min(dx, dy) > hit) return null;
-    return dx <= dy ? 'x' : 'y';
+    // the axes; Z only in 3D (the mounting height, decided on 21 Nov 2026)
+    const ds = [['x', segDist(p, g.o, g.x)], ['y', segDist(p, g.o, g.y)], ...(g.z ? [['z', segDist(p, g.o, g.z)]] : [])];
+    const [axis, d] = ds.reduce((a, b) => (b[1] < a[1] ? b : a));
+    return d > hit ? null : axis;
   }
   if (tool === 'rotate' && g.ring) {
     let d = Infinity;

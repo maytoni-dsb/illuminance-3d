@@ -87,7 +87,8 @@ export function createCalc() {
     const p = normalizeParams(params);
     const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, planes: 0, checks: 0 };
     const reused = { kernel: true, direct: true };
-    if (!Array.isArray(p.types) || !p.types.length) throw new RangeError('calc: no luminaire types');
+    // a room without luminaires (21 Nov 2026) is calculated in the dark
+    if (!Array.isArray(p.types)) throw new RangeError('calc: no luminaire types');
     const byType = new Map(p.types.map((ty) => [ty.id, []]));
     if (byType.size !== p.types.length) throw new RangeError('calc: two luminaire types with the same id');
     for (const l of p.lums) {

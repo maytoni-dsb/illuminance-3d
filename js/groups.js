@@ -6,17 +6,39 @@
 // mounting height h_m, m, and the rotation ψ of the C0 plane from +X, counter-clockwise, degrees.
 // Groups are drawn on the plan and have no rotation of their own (decided on 20 Nov 2026):
 //
-//   grid    { nx, ny, hm, psi, area? }        — as in version 1: cells of equal size over the area
-//            { x0, y0, x1, y1 } (the whole room when absent), a luminaire in every cell centre;
-//            the form shows the area as its centre and size
-//   line    { x0, y0, x1, y1, n, hm, hm1, psi } — n luminaires evenly from P0 to P1 (one: the
-//            middle); mounting heights from hm at P0 to hm1 at P1; ψ counts from the direction P0 → P1
-//   circle  { cx, cy, r, n, hm, psi }         — n luminaires at the angles k·360°/n from +X; ψ counts
-//            from the radius (90°: along the tangent)
+//   grid    { nx, ny, hm, psi, area?, mx?, my? } — over the area { x0, y0, x1, y1 } (the whole room
+//            when absent); along X and Y the way of DIALux (decided on 21 Nov 2026): 'in' — cells
+//            of equal size, a luminaire in every cell centre (version 1, the default), 'edge' — the
+//            housings of the outer luminaires at the edges of the area, 'axis' — the axes of the
+//            outer luminaires on the edges; one luminaire along an axis: the middle
+//   line    { x0, y0, x1, y1, n, hm, hm1, psi, m? } — n luminaires from P0 to P1 the same ways
+//            ('axis' — evenly from P0 to P1, the default; one: the middle); mounting heights from
+//            hm at P0 to hm1 at P1; ψ counts from the direction P0 → P1
+//   circle  { cx, cy, r, n, hm, psi, a0?, a1? } — n luminaires on the arc from a0 to a1 (degrees
+//            from +X, counter-clockwise; 0 and 360 when absent): the full circle at the angles
+//            a0 + k·(a1 − a0)/n, an arc from end to end (one: its middle); ψ counts from the
+//            radius (90°: along the tangent)
 //   single  { points: [{ x, y, hm, psi }] }    — every luminaire with its own height and rotation
 
 /** Kinds of groups. */
 export const GROUP_KINDS = Object.freeze(['single', 'grid', 'line', 'circle']);
+/** Ways of spacing along an axis of a grid or along a line. */
+export const SPACINGS = Object.freeze(['in', 'edge', 'axis']);
+
+/**
+ * Offsets of n luminaires along a segment of length len from its start (decided on 21 Nov 2026):
+ * 'in' — cell centres, 'edge' — the housings (half size h along the segment) at the ends, 'axis'
+ * — the axes at the ends; one luminaire: the middle.
+ */
+export function spacing(n, len, way, h = 0) {
+  if (n === 1) return [len / 2];
+  if (way === 'in') return Array.from({ length: n }, (_, i) => ((i + 0.5) * len) / n);
+  const s = way === 'edge' ? Math.min(h, len / 2) : 0;
+  return Array.from({ length: n }, (_, i) => s + (i * (len - 2 * s)) / (n - 1));
+}
+
+/** True when the arc of a circle group is the full circle. */
+export const fullCircle = (g) => (g.a1 ?? 360) - (g.a0 ?? 0) >= 360 - 1e-9;
 
 const DEG = Math.PI / 180;
 /** Lengths closer than this are equal (m); also the tolerance of the placement check. */
@@ -29,37 +51,59 @@ export const wrapDeg = (a) => { const r = a % 360; return r < 0 ? r + 360 : r + 
  * Mounting points of a group, in the order of the luminaires.
  * @param {object} g — group
  * @param {{ L: number, W: number }} room — size of the room (the area of a grid without its own)
+ * @param {{ a: number, b: number }|null} [size] — the housing in plan (a along C0, b along C90) of
+ *   the type of the group: the way 'edge' keeps it inside the area or the line (none: as 'axis')
  * @returns {{ x, y, hm, psi }[]}
  */
-export function groupPoints(g, room) {
+export function groupPoints(g, room, size = null) {
   switch (g.kind) {
     case 'grid': {
       const out = [];
-      const a = g.area;
-      for (let j = 0; j < g.ny; j++) {
-        for (let i = 0; i < g.nx; i++) {
-          // without an area: the expressions of photometry.luminaireGrid (version 1 bit for bit)
-          const x = a ? a.x0 + (i + 0.5) * (a.x1 - a.x0) / g.nx : (i + 0.5) * room.L / g.nx;
-          const y = a ? a.y0 + (j + 0.5) * (a.y1 - a.y0) / g.ny : (j + 0.5) * room.W / g.ny;
-          out.push({ x, y, hm: g.hm, psi: g.psi });
+      const a = g.area, mx = g.mx ?? 'in', my = g.my ?? 'in';
+      if (mx === 'in' && my === 'in') {
+        for (let j = 0; j < g.ny; j++) {
+          for (let i = 0; i < g.nx; i++) {
+            // without an area: the expressions of photometry.luminaireGrid (version 1 bit for bit)
+            const x = a ? a.x0 + (i + 0.5) * (a.x1 - a.x0) / g.nx : (i + 0.5) * room.L / g.nx;
+            const y = a ? a.y0 + (j + 0.5) * (a.y1 - a.y0) / g.ny : (j + 0.5) * room.W / g.ny;
+            out.push({ x, y, hm: g.hm, psi: g.psi });
+          }
         }
+        return out;
       }
+      const ar = a ?? { x0: 0, y0: 0, x1: room.L, y1: room.W };
+      const [hx, hy] = housingHalf(size, g.psi);
+      const xs = spacing(g.nx, ar.x1 - ar.x0, mx, hx), ys = spacing(g.ny, ar.y1 - ar.y0, my, hy);
+      for (const y of ys) for (const x of xs) out.push({ x: ar.x0 + x, y: ar.y0 + y, hm: g.hm, psi: g.psi });
       return out;
     }
     case 'line': {
       const dx = g.x1 - g.x0, dy = g.y1 - g.y0;
       const dir = dx || dy ? Math.atan2(dy, dx) / DEG : 0;
+      const way = g.m ?? 'axis';
       const out = [];
-      for (let k = 0; k < g.n; k++) {
-        const t = g.n === 1 ? 0.5 : k / (g.n - 1);
+      if (way === 'axis') {
+        for (let k = 0; k < g.n; k++) {
+          const t = g.n === 1 ? 0.5 : k / (g.n - 1);
+          out.push({ x: g.x0 + t * dx, y: g.y0 + t * dy, hm: g.hm + t * (g.hm1 - g.hm), psi: wrapDeg(dir + g.psi) });
+        }
+        return out;
+      }
+      const len = Math.hypot(dx, dy);
+      // half of the housing along the line: ψ counts from its direction
+      const h = size ? housingHalf(size, g.psi)[0] : 0;
+      for (const d of spacing(g.n, len, way, h)) {
+        const t = len > 0 ? d / len : 0.5;
         out.push({ x: g.x0 + t * dx, y: g.y0 + t * dy, hm: g.hm + t * (g.hm1 - g.hm), psi: wrapDeg(dir + g.psi) });
       }
       return out;
     }
     case 'circle': {
       const out = [];
+      const a0 = g.a0 ?? 0, a1 = g.a1 ?? 360, full = fullCircle(g);
       for (let k = 0; k < g.n; k++) {
-        const a = (360 * k) / g.n;
+        const a = full ? (a0 === 0 && a1 === 360 ? (360 * k) / g.n : a0 + (k * (a1 - a0)) / g.n)
+          : g.n === 1 ? (a0 + a1) / 2 : a0 + (k * (a1 - a0)) / (g.n - 1);
         out.push({ x: g.cx + g.r * Math.cos(a * DEG), y: g.cy + g.r * Math.sin(a * DEG), hm: g.hm, psi: wrapDeg(a + g.psi) });
       }
       return out;
@@ -148,6 +192,25 @@ export function moveGroup(g, dx, dy, room) {
   }
 }
 
+/**
+ * The arc of a circle group from the angles typed (decided on 21 Nov 2026): a0 reduced to
+ * [0, 360), a1 in (a0, a0 + 360] (a1 below a0 or equal: + 360).
+ * @returns {[number, number]}
+ */
+export function normArc(a0, a1) {
+  const b0 = wrapDeg(a0);
+  let b1 = a1 - (a0 - b0);
+  while (b1 <= b0 + 1e-9) b1 += 360;
+  while (b1 > b0 + 360 + 1e-9) b1 -= 360;
+  return [b0, +b1.toFixed(9)];
+}
+
+/** A circle group turned as a whole by d degrees about its centre: both angles move (E on the plan). */
+export function turnArc(g, d) {
+  const [a0, a1] = normArc((g.a0 ?? 0) + d, (g.a1 ?? 360) + d);
+  return a0 === 0 && a1 === 360 ? (({ a0: _, a1: __, ...r }) => r)(g) : { ...g, a0, a1 };
+}
+
 /** Single luminaires at the given indices of a group "single" moved by (dx, dy). */
 export function movePoints(g, indices, dx, dy) {
   if (g.kind !== 'single') throw new RangeError('movePoints: only single luminaires move one by one');
@@ -159,8 +222,8 @@ export function movePoints(g, indices, dx, dy) {
  * The group as single luminaires (ungroup): the same type, id and luminaires; every luminaire keeps
  * the height and rotation it had in the group.
  */
-export function ungroup(g, room) {
-  return { id: g.id, type: g.type, kind: 'single', points: groupPoints(g, room) };
+export function ungroup(g, room, size = null) {
+  return { id: g.id, type: g.type, kind: 'single', points: groupPoints(g, room, size) };
 }
 
 /**

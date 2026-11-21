@@ -90,10 +90,10 @@ test('groups drawn on the plan: every kind with the draft; single luminaires one
   assert.equal(removeGroup(m, 'g1').groups.length, m.groups.length - 1);
 });
 
-test('fields of a group: rows by kind, values, the grid as centre and size, the line length', () => {
+test('fields of a group: rows by kind, values, the grid as centre and size, the arc and its measure', () => {
   assert.deepEqual(Object.keys(GROUP_ROWS), ['single', 'grid', 'line', 'circle']);
-  assert.deepEqual(rowsOf('line', true).flatMap((r) => r.fields.map((f) => f.key)), ['n', 'hm', 'hm1', 'psi']);
-  assert.deepEqual(rowsOf('grid', true).flatMap((r) => r.fields.map((f) => f.key)), ['nx', 'ny', 'hm', 'psi']);
+  assert.deepEqual(rowsOf('line').flatMap((r) => r.fields.map((f) => f.key)), ['n', 'x0', 'y0', 'hm', 'x1', 'y1', 'hm1', 'rx', 'ry', 'psi']);
+  assert.deepEqual(rowsOf('grid').map((r) => r.extra ?? null), ['mx', 'my', 'fit', null, null]);
   const ctx = { H: 3, L: 6, W: 4, others: 6 };
   const raw = (g, over = {}, c = ctx) => ({ ...Object.fromEntries(Object.entries(fieldValues(g, c)).map(([k, v]) => [k, String(v)])), ...over });
   // a grid without an area shows the room; unchanged it keeps following the room
@@ -105,11 +105,9 @@ test('fields of a group: rows by kind, values, the grid as centre and size, the 
   assert.deepEqual(r.group.area, { x0: 0.5, y0: 0, x1: 3.5, y1: 4 });
   r = validateGroup(grid, raw(grid, { gw: '0' }), ctx);
   assert.ok(!r.ok && r.errors.gw);
-  // a line: the length moves the end point; a new end point gives a new length
+  // a line: no length field (21 Nov 2026), the end points
   const line = { id: 'g2', type: 't1', kind: 'line', x0: 1, y0: 1, x1: 4, y1: 5, n: 3, hm: 3, hm1: 3, psi: 0 };
-  assert.equal(fieldValues(line, ctx).len, 5);
-  r = validateGroup(line, raw(line, { len: '10' }), ctx);
-  assert.deepEqual([r.group.x1, r.group.y1], [7, 9]);
+  assert.equal(fieldValues(line, ctx).len, undefined);
   r = validateGroup(line, raw(line, { x1: '1', y1: '3' }), ctx);
   assert.deepEqual([r.group.x1, r.group.y1], [1, 3]);
   r = validateGroup(line, raw(line, { x1: '1', y1: '1' }), ctx);
@@ -120,10 +118,22 @@ test('fields of a group: rows by kind, values, the grid as centre and size, the 
   assert.match(r.errors.n, /всего 501/);
   // a circle, single luminaires
   const circle = { id: 'g3', type: 't1', kind: 'circle', cx: 3, cy: 2, r: 1, n: 6, hm: 3, psi: 90 };
-  assert.ok(validateGroup(circle, raw(circle, { r: '-1' }), ctx).errors.r);
+  assert.ok(validateGroup(circle, raw(circle, { sz: '-1' }), ctx).errors.sz);
+  // the measure: radius, diameter, length of the arc; the angles kept as the rule says
+  const dctx = { ...ctx, measure: 'd' }, pctx = { ...ctx, measure: 'p' };
+  assert.equal(fieldValues(circle, dctx).sz, 2);
+  assert.equal(validateGroup(circle, raw(circle, { sz: '3' }, dctx), dctx).group.r, 1.5);
+  r = validateGroup(circle, raw(circle, { a0: '300', a1: '60' }), ctx);
+  assert.deepEqual([r.group.a0, r.group.a1], [300, 420]);
+  assert.ok(Math.abs(fieldValues(r.group, pctx).sz - 2 * Math.PI / 3) < 1e-12);
+  assert.ok(Math.abs(validateGroup(r.group, raw(r.group, { sz: String(Math.PI) }, pctx), pctx).group.r - 1.5) < 1e-12);
+  r = validateGroup(r.group, raw(r.group, { a0: '0', a1: '360' }), ctx);
+  assert.equal(r.group.a0, undefined);
   assert.equal(validateGroup(circle, raw(circle, { psi: '0' }), ctx).group.psi, 0);
   const single = { id: 'g4', type: 't1', kind: 'single', points: [{ x: 1, y: 1, hm: 3, psi: 0 }, { x: 2, y: 2, hm: 2.5, psi: 30 }] };
   assert.deepEqual(fieldValues(single, { ...ctx, at: 1 }), { x: 2, y: 2, hm: 2.5, psi: 30 });
+  // several luminaires with different values: an empty field changes nothing
+  assert.deepEqual(validateGroup(single, { x: '', y: '2', hm: '', psi: '' }, { ...ctx, at: 1, multi: true }).group.points[1], { x: 2, y: 2, hm: 2.5, psi: 30 });
   r = validateGroup(single, { x: '2,5', y: '2', hm: '2.4', psi: '45' }, { ...ctx, at: 1 });
   assert.deepEqual(r.group.points, [{ x: 1, y: 1, hm: 3, psi: 0 }, { x: 2.5, y: 2, hm: 2.4, psi: 45 }]);
 });

@@ -12,7 +12,7 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=cc5e08ae",
+      "./js/calc.js": "./js/calc.js?v=7fe23fc6",
       "./js/checks2.js": "./js/checks2.js?v=6c5f10f2",
       "./js/checks3.js": "./js/checks3.js?v=2413caec",
       "./js/checks4.js": "./js/checks4.js?v=a4a67988",
@@ -24,18 +24,18 @@
       "./js/estimate.js": "./js/estimate.js?v=8e837379",
       "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
-      "./js/groupform.js": "./js/groupform.js?v=fe9956af",
-      "./js/groups.js": "./js/groups.js?v=06614448",
-      "./js/groupui.js": "./js/groupui.js?v=54c013c4",
+      "./js/groupform.js": "./js/groupform.js?v=0538b122",
+      "./js/groups.js": "./js/groups.js?v=152a9a49",
+      "./js/groupui.js": "./js/groupui.js?v=14e61b92",
       "./js/help.js": "./js/help.js?v=98159935",
-      "./js/hotkeys.js": "./js/hotkeys.js?v=e9d8ff5c",
+      "./js/hotkeys.js": "./js/hotkeys.js?v=4d1be303",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=888095dd",
-      "./js/lang-en.js": "./js/lang-en.js?v=8e32ab4e",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=1f88a92f",
-      "./js/model.js": "./js/model.js?v=682060f3",
+      "./js/lang-de.js": "./js/lang-de.js?v=7a4d2313",
+      "./js/lang-en.js": "./js/lang-en.js?v=7ec51b72",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=ceb76897",
+      "./js/model.js": "./js/model.js?v=f6385a6b",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -43,16 +43,16 @@
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=51d36bb9",
-      "./js/planedit.js": "./js/planedit.js?v=a8b13d74",
-      "./js/planview.js": "./js/planview.js?v=6bac9b7b",
-      "./js/project.js": "./js/project.js?v=b41537ba",
+      "./js/planedit.js": "./js/planedit.js?v=21ce5f07",
+      "./js/planview.js": "./js/planview.js?v=2573e143",
+      "./js/project.js": "./js/project.js?v=3155618c",
       "./js/report.js": "./js/report.js?v=82058f86",
       "./js/reportsvg.js": "./js/reportsvg.js?v=aee5f3b6",
       "./js/reportui.js": "./js/reportui.js?v=68656ae9",
       "./js/solver.js": "./js/solver.js?v=a5376c19",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=1cd77bb9",
-      "./js/view3d.js": "./js/view3d.js?v=23cd15b5",
+      "./js/view3d.js": "./js/view3d.js?v=819b3074",
       "./js/worker.js": "./js/worker.js?v=a2071819",
       "./js/workplane.js": "./js/workplane.js?v=dc6a0497"
     }
@@ -70,7 +70,7 @@
       --accent:#7C54FE; --accent-hov:#5b34e6; --accent-soft:#DEDAEB; --on-accent:#fff;
       --sel:#000; --on-sel:#fff; --sel-sub:#BDBDBD;
       --err:#EB3D00; --ok:#1D874D; --ok-soft:#ECFFBF;
-      --room-bg:#F6F6F5; --view-edge:#7a7a78;
+      --room-bg:#a6a6a6; --view-edge:#7a7a78;
       --sans:"Suisse Intl","SuisseIntl","Suisse","Helvetica Neue",Helvetica,Arial,sans-serif;
     }
     @media (prefers-color-scheme:dark){
@@ -334,7 +334,20 @@
 
 
     /* stages in the top bar (as in Maytoni Track Configurator): number, name; the current one filled */
-    .stnav{display:flex;align-items:center;gap:8px;margin:0 auto}
+    .stnav{display:flex;align-items:center;gap:8px;margin:0 auto 0 14px}
+    .hbtns{display:flex;align-items:center;gap:2px;margin-left:auto}
+    .hib{width:34px;height:34px;border-radius:999px;border:0;background:transparent;color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer}
+    .hib:hover:not(:disabled){background:var(--soft)}
+    .hib:disabled{opacity:.35;cursor:default}
+    .hsep{width:1px;height:20px;background:var(--rule);margin:0 4px}
+    .langw{position:relative}
+    .langpill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 14px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);font-size:12px;font-weight:600;letter-spacing:.02em;cursor:pointer}
+    .langmenu{min-width:180px;padding:6px;border-radius:12px}
+    .langmenu button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;border-radius:8px;padding:7px 10px;font-size:13px;text-align:left;color:var(--ink);cursor:pointer}
+    .langmenu button:hover{background:var(--soft)}
+    .langmenu b{width:22px;color:var(--ink3);font-weight:600}
+    .langmenu span{flex:1}
+    .langmenu i{font-style:normal}
     .gsst{position:relative;display:flex;align-items:center;gap:10px;height:38px;padding:0 16px 0 6px;border-radius:999px;border:0;
       background:transparent;color:var(--muted);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
     .gsst .gsn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;
@@ -433,7 +446,7 @@
       background:var(--sel);color:var(--on-sel);font-size:12px;font-weight:400;line-height:1;padding:6px 9px;border-radius:6px;
       pointer-events:none;opacity:0;transform:translateY(-2px);transition:opacity .08s,transform .08s;z-index:60;letter-spacing:0}
     .tipr[data-tip]::after{right:0} .tipl[data-tip]::after{left:0}
-    [data-tip][data-key]::after{content:attr(data-tip) "\2003" attr(data-key);white-space:pre}
+    [data-tip][data-key]::after{content:attr(data-tip) " · " attr(data-key);white-space:pre}
     .tipr[data-tip]:hover::after,.tipr[data-tip]:focus-visible::after,.tipl[data-tip]:hover::after,.tipl[data-tip]:focus-visible::after{opacity:1;transform:none}
     @media (hover:none){ .tipr[data-tip]::after,.tipl[data-tip]::after{display:none} }
     .stage[hidden]{display:none!important}
@@ -562,11 +575,6 @@
     .pfdesc.top .pfmid{gap:2px}
     .pfsize{margin-top:6px}
     .swhost{margin-top:auto;padding-top:10px}
-    .swrow{display:flex;gap:8px;align-items:center}
-    .tsw{width:20px;height:20px;border-radius:50%;border:1.5px solid #fff;padding:0;background:var(--ty);box-shadow:0 0 0 1px var(--rule);cursor:pointer;position:relative;flex:none}
-    .tsw.sel{box-shadow:0 0 0 2px var(--ink)}
-    .tsw.own{background:conic-gradient(#e03131,#f5b700,#2f9e44,#1c7ed6,#9c36b5,#e03131)}
-    .tsw input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
     .tydel{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 8px 0 2px;cursor:pointer}
     .tydel:hover{color:var(--err)}
     .tydel:disabled{opacity:.35;cursor:not-allowed}
@@ -609,7 +617,8 @@
     .gf input:focus{outline:none;border-color:var(--accent)}
     .gf.bad input{border-color:var(--err)}
     .gf .gu{position:absolute;right:7px;font-size:11.5px;color:var(--muted);pointer-events:none}
-    .gf:has(.gu) input{padding-right:18px}
+    .gf:has(.gu) input{padding-right:24px}
+    .gf input{text-align:right}
     .gerr{margin:2px 0 4px}
     .gdraw{margin-top:2px}
     .etools{position:absolute;top:16px;left:16px;display:flex;gap:6px;align-items:center;z-index:6}
@@ -635,6 +644,61 @@
     .eprow input:focus{outline:none;border-color:var(--accent)}
     .eprow input[aria-invalid]{border-color:var(--err)}
     .eck{display:flex;align-items:center;gap:8px;height:30px;font-size:13px;cursor:pointer}
+    .kcap{display:inline-flex;gap:2px;background:var(--soft);border-radius:999px;padding:3px;align-self:flex-start}
+    .kcap button{width:40px;height:30px;border-radius:999px;border:0;background:transparent;color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer;position:relative}
+    .kcap button.on{background:var(--card);box-shadow:0 0 0 1px var(--rule)}
+    .kcap button:disabled{opacity:.35;cursor:default}
+    .lempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:128px;border:1.5px dashed var(--line);border-radius:10px;color:var(--ink3);text-align:center;cursor:pointer;font-size:12.5px;padding:10px}
+    .lempty b{font-weight:600;color:var(--ink2)}
+    .lempty:hover,.lempty.drop{border-color:var(--ink);background:var(--soft);color:var(--ink)}
+    .pfcard{position:relative}
+    .pfcard.drop::after{content:attr(data-drop);position:absolute;inset:-6px;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--ink);border-radius:10px;background:var(--soft);font-weight:600;font-size:13px;color:var(--ink);z-index:2}
+    .pfcard .pfpolar{cursor:grab;border-radius:50%}
+    .pfcard .pfpolar:hover{background:var(--soft)}
+    .swrow{display:flex;gap:8px;align-items:center}
+    .tsw{width:20px;height:20px;border-radius:50%;border:2px solid var(--card);padding:0;background:var(--ty);box-shadow:0 0 0 1px var(--rule);cursor:pointer;position:relative;flex:none}
+    .tsw.sel{box-shadow:0 0 0 2px var(--ink)}
+    .tsw.more{background:conic-gradient(#e03131,#f5b700,#2f9e44,#1c7ed6,#9c36b5,#e03131)}
+    .tsw.more.sel{background:var(--ty)}
+    .colpop{width:auto;padding:12px 14px}
+    #colorpop{top:auto;left:0}
+    .pal{display:grid;grid-template-columns:repeat(8,20px);gap:7px}
+    .palown{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--ink3)}
+    .palhex{width:84px;height:26px;border:1px solid var(--rule);border-radius:5px;padding:0 8px;font:12px ui-monospace,monospace;color:var(--ink);background:var(--card)}
+    .palpick{width:26px;height:26px;padding:0;border:0;background:none;cursor:pointer}
+    .grow{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px;margin-top:8px}
+    .gcells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-items:center}
+    .gf.off input{background:var(--soft);color:var(--muted)}
+    .gways{grid-column:span 2;justify-self:end;display:inline-flex;gap:2px;background:var(--soft);border-radius:999px;padding:2px}
+    .gways button{width:40px;height:24px;border-radius:999px;border:0;background:transparent;color:var(--ink);padding:0;display:inline-grid;place-items:center;cursor:pointer;position:relative}
+    .gways button.on{background:var(--card);box-shadow:0 0 0 1px var(--rule)}
+    .gways button:disabled{opacity:.3;cursor:default}
+    .gfit{height:26px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer;position:relative}
+    .gpick{display:flex;justify-content:flex-end;margin-top:8px}
+    .ldlg2{width:400px;max-width:calc(100vw - 32px);height:fit-content;max-height:min(640px,calc(100vh - 48px));padding:0;border:1px solid var(--rule);border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.10);overflow:visible}
+    .ldlg2[open]{display:flex;flex-direction:column}
+    .ldlg2::backdrop{background:rgba(0,0,0,.25)}
+    .lhd{display:flex;align-items:center;gap:10px;padding:14px 14px 10px 16px}
+    .lhd h2{font-size:16px;font-weight:600;margin:0;flex:1}
+    .lmode button{width:auto;padding:0 12px;font-size:12px;height:26px}
+    .llist{padding:0 8px;display:flex;flex-direction:column;gap:2px;min-height:120px;overflow:auto}
+    .lrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;border:1.5px solid transparent}
+    .lrow:hover{background:var(--soft)}
+    .lrow.on{border-color:var(--ink)}
+    .lrow .tsw{width:16px;height:16px}
+    .lrow .lnm{flex:1;min-width:0}
+    .lrow .lnm b{display:block;font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lrow .lnm small{display:block;color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lrow .lcnt{min-width:22px;text-align:center;border:1px solid var(--line);border-radius:5px;font-size:12px;padding:1px 4px;font-variant-numeric:tabular-nums}
+    .lrow svg.mini{flex:none}
+    .lnone{padding:24px 10px;text-align:center;color:var(--ink3);font-size:12.5px}
+    .ldrop{margin:8px 16px 0;border:1px dashed var(--line);border-radius:8px;padding:8px;text-align:center;color:var(--ink3);font-size:12px}
+    .ldrop.drop{border-color:var(--ink);color:var(--ink);background:var(--soft)}
+    .lbar{display:flex;align-items:center;gap:4px;padding:10px 12px 12px;border-top:1px solid var(--rule);margin-top:10px}
+    .lbar .lsp{flex:1}
+    .tipt{position:relative}
+    .tipt:hover::after{content:attr(data-tip);position:absolute;bottom:40px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--ink);color:var(--card);font-size:11px;padding:3px 7px;border-radius:5px;z-index:9;pointer-events:none}
+    .ltip{position:absolute;z-index:7;pointer-events:none;padding:4px 8px;font-size:12px;color:#fff;background:#1f1f1f;border-radius:5px;white-space:nowrap}
     .ehint{position:absolute;left:16px;top:60px;z-index:5;max-width:60%;padding:6px 12px;font-size:12px;color:var(--ink2);background:var(--card);border:1px solid var(--rule);border-radius:999px}
     .ndlg.ldlg{width:min(980px,94vw);height:fit-content;max-height:88vh}
     .lbody{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:start}
@@ -670,6 +734,13 @@
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle" data-i18n-html="app.appTitle"></span>
     <span class="beta" data-i18n="app.beta" data-i18n-attr="title:app.betaTip"></span>
+    <div class="hbtns" role="group" data-i18n-attr="aria-label:app.fileTools">
+      <button type="button" class="hib tipr" id="hopen" data-i18n-attr="data-tip:app.openTip;aria-label:app.openTip" data-key="Ctrl+O"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6V4.5h5l1.5 1.5h7.5v2"/><path d="M2.5 6v9.5h13l2-7.5h-13l-2 7.5"/></svg></button>
+      <button type="button" class="hib tipr" id="savebtn" data-i18n-attr="data-tip:app.saveTip;aria-label:app.saveTip" data-key="Ctrl+S"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5"/><path d="M3.5 13v3.5h13V13"/></svg></button>
+      <span class="hsep"></span>
+      <button type="button" class="hib tipr" id="hundo" data-i18n-attr="data-tip:app.undo;aria-label:app.undo" data-key="Ctrl+Z" disabled><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 5 4 8.5 7.5 12"/><path d="M4 8.5h8a4 4 0 0 1 0 8H9"/></svg></button>
+      <button type="button" class="hib tipr" id="hredo" data-i18n-attr="data-tip:app.redo;aria-label:app.redo" data-key="Ctrl+Y" disabled><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 5 16 8.5 12.5 12"/><path d="M16 8.5H8a4 4 0 0 0 0 8h3"/></svg></button>
+    </div>
     <nav class="stnav" id="stnav" data-i18n-attr="aria-label:app.stages">
       <button type="button" class="gsst" data-s="1"><span class="gsn">1</span><span data-i18n="app.st1"></span></button>
       <span class="gsln" data-l="1"></span>
@@ -684,8 +755,8 @@
       <button type="button" class="gsst" data-s="3"><span class="gsn">3</span><span data-i18n="app.st3"></span></button>
     </nav>
     <div class="sbtools">
-      <div class="seg langsw" id="langsw" role="group" data-i18n-attr="aria-label:app.lang"></div>
-      <button type="button" class="sbbtn tipr" id="savebtn" data-i18n-attr="data-tip:app.saveTip" data-key="Ctrl+S"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v7.5M4.8 7 8 10.2 11.2 7"/><path d="M2.5 11v2.5h11V11"/></svg><span data-i18n="app.save"></span></button>
+      <div class="langw"><button type="button" class="langpill" id="langpill" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="aria-label:app.lang"></button>
+        <div class="vmenu langmenu" id="langsw" role="menu" hidden></div></div>
       <button type="button" class="sbbtn round tipr" id="apphelp" data-i18n-attr="data-tip:help.title;aria-label:help.title" data-key="F1" aria-expanded="false">?</button>
       <button type="button" class="themebtn tipr" id="themebtn" data-i18n-attr="data-tip:app.themeTip;aria-label:app.theme"><svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></svg></button>
     </div>
@@ -729,16 +800,21 @@
         <div class="fsec">
           <div class="shd"><span data-i18n="app.lum"></span> <button type="button" class="help" data-help="file" data-i18n-attr="aria-label:app.helpFile" aria-expanded="false">?</button>
             <button type="button" class="gschipb sm" id="lumlistbtn" aria-haspopup="dialog" data-i18n="lum.list" data-i18n-attr="title:lum.listTip"></button></div>
+          <div class="lempty" id="lumempty" role="button" tabindex="0" hidden><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5"/><path d="M4 12.5v3h12v-3"/></svg><b data-i18n="lum.dropTitle"></b><span data-i18n="lum.dropSub"></span></div>
           <div id="lumedit">
-            <div class="pfcard" id="lumcard"></div>
+            <div class="pfcard" id="lumcard" data-i18n-attr="data-drop:lum.dropAdd"></div>
+            <div class="epop colpop" id="colorpop" hidden></div>
             <div class="fld wide" id="lampsets" hidden></div>
             <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
           </div>
+          <div id="photfile" hidden></div>
+          <input type="file" id="lumfile" accept=".ies,.ldt,.IES,.LDT" multiple hidden>
         </div>
         <div class="fsec">
           <div class="shd"><span data-i18n="lum.place"></span> <button type="button" class="help" data-help="grid" data-i18n-attr="aria-label:app.helpGrid" aria-expanded="false">?</button>
-            <button type="button" class="gschipb sm" id="suggest" data-i18n-attr="title:app.suggestTip" data-i18n="app.suggest" hidden></button></div>
-          <div class="kinds" id="kinds" role="group" data-i18n-attr="aria-label:lum.place"></div>
+</div>
+          <span id="suggest" style="display:none"></span>
+          <div class="kcap" id="kinds" role="group" data-i18n-attr="aria-label:lum.place"></div>
           <div id="gform"></div>
           <div class="gshint" id="hmnote"></div>
           <div class="gshint" id="estnote" hidden></div>
@@ -772,15 +848,15 @@
       <div class="etools" id="etools" hidden>
         <div class="ecap" id="etool" role="group" data-i18n-attr="aria-label:lum.tools">
           <button type="button" class="tipl on" data-tool="select" aria-pressed="true" data-i18n-attr="aria-label:lum.tool.select;data-tip:lum.tool.select" data-key="Q">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3.5 2.5 12 8.2l-3.8.7 2.2 4.4-1.6.8-2.2-4.4L3.5 12z"/></svg><sub>Q</sub></button>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3.5 2.5 12 8.2l-3.8.7 2.2 4.4-1.6.8-2.2-4.4L3.5 12z"/></svg></button>
           <button type="button" class="tipl" data-tool="move" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.move;data-tip:lum.tool.move" data-key="W">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M1.5 8h13M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2"/></svg><sub>W</sub></button>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M1.5 8h13M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2"/></svg></button>
           <button type="button" class="tipl" data-tool="rotate" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.rotate;data-tip:lum.tool.rotate" data-key="E">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M11.8 1.8v2.8H9"/></svg><sub>E</sub></button>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M11.8 1.8v2.8H9"/></svg></button>
         </div>
         <div class="epill">
           <button type="button" class="tipl" id="gridon" aria-pressed="true" data-i18n-attr="aria-label:lum.gridShow;data-tip:lum.gridShow" data-key="G">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M6 2v12M10 2v12M2 6h12M2 10h12"/></svg><sub>G</sub></button>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M6 2v12M10 2v12M2 6h12M2 10h12"/></svg></button>
           <button type="button" class="earr tipl" id="gridset" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:lum.gridSet;data-tip:lum.gridSet">
             <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
           <div class="epop" id="gridpop" hidden>
@@ -793,7 +869,7 @@
         </div>
         <div class="epill">
           <button type="button" class="tipl" id="snapon" aria-pressed="true" data-i18n-attr="aria-label:lum.snap;data-tip:lum.snap" data-key="S">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3.5 2.5v5a4.5 4.5 0 0 0 9 0v-5"/><path d="M3.5 5h2.5M10 5h2.5" stroke-width="2.2"/></svg><sub>S</sub></button>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3.5 2.5v5a4.5 4.5 0 0 0 9 0v-5"/><path d="M3.5 5h2.5M10 5h2.5" stroke-width="2.2"/></svg></button>
           <button type="button" class="earr tipl" id="snapset" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:lum.snapSet;data-tip:lum.snapSet">
             <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
           <div class="epop" id="snappop" hidden>
@@ -805,6 +881,7 @@
         </div>
       </div>
       <div class="ehint" id="ehint" hidden></div>
+      <div class="ltip" id="ltip" hidden></div>
       <div class="vtop"><div class="vstatus" id="hover"></div></div>
       <div class="vbottom">
         <div class="legend" id="legend" data-i18n-attr="aria-label:app.legend"><span class="lt" data-i18n="app.legendUnit"></span><ol></ol></div>
@@ -903,17 +980,21 @@
     <div class="ndfoot" id="normnote"></div>
   </dialog>
 
-  <dialog class="ndlg ldlg" id="lumdlg" aria-labelledby="lumtitle">
-    <div class="ndhead"><div class="gshd"><span class="gskick" data-i18n="lum.listKick"></span><h1 id="lumtitle" data-i18n="lum.listTitle"></h1>
-      <p data-i18n="lum.listLead"></p></div>
+  <dialog class="ldlg2" id="lumdlg" aria-labelledby="lumtitle">
+    <div class="lhd"><h2 id="lumtitle" data-i18n="lum.listTitle"></h2>
+      <div class="ecap lmode" id="lummode" role="group"><button type="button" data-m="room" class="on" data-i18n="lum.modeRoom"></button><button type="button" data-m="proj" data-i18n="lum.modeProject"></button></div>
       <button type="button" class="ndclose" id="lumclose" data-i18n-attr="aria-label:app.close">×</button></div>
-    <div class="ndbody lbody">
-      <div class="lcol" id="lumlist"></div>
-      <div class="lcol lact2">
-        <div class="lacthd" id="lumacthd"></div>
-        <div id="photfile"></div>
-      </div>
+    <div class="llist" id="lumlist"></div>
+    <div class="ldrop" id="lumdrop" data-i18n="lum.dropList"></div>
+    <div class="lbar">
+      <button type="button" class="hib tipt" data-act="add" data-i18n-attr="data-tip:lum.act.add;aria-label:lum.act.add"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H5.5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V6.5z"/><path d="M11.5 2.5v4h4M10 9.5v5M7.5 12h5"/></svg></button>
+      <button type="button" class="hib tipt" data-act="file" data-i18n-attr="data-tip:lum.act.file;aria-label:lum.act.file"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5H5.5a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V6.5z"/><path d="M11.5 2.5v4h4M7.5 11.5h5M10.5 9.5l2 2-2 2"/></svg></button>
+      <button type="button" class="hib tipt" data-act="copy" data-i18n-attr="data-tip:lum.act.copy;aria-label:lum.act.copy"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13H7"/></svg></button>
+      <span class="lsp"></span>
+      <button type="button" class="hib tipt" data-act="replace" data-i18n-attr="data-tip:lum.act.replace;aria-label:lum.act.replace"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11l-3-3M17 13H6l3 3"/></svg></button>
+      <button type="button" class="hib tipt" data-act="del" data-i18n-attr="data-tip:lum.act.del;aria-label:lum.act.del"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h12M8 6V4h4v2M5.5 6l.8 10.5h7.4L14.5 6"/></svg></button>
     </div>
+    <div class="epop colpop" id="lumcolorpop" hidden></div>
   </dialog>
 
   <main class="stage rstage" id="stage3" hidden>
@@ -937,12 +1018,12 @@
 
 <script type="module">
   import { createRoom, autoStep } from './js/geometry.js';
-  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES, photometricHeight, ceilingDrop, parseNumber } from './js/ui.js';
+  import { initForm, formatNumber, faceRho, MAX_LUMINAIRES, photometricHeight, ceilingDrop, parseNumber, DEFAULTS } from './js/ui.js';
   import { stage2Checks } from './js/checks2.js';
   import { faceAverages } from './js/direct.js';
   import { luminance, exposure } from './js/tonemap.js';
   import { LEVELS, COLORS_HEX } from './js/colorscale.js';
-  import { initPhotFile, fileKey } from './js/photui.js';
+  import { initPhotFile, fileKey, decodeBytes, setValues, lidcCurves } from './js/photui.js';
   import { parsePhotometryFile, luminaireShape } from './js/photfile.js';
   import { initHelp } from './js/help.js';
   import { levelStatus, bilinear, cellStats } from './js/workplane.js';
@@ -955,13 +1036,13 @@
     formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
     addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors,
   } from './js/model.js';
-  import { groupPoints, groupCount } from './js/groups.js';
-  import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, swatchesHtml } from './js/groupui.js';
+  import { groupPoints, groupCount, fullCircle } from './js/groups.js';
+  import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, swatchesHtml, paletteHtml, PALETTE } from './js/groupui.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
   import { hotkeyAction, editorKey } from './js/hotkeys.js';
   import {
     planItems, pickAt, selectionOf, combine, boxSelection, selectedItems, isSelected, isEmpty, emptySelection,
-    clampDelta, moveSelection, deleteSelection, snapPoint, rotateSelection, replaceType, gizmoHit, constrain, selectionCentre, GIZMO,
+    clampDelta, moveSelection, deleteSelection, snapPoint, rotateSelection, liftSelection, replaceType, gizmoHit, constrain, selectionCentre, GIZMO,
   } from './js/planedit.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
@@ -990,9 +1071,21 @@
   document.documentElement.lang = getLang();
   applyI18n();
   document.title = t('app.title');
-  $('#langsw').innerHTML = LANG_IDS.map((id) => `<button type="button" data-lang="${id}" aria-pressed="${id === getLang()}" lang="${id}" title="${DICTS[id].meta.name}">${DICTS[id].meta.label}</button>`).join('');
+  // the language: a pill with its code and a list (21 Nov 2026)
+  const CHEV = '<svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  $('#langpill').innerHTML = `<span>${DICTS[getLang()].meta.label}</span>${CHEV}`;
+  $('#langsw').innerHTML = LANG_IDS.map((id) => `<button type="button" role="menuitemradio" data-lang="${id}" aria-checked="${id === getLang()}" lang="${id}"><b>${DICTS[id].meta.label}</b><span>${DICTS[id].meta.name}</span>${id === getLang() ? '<i>✓</i>' : ''}</button>`).join('');
+  $('#langpill').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = $('#langsw').hidden;
+    $('#langsw').hidden = !open; $('#langpill').setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.langw')) { $('#langsw').hidden = true; $('#langpill').setAttribute('aria-expanded', 'false'); }
+  });
   $('#langsw').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-lang]');
+    $('#langsw').hidden = true;
     if (!b || b.dataset.lang === getLang()) return;
     // the project is kept in this browser: save it now, then load the page in the other language
     flushSave();
@@ -1026,17 +1119,16 @@
         if (info.mode === '2d') {
           // the axes of the selected grid (stage 2.1; the plan editor draws every luminaire)
           const m = activeRoom()?.model, g = m?.groups.find((x) => x.id === selGroup);
-          const a = g?.kind === 'grid' ? g.area ?? { x0: 0, y0: 0, x1: room.L, y1: room.W } : null;
-          const xs = a ? Array.from({ length: g.nx }, (_, i) => a.x0 + (i + 0.5) * (a.x1 - a.x0) / g.nx) : [];
-          const ys = a ? Array.from({ length: g.ny }, (_, j) => a.y0 + (j + 0.5) * (a.y1 - a.y0) / g.ny) : [];
+          const gp = g?.kind === 'grid' ? groupPoints(g, { L: room.L, W: room.W }, sizeOf(m.types.find((ty) => ty.id === g.type))) : [];
+          const xs = gp.slice(0, g?.nx ?? 0).map((p) => p.x), ys = gp.filter((_, k) => k % (g?.nx || 1) === 0).map((p) => p.y);
           const css = getComputedStyle($('.viewcard'));
           drawRoomPlan(ctx, info.T, size, { L: room.L, W: room.W, xs, ys, ink: css.getPropertyValue('--ink2').trim() || '#2e2e2e' });
           if (planDraw) drawPlaneOnPlan(ctx, info.T, size, planDraw);
-          if (m) drawEditor(ctx, size, editorDraw(m, accent, info));
+          if (m) drawEditor(ctx, size, editorDraw(m, '#ffffff', info));
         } else {
           if (planDraw) drawPlane3D(ctx, info.project, size, planDraw);
           const m = activeRoom()?.model;
-          if (m && stage === 2) drawEditor(ctx, size, editorDraw(m, accent, info));
+          if (m && stage === 2) drawEditor(ctx, size, editorDraw(m, '#ffffff', info));
         }
       },
       onPlanPointer: (type, e) => planPointer(type, e),
@@ -1138,6 +1230,7 @@
   let result = null;    // last result that matches the current room: { ...CalcResult, rho }
   let shown = null;     // what is displayed: { E, L } per element (maintained values)
   let mapMode = 'total', falseOn = true, faceColors = false, stops = 0;
+  let falsePlan = false;     // false colours on the plan (21 Nov 2026: the plan is a wireframe without them)
   // the false colours button: for the faces, and on the plan with a plane shown for that plane
   // (the plane starts without them)
   let planeColors = false;
@@ -1188,6 +1281,12 @@
   const model = () => activeRoom().model;
   const typeIndex = (m, id) => Math.max(0, m.types.findIndex((ty) => ty.id === id));
   const nameOfType = (ty, k) => typeName(ty, k, fileOfType(ty));
+  /** "Name Article" of a luminaire (the list, the tooltip of the view; 21 Nov 2026). */
+  function lumLabel(ty) {
+    const tb = fileOfType(ty)?.table;
+    const s2 = tb ? [tb.name, tb.catalog].map((x) => String(x ?? '').trim()).filter(Boolean) : [];
+    return s2.length ? [...new Set(s2)].join(' ') : nameOfType(ty, typeIndex(model(), ty.id));
+  }
   /** The note under the fields: where the photometric centre is (group in focus, else the next group). */
   function showCentre(m) {
     const el = $('#hmnote'), g = !isEmpty(sel) ? m.groups.find((x) => x.id === selGroup) : null;
@@ -1224,14 +1323,16 @@
   }
   /** The active luminaire line, the placement buttons and "Suggest" (a grid in focus). */
   function renderLum(m, per = new Map()) {
-    renderKinds($('#kinds'), kind, drawing);
+    renderKinds($('#kinds'), kind, drawing, !m.types.length);
     const g = m.groups.find((x) => x.id === selGroup);
     $('#suggest').hidden = !(g?.kind === 'grid' && !isEmpty(sel));
   }
   /** The fields: of the group in focus, else of the next group to draw. */
   function loadGroupForm() {
     const m = model(), g = !isEmpty(sel) ? m.groups.find((x) => x.id === selGroup) : null;
-    if (g) gform.load({ group: g }, gctx(m, g));
+    const several = !isEmpty(sel) && multiItems(m);
+    if (several) { const mg = multiGroup(several); gform.load({ group: mg.group }, { ...gctx(m, null), at: 0, multi: true, blank: mg.blank }); }
+    else if (g) gform.load({ group: g }, gctx(m, g));
     else gform.load({ kind, draft: drafts[kind] }, gctx(m, null));
     renderLum(m, lastPer);
   }
@@ -1453,7 +1554,7 @@
    * neutral semi-transparent layer (false colours apply to the faces only).
    */
   function applyPlane() {
-    $('#falsecolors').setAttribute('aria-pressed', String(buttonOnPlane() ? planeColors : falseOn));
+    $('#falsecolors').setAttribute('aria-pressed', String(buttonOnPlane() ? planeColors : is2D ? falsePlan : falseOn));
     const pl = planeZ != null && result ? result.planes.find((q) => zKey(q.z) === zKey(planeZ)) : null;
     const f = pl?.field;
     if (!view) return;
@@ -1623,8 +1724,11 @@
   // fields of the selected group, or of the next group to draw
   const gform = initGroupForm($('#gform'), (o) => {
     if (o.draft) { drafts[kind] = o.draft; return; }
+    if (o.pick) { suggestGrid(); return; }
+    if (o.group?.id === MULTI) { applyMulti(o.group); return; }
     const g = o.group, m = model(), old = m.groups.find((x) => x.id === g.id);
     if (!old) return;
+    keepDraft(g);
     if (o.at != null) {
       selPoint = o.at;
       sel = { groups: new Set(), points: new Map([[g.id, new Set([selPoint])]]) };
@@ -1639,7 +1743,7 @@
   });
   // a file sets the photometry of the active luminaire and fills flux, colour temperature and power
   // from its lamp set
-  const photUI = initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('#lumdlg .lact2') }, (f) => {
+  const photUI = initPhotFile({ zone: $('#photfile'), card: $('#lumcard'), sets: $('#lampsets'), dropTarget: $('#photfile') }, (f) => {
     photFile = f;
     if (switching) return; // another room or luminaire is being loaded: its values come with it
     const ar = activeRoom();
@@ -1649,31 +1753,170 @@
     const g = model().groups.find((x) => x.id === selGroup);
     if (f && f.reason !== 'set' && g?.kind === 'grid' && g.type === selType) suggestGrid();
     renderLumList();
-  }, { restore: false, tail: () => {
-    const m = activeRoom()?.model;
-    return `<div class="swhost" id="tycolors" title="${t('lum.color').replace(/"/g, '&quot;')}">${m ? swatchesHtml(typeColorOf(m, typeIndex(m, selType)), freeColors(m, selType)) : ''}</div>`;
-  } });
+  }, { restore: false, tail: () => `<div class="swhost" id="tycolors">${colorsHtml()}</div>` });
 
-  // the colour of the active luminaire (21 Nov 2026: a type is told by its colour): the palette and
-  // a colour of one's own, under the name and the article of the card
-  function showColors() {
-    const host = $('#tycolors'), m = activeRoom()?.model;
-    if (host && m) host.innerHTML = swatchesHtml(typeColorOf(m, typeIndex(m, selType)), freeColors(m, selType));
+  // ---- the luminaires of the project: identity, colours, files (21 Nov 2026) ----
+  /** The same luminaire in every room: the same file and lamp set (a copy or no file: itself). */
+  const identOf = (ty) => (ty.file && !ty.copy ? `${fileKey(ty.file.name, ty.file.text)}#${ty.file.set ?? 0}` : `type:${ty.id}`);
+  /** Every luminaire of the project with its room and colour. */
+  const projectTypes = () => project.rooms.flatMap((r) => r.model.types.map((ty, k) => ({ ty, room: r, color: typeColorOf(r.model, k), ident: identOf(ty) })));
+  /** The colours of the other luminaires of the project. */
+  const usedColors = (ident) => new Set(projectTypes().filter((x) => x.ident !== ident).map((x) => x.color));
+  /** The colour of a new luminaire: the one it has in another room, else the first free one. */
+  function colorForNew(ident) {
+    const same = projectTypes().find((x) => x.ident === ident);
+    if (same) return same.color;
+    const used = usedColors(ident);
+    return PALETTE.find((c) => !used.has(c)) ?? PALETTE[projectTypes().length % PALETTE.length];
   }
-  function setColor(c) {
-    const m = model(), next = setTypeColor(m, selType, c);
-    if (next.types.every((ty, k) => ty.color === m.types[k].color)) return;
-    remember(m); activeRoom().model = next; autosave();
-    showColors(); report.invalidate('rooms'); renderLumList(); view?.refresh();
+  function colorsHtml() {
+    const m = activeRoom()?.model, k = m ? m.types.findIndex((ty) => ty.id === selType) : -1;
+    if (k < 0) return '';
+    return swatchesHtml(typeColorOf(m, k), usedColors(identOf(m.types[k])));
   }
-  $('#lumcard').addEventListener('click', (e) => { const b = e.target.closest('button[data-color]'); if (b) setColor(b.dataset.color); });
-  $('#lumcard').addEventListener('input', (e) => { if (e.target.type === 'color') { e.stopPropagation(); setColor(e.target.value); } });
-  $('#lumcard').addEventListener('change', (e) => { if (e.target.type === 'color') e.stopPropagation(); });
+  function showColors() { const h = $('#tycolors'); if (h) h.innerHTML = colorsHtml(); }
+  /** The colour of a luminaire, in every room where it is (the same file and lamp set). */
+  function setColorOf(id, c) {
+    const m = model(), ty = m.types.find((x) => x.id === id);
+    if (!ty || !/^#[0-9a-f]{6}$/i.test(c)) return;
+    const ident = identOf(ty);
+    remember(m);
+    for (const r of project.rooms) {
+      for (const t2 of r.model.types) if (identOf(t2) === ident) r.model = setTypeColor(r.model, t2.id, c);
+    }
+    autosave(); showColors(); report.invalidate('rooms'); renderLumList(); view?.refresh();
+  }
+  // the full choice of a colour: a popover with the palette and a colour of one's own
+  let colorFor = null; // { id, pop, anchor }
+  function openColors(id, pop, anchor) {
+    const m = model(), k = m.types.findIndex((x) => x.id === id);
+    if (k < 0) return;
+    const color = typeColorOf(m, k);
+    pop.innerHTML = paletteHtml(color, usedColors(identOf(m.types[k])));
+    const host = pop.offsetParent ?? pop.parentElement, a = anchor.getBoundingClientRect(), h = host.getBoundingClientRect();
+    pop.style.left = `${Math.max(0, a.left - h.left - 4)}px`; pop.style.top = `${a.bottom - h.top + 8}px`;
+    pop.hidden = false; colorFor = { id, pop, anchor };
+  }
+  function closeColors() { if (colorFor) { colorFor.pop.hidden = true; colorFor = null; } }
+  function colorPopEvents(pop) {
+    pop.addEventListener('click', (e) => { const b = e.target.closest('[data-color]'); if (b && colorFor) { setColorOf(colorFor.id, b.dataset.color); openColors(colorFor.id, pop, colorFor.anchor.isConnected ? colorFor.anchor : pop); } });
+    pop.addEventListener('input', (e) => {
+      e.stopPropagation();
+      if (!colorFor) return;
+      if (e.target.matches('.palpick')) setColorOf(colorFor.id, e.target.value);
+      if (e.target.matches('.palhex') && /^#[0-9a-f]{6}$/i.test(e.target.value.trim())) setColorOf(colorFor.id, e.target.value.trim().toLowerCase());
+    });
+    pop.addEventListener('change', (e) => e.stopPropagation());
+  }
+  colorPopEvents($('#colorpop')); colorPopEvents($('#lumcolorpop'));
+  document.addEventListener('pointerdown', (e) => { if (colorFor && !e.target.closest('.colpop, [data-more], .lrow .tsw')) closeColors(); });
+  $('#lumcard').addEventListener('click', (e) => {
+    const b = e.target.closest('#tycolors button');
+    if (!b) return;
+    e.stopPropagation();
+    if (b.dataset.more) { if (colorFor?.pop === $('#colorpop')) closeColors(); else openColors(selType, $('#colorpop'), b); return; }
+    closeColors(); setColorOf(selType, b.dataset.color);
+  });
+
+  /**
+   * Photometric files dropped or chosen (the field of an empty room, the card, the list): every
+   * file is a new luminaire of the room, the last one active; nothing is placed (21 Nov 2026).
+   */
+  async function addFiles(files) {
+    const list = [...files].filter(Boolean);
+    let last = null;
+    for (const file of list) {
+      if (!/\.(ies|ldt)$/i.test(file.name)) { toast(`${file.name}: ${t('phot.type')}`); continue; }
+      if (file.size > 5 * 1024 * 1024) { toast(`${file.name}: ${t('phot.size')}`); continue; }
+      const text = decodeBytes(await file.arrayBuffer());
+      let table;
+      try { table = parsePhotometryFile(text, file.name); } catch (err) { toast(`${file.name}: ${err.message}`); continue; }
+      const m = model();
+      if (!last) remember(m);
+      const phot = createPhotometry({ type: 'file', table }), v = setValues(table, phot.tableFlux, 0);
+      const r = addType(m);
+      let next = withTypeFile(r.model, r.id, { name: file.name, text, set: 0 });
+      next = applyTypeValues(next, r.id, { phot: 'file', flux: v.flux, cct: v.cct ?? DEFAULTS.cct, power: v.power ?? DEFAULTS.power });
+      next = setTypeColor(next, r.id, colorForNew(identOf(next.types.find((x) => x.id === r.id))));
+      activeRoom().model = next;
+      last = r.id;
+    }
+    if (!last) return;
+    autosave(); clearSelection(); showType(last); refresh(); renderLumList();
+  }
+  /** The file of the active luminaire replaced (the list). */
+  async function replaceFile(file) {
+    if (!file || !selType) return;
+    const text = decodeBytes(await file.arrayBuffer());
+    let table;
+    try { table = parsePhotometryFile(text, file.name); } catch (err) { toast(`${file.name}: ${err.message}`); return; }
+    const m = model(), phot = createPhotometry({ type: 'file', table }), v = setValues(table, phot.tableFlux, 0);
+    remember(m);
+    let next = withTypeFile(m, selType, { name: file.name, text, set: 0 });
+    next = applyTypeValues(next, selType, { phot: 'file', flux: v.flux, cct: v.cct ?? DEFAULTS.cct, power: v.power ?? DEFAULTS.power });
+    activeRoom().model = next;
+    autosave(); showType(selType); refresh(); renderLumList();
+  }
+  let fileMode = 'add';
+  const pickFiles = (mode) => { fileMode = mode; $('#lumfile').multiple = mode === 'add'; $('#lumfile').click(); };
+  $('#lumfile').addEventListener('change', (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    if (fileMode === 'file') replaceFile(files[0]); else addFiles(files);
+  });
+  // drop targets: the field of an empty room, the card, the list of the dialog
+  for (const [el, cls] of [[$('#lumempty'), 'drop'], [$('#lumcard'), 'drop'], [$('#lumdrop'), 'drop'], [$('#lumlist'), null]]) {
+    const target = cls ? el : $('#lumdrop');
+    el.addEventListener('dragover', (e) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); target.classList.add('drop'); } });
+    el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget)) target.classList.remove('drop'); });
+    el.addEventListener('drop', (e) => { if (!e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); target.classList.remove('drop'); addFiles(e.dataTransfer.files); });
+  }
+  $('#lumempty').addEventListener('click', () => pickFiles('add'));
+  $('#lumempty').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFiles('add'); } });
+
+  // a single luminaire placed by dragging the polar diagram of the card onto the plan or into 3D
+  let kssDrag = null; // { x, y, hm, in } while dragging
+  $('#lumcard').addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.pfpolar') || e.button !== 0 || !selType || stage !== 2) return;
+    e.preventDefault();
+    kssDrag = { in: false };
+    document.body.style.cursor = 'grabbing';
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!kssDrag || !view) return;
+    const m = model(), hm = Math.min(m.room.H, drafts.single.hm ?? m.room.H);
+    const r = view.roomAt(e.clientX, e.clientY, hm);
+    const inside = !!r && r.x >= 0 && r.y >= 0 && r.x <= m.room.shape.L && r.y <= m.room.shape.W;
+    if (inside) { const p = planGrid(m).snap && r.mode === '2d' ? snapped(r.x, r.y, r.k) : r; Object.assign(kssDrag, { x: p.x, y: p.y, hm, in: true }); }
+    else kssDrag.in = false;
+    view.refresh();
+  });
+  window.addEventListener('pointerup', () => {
+    if (!kssDrag) return;
+    const k = kssDrag; kssDrag = null; snapMark = null; document.body.style.cursor = '';
+    if (k.in) {
+      const id = addDrawn('single', { x: k.x, y: k.y });
+      const g = model().groups.find((x) => x.id === id);
+      sel = { groups: new Set(), points: new Map([[id, new Set([0])]]) };
+      selGroup = id; selPoint = 0;
+      if (g) keepDraft(g, 0);
+      loadGroupForm(); refresh();
+    } else view?.refresh();
+  });
 
   /** Makes a luminaire type the active one: its file and values in the form. */
   function showType(id) {
     const m = model();
     const ty = m.types.find((x) => x.id === id) ?? m.types[0];
+    // a room without luminaires (21 Nov 2026): only the field for a photometric file
+    $('#lumempty').hidden = !!ty; $('#lumedit').hidden = !ty;
+    if (!ty) {
+      selType = null;
+      switching = true;
+      try { photUI.clear({ reason: 'type' }); photFile = null; form.set(roomValues(m), { exact: true }); } finally { switching = false; }
+      current = { ...form.values(), ...typeForm.values() };
+      renderLumList();
+      return;
+    }
     selType = ty.id;
     switching = true;
     try {
@@ -1715,10 +1958,26 @@
   // the buttons of the placement kinds: a press starts drawing that kind on the plan
   $('#kinds').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-kind]');
-    if (!b) return;
+    if (!b || b.disabled) return;
+    if (b.dataset.kind === 'auto') { autoPlace(); return; }
     kind = b.dataset.kind;
     startDrawing();
   });
+  /**
+   * "Automatically" (21 Nov 2026): a grid of the active luminaire over the whole room, its count by
+   * the utilisation factor method as in version 1; then an ordinary grid, selected.
+   */
+  function autoPlace() {
+    const m = model();
+    if (!selType) return;
+    stopDrawing();
+    remember(m);
+    const r = addGroup(m, 'grid', selType, null, { ...draftValuesOf('grid'), nx: 1, ny: 1 });
+    activeRoom().model = r.model;
+    selectGroup(r.id);
+    suggestGrid();
+    autosave(); refresh();
+  }
   function startDrawing() {
     drawing = true; pend = null; session = null;
     setTool('select', { keepDrawing: true });
@@ -1731,55 +1990,125 @@
     renderLum(model(), lastPer); showHint(); view?.refresh();
   }
 
-  // the luminaires of the project (dialog "List")
+  // the luminaires (dialog "List", after DIALux, 21 Nov 2026): of the room or of the whole project
   const lumDlg = $('#lumdlg');
+  let listMode = 'room';
+  /** The polar diagram of a row: rings and the γ lines every 30°, the curve C0–C180. */
+  function miniPolar(phot) {
+    const R = 17, { c0, spokes, rings } = lidcCurves(phot, R);
+    let sp = '';
+    for (let g2 = 0; g2 < 360; g2 += 30) sp += `M0 0L${(R * Math.sin(g2 * Math.PI / 180)).toFixed(1)} ${(R * Math.cos(g2 * Math.PI / 180)).toFixed(1)}`;
+    return `<svg class="mini" width="38" height="38" viewBox="-19 -19 38 38" aria-hidden="true"><g fill="none" stroke="var(--line)" stroke-width="0.6">${rings.map((r) => `<circle r="${r.toFixed(1)}"/>`).join('')}<path d="${sp}"/></g><path d="${c0}" fill="none" stroke="#7C54FE" stroke-width="1.1"/></svg>`;
+  }
+  /** Source, flux, colour temperature, power of a luminaire. */
+  function lumParams(ty) {
+    const f = fileOfType(ty), st = f ? f.table.lampSets?.[ty.file?.set ?? 0] : null;
+    const src = f ? (st?.type || f.table.lampSets?.[0]?.type || '').trim() : t('lum.cosine');
+    return [src, `${formatNumber(ty.flux, 0)} ${t('unit.lm')}`, `${ty.cct} ${t('unit.K')}`, `${formatNumber(ty.power, 3)} ${t('unit.W')}`].filter(Boolean).join(' · ');
+  }
   function renderLumList() {
     if (!lumDlg.open || !activeRoom()) return;
-    const m = model(), k = typeIndex(m, selType), ty = m.types[k];
-    renderLumListHost($('#lumlist'), m, { nameOf: nameOfType, fileOf: fileOfType, active: selType, canReplace: !isEmpty(sel) });
-    $('#lumacthd').innerHTML = `${typeMark(typeColorOf(m, k))}<b>${esc(nameOfType(ty, k))}</b>`;
+    const m = model();
+    let rows;
+    if (listMode === 'room') {
+      const counts = new Map(m.types.map((ty) => [ty.id, 0]));
+      for (const g of m.groups) counts.set(g.type, (counts.get(g.type) ?? 0) + groupCount(g));
+      rows = m.types.map((ty, k) => ({ id: ty.id, ty, color: typeColorOf(m, k), count: counts.get(ty.id), on: ty.id === selType }));
+    } else {
+      const by = new Map();
+      for (const x of projectTypes()) {
+        const n = x.room.model.groups.filter((g) => g.type === x.ty.id).reduce((a, g) => a + groupCount(g), 0);
+        const r = by.get(x.ident) ?? { id: x.ident, ty: x.ty, color: x.color, count: 0, room: x.room };
+        r.count += n; if (x.room === activeRoom()) { r.ty = x.ty; r.room = x.room; }
+        by.set(x.ident, r);
+      }
+      const act = m.types.find((ty) => ty.id === selType);
+      rows = [...by.values()].map((r) => ({ ...r, on: !!act && identOf(act) === r.id }));
+    }
+    const ph = (ty) => fileOfType(ty)?.phot ?? createPhotometry({ type: 'cosine', flux: 1000 });
+    $('#lumlist').innerHTML = rows.length ? rows.map((r) => `<div class="lrow${r.on ? ' on' : ''}" data-row="${esc(r.id)}">
+        <button type="button" class="tsw" style="--ty:${r.color}" data-col="${esc(r.id)}" aria-label="${esc(t('lum.color'))}"></button>${miniPolar(ph(r.ty))}
+        <div class="lnm"><b>${esc(lumLabel(r.ty))}</b><small>${esc(lumParams(r.ty))}</small></div><span class="lcnt">${r.count}</span></div>`).join('')
+      : `<div class="lnone">${esc(t('lum.none'))}</div>`;
+    const act = m.types.find((ty) => ty.id === selType);
+    const room = listMode === 'room';
+    for (const b of lumDlg.querySelectorAll('.lbar [data-act]')) {
+      const a = b.dataset.act;
+      b.disabled = a === 'add' ? false : !act || (!room && a !== 'add') || (a === 'replace' && isEmpty(sel)) || (a === 'del' && m.groups.some((g) => g.type === selType));
+    }
   }
   $('#lumlistbtn').addEventListener('click', () => { lumDlg.showModal(); renderLumList(); });
-  $('#lumclose').addEventListener('click', () => lumDlg.close());
-  lumDlg.addEventListener('click', (e) => { if (e.target === lumDlg) lumDlg.close(); });
-  let named = false; // the name being typed is one step of the undo history
-  $('#lumlist').addEventListener('focusin', (e) => { if (e.target.matches('.lname')) named = false; });
-  $('#lumlist').addEventListener('input', (e) => {
-    const el = e.target.closest('.lname');
-    if (!el) return;
-    if (!named) { remember(model()); named = true; }
-    activeRoom().model = renameType(model(), el.dataset.name, el.value);
-    renderLum(model(), lastPer); report.invalidate('rooms'); autosave(); view?.refresh();
+  $('#lumclose').addEventListener('click', () => { closeColors(); lumDlg.close(); });
+  lumDlg.addEventListener('click', (e) => { if (e.target === lumDlg) { closeColors(); lumDlg.close(); } });
+  $('#lummode').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-m]');
+    if (!b) return;
+    listMode = b.dataset.m;
+    for (const x of $('#lummode').querySelectorAll('button')) x.classList.toggle('on', x === b);
+    closeColors(); renderLumList();
   });
   $('#lumlist').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    const row = e.target.closest('tr[data-type]');
-    // a click on a row (not on its name or buttons) makes that luminaire the active one
-    if (!b && row && !e.target.closest('input') && row.dataset.type !== selType) {
-      clearSelection(); showType(row.dataset.type); loadGroupForm(); refresh(); renderLumList(); return;
+    const c = e.target.closest('[data-col]');
+    const row = e.target.closest('[data-row]');
+    if (!row) return;
+    // the luminaire of the row in this room (project: added to the room when it has none)
+    let id = listMode === 'room' ? row.dataset.row : model().types.find((ty) => identOf(ty) === row.dataset.row)?.id;
+    if (!id && listMode === 'proj') {
+      const src = projectTypes().find((x) => x.ident === row.dataset.row);
+      if (!src) return;
+      const m = model(); remember(m);
+      const r = addType(m), { id: _, ...rest } = structuredClone(src.ty);
+      activeRoom().model = { ...r.model, types: r.model.types.map((ty) => (ty.id === r.id ? { ...rest, id: r.id, color: src.color } : ty)) };
+      id = r.id; autosave();
     }
+    if (c) { if (colorFor?.id === id && colorFor.pop === $('#lumcolorpop')) closeColors(); else openColors(id, $('#lumcolorpop'), c); return; }
+    if (id !== selType) { clearSelection(); showType(id); refresh(); }
+    renderLumList();
+  });
+  lumDlg.querySelector('.lbar').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
     if (!b || b.disabled) return;
-    const m = model();
-    if (b.dataset.replace) {
-      const next = replaceType(m, sel, b.dataset.replace);
-      if (next !== m) { remember(m); activeRoom().model = next.model ?? next; sel = next.sel ?? sel; autosave(); showType(b.dataset.replace); focusGroup(firstOf(sel)?.group ?? null, firstOf(sel)?.index ?? 0); refresh(); }
-    } else if (b.dataset.del) {
-      const next = removeType(m, b.dataset.del);
+    const m = model(), a = b.dataset.act;
+    if (a === 'add') { pickFiles('add'); return; }
+    if (a === 'file') { pickFiles('file'); return; }
+    if (a === 'copy') {
+      const r = duplicateType(m, selType);
+      if (!r) return;
+      remember(m);
+      // a copy is another luminaire (another lamp set to choose): its own colour
+      const used = usedColors('none');
+      const color = PALETTE.find((c) => !used.has(c)) ?? r.model.types.find((ty) => ty.id === r.id).color;
+      activeRoom().model = setTypeColor({ ...r.model, types: r.model.types.map((ty) => (ty.id === r.id ? { ...ty, copy: true } : ty)) }, r.id, color);
+      autosave(); showType(r.id); refresh();
+    } else if (a === 'replace') {
+      const next = replaceType(m, sel, selType);
+      if (next !== m) { remember(m); activeRoom().model = next.model ?? next; sel = next.sel ?? sel; autosave(); loadGroupForm(); refresh(); }
+    } else if (a === 'del') {
+      const next = removeType(m, selType);
       if (!next) return;
       remember(m); activeRoom().model = next;
-      if (selType === b.dataset.del) showType(next.types[0].id);
-      autosave(); refresh();
-    } else if (b.dataset.dup) {
-      const r = duplicateType(m, b.dataset.dup);
-      if (r) { remember(m); activeRoom().model = r.model; showType(r.id); autosave(); refresh(); }
-    } else if (b.dataset.addtype) {
-      remember(m); const r = addType(m); activeRoom().model = r.model; clearSelection(); showType(r.id); loadGroupForm(); autosave(); refresh();
+      autosave(); showType(next.types[0]?.id); refresh();
     }
     renderLumList();
   });
 
   // ---- luminaire editor after 3ds Max: Q select, W select and move, E select and rotate; gizmos ----
   let hoverHandle = null;   // the gizmo handle under the pointer
+  let hoverItem = null;     // "group:index" of the luminaire under the pointer (drawn thicker)
+  let tipTimer = null;
+  // the cursor of the rotate tool: a turning arrow (CSS has none)
+  const ROTATE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 11a6 6 0 1 1-1.8-4.3" stroke="#fff" stroke-width="4"/><path d="M15.8 3.6v3.4h-3.4" stroke="#fff" stroke-width="4"/><path d="M17 11a6 6 0 1 1-1.8-4.3" stroke="#111" stroke-width="1.6"/><path d="M15.8 3.6v3.4h-3.4" stroke="#111" stroke-width="1.6"/></g></svg>')}") 11 11, pointer`;
+  /** The luminaire under the pointer: drawn thicker; after 0.6 s its name and article (21 Nov 2026). */
+  function hoverOn(it, e) {
+    const key = it ? `${it.group}:${it.index}` : null, tip = $('#ltip');
+    if (key === hoverItem) { if (key && !tip.hidden) placeTip(e); return; }
+    hoverItem = key; clearTimeout(tipTimer); tip.hidden = true;
+    view?.refresh();
+    if (!it) return;
+    const ty = model().types.find((x) => x.id === it.type);
+    tipTimer = setTimeout(() => { if (hoverItem !== key || !ty) return; tip.textContent = lumLabel(ty); tip.hidden = false; placeTip(e); }, 600);
+  }
+  function placeTip(e) { if (!e) return; const t2 = $('#ltip'); t2.style.left = `${e.px + 14}px`; t2.style.top = `${e.py + 18}px`; }
   function setTool(t, { keepDrawing = false } = {}) {
     tool = t; drag = null;
     if (!keepDrawing && drawing) { drawing = false; pend = null; session = null; }
@@ -1827,19 +2156,20 @@
     return selectionCentre(selectedItems(planItems(m, sizeOf), sel))?.z ?? m.room.H;
   }
   /** The gizmo of the selection in view px for the projection P (room → px), or null. */
-  function gizmoGeom(m, P) {
-    if (drawing || tool === 'select' || isEmpty(sel)) return null;
+  function gizmoGeom(m, P, mode) {
+    if (drawing || isEmpty(sel)) return null;
     const c = selectionCentre(selectedItems(planItems(m, sizeOf), sel));
     const o = c && P(c.x, c.y, c.z);
     if (!o) return null;
-    const along = (dx, dy, px) => {          // the room direction (dx, dy) drawn px long on the screen
-      const q = P(c.x + dx, c.y + dy, c.z);
+    const towards = (q, px) => {             // the screen direction o → q drawn px long
       if (!q) return null;
       const l = Math.hypot(q[0] - o[0], q[1] - o[1]);
       return l > 1e-9 ? [o[0] + (q[0] - o[0]) / l * px, o[1] + (q[1] - o[1]) / l * px] : null;
     };
-    const x = along(1, 0, GIZMO.arrow), y = along(0, 1, GIZMO.arrow);
+    const x = towards(P(c.x + 1, c.y, c.z), GIZMO.arrow), y = towards(P(c.x, c.y + 1, c.z), GIZMO.arrow);
     if (!x || !y) return null;
+    // Z only in 3D: the mounting height (decided on 21 Nov 2026)
+    const z = mode === '3d' ? towards(P(c.x, c.y, c.z + 1), GIZMO.arrow) : null;
     let ring = null;
     if (tool === 'rotate') {
       const sx = P(c.x + 1, c.y, c.z), sy = P(c.x, c.y + 1, c.z);
@@ -1847,7 +2177,9 @@
       const r = GIZMO.ring / ppm;
       ring = Array.from({ length: 72 }, (_, k) => P(c.x + r * Math.cos(k * Math.PI / 36), c.y + r * Math.sin(k * Math.PI / 36), c.z)).filter(Boolean);
     }
-    return { tool, o, x, y, ring, c };
+    // the metres of height per px along the Z arrow (its drag)
+    const zp = z && P(c.x, c.y, c.z + 1);
+    return { tool, o, x, y, z, ring, c, zv: zp ? [zp[0] - o[0], zp[1] - o[1]] : null };
   }
   /** The luminaire nearest to the pointer in 3D (its top centre within 12 px). */
   function pickScreen(items, e) {
@@ -1882,7 +2214,14 @@
     const guides = [];
     for (const g of m.groups) {
       if (!sel.groups.has(g.id)) continue;
-      if (g.kind === 'circle') guides.push({ kind: 'circle', cx: g.cx, cy: g.cy, r: g.r, z: g.hm });
+      if (g.kind === 'circle') {
+        if (fullCircle(g)) guides.push({ kind: 'circle', cx: g.cx, cy: g.cy, r: g.r, z: g.hm });
+        else {
+          const a0 = g.a0 * Math.PI / 180, a1 = g.a1 * Math.PI / 180, n = Math.max(8, Math.ceil((a1 - a0) / 0.1));
+          const pt = (k) => [g.cx + g.r * Math.cos(a0 + (a1 - a0) * k / n), g.cy + g.r * Math.sin(a0 + (a1 - a0) * k / n)];
+          guides.push({ kind: 'line', z: g.hm, segments: Array.from({ length: n }, (_, k) => [pt(k), pt(k + 1)]) });
+        }
+      }
       else if (g.kind === 'line') guides.push({ kind: 'line', segments: [[[g.x0, g.y0], [g.x1, g.y1]]], z: g.hm });
       else if (g.kind === 'grid' && g.area) { const a = g.area; guides.push({ kind: 'line', z: g.hm, segments: [[[a.x0, a.y0], [a.x1, a.y0]], [[a.x1, a.y0], [a.x1, a.y1]], [[a.x1, a.y1], [a.x0, a.y1]], [[a.x0, a.y1], [a.x0, a.y0]]] }); }
     }
@@ -1891,14 +2230,45 @@
       if (pend.kind === 'line') guides.push({ kind: 'line', segments: [[[pend.x0, pend.y0], [pend.x, pend.y]]] });
       if (pend.kind === 'circle') guides.push({ kind: 'circle', cx: pend.x0, cy: pend.y0, r: Math.hypot(pend.x - pend.x0, pend.y - pend.y0) });
     }
-    const gz = gizmoGeom(m, P);
+    const gz = gizmoGeom(m, P, info.mode);
     return {
       mode: info.mode, P, k: info.mode === '2d' ? info.T.k : 0.01,
       items: planItems(m, sizeOf), color: (ty) => typeColorOf(m, kOf.get(ty) ?? 0),
-      selected: (it) => isSelected(sel, it.group, it.index, it.kind), grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
+      selected: (it) => isSelected(sel, it.group, it.index, it.kind), hovered: (it) => hoverItem === `${it.group}:${it.index}`, grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
       guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad, snap: snapMark,
       gizmo: gz && { ...gz, active: drag?.axis ?? null, hover: hoverHandle, angle: drag?.mode === 'rotate' ? drag.ang : null },
+      ghost: kssDrag?.in ? (() => { const ty = m.types.find((x) => x.id === selType), z2 = sizeOf(ty); return { x: kssDrag.x, y: kssDrag.y, hm: kssDrag.hm, psi: drafts.single.psi ?? 0, a: z2?.a ?? 0, b: z2?.b ?? 0, h: z2?.h ?? 0, round: !!z2?.round, color: typeColorOf(m, typeIndex(m, selType)) }; })() : null,
     };
+  }
+  /** The next group of a kind takes the values of the last one drawn or edited (21 Nov 2026). */
+  function keepDraft(g, at = selPoint) {
+    if (g.kind === 'single') { const p = g.points[Math.min(at, g.points.length - 1)]; if (p) drafts.single = { hm: p.hm, psi: p.psi }; return; }
+    const keys = { grid: ['nx', 'ny', 'hm', 'psi', 'mx', 'my'], line: ['n', 'hm', 'hm1', 'psi', 'm'], circle: ['n', 'hm', 'psi'] }[g.kind] ?? [];
+    drafts[g.kind] = Object.fromEntries(keys.filter((k) => g[k] !== undefined).map((k) => [k, g[k]]));
+  }
+  // several single luminaires selected: one set of fields, the common values (21 Nov 2026)
+  const MULTI = '__several';
+  function multiItems(m) {
+    const its = selectedItems(planItems(m, sizeOf), sel);
+    return its.length > 1 && its.every((it) => it.kind === 'single') ? its : null;
+  }
+  function multiGroup(its) {
+    const same = (k) => its.every((it) => Math.abs(it[k] - its[0][k]) < 1e-9);
+    const p = Object.fromEntries(['x', 'y', 'hm', 'psi'].map((k) => [k, same(k) ? its[0][k] : NaN]));
+    return { group: { id: MULTI, type: its[0].type, kind: 'single', points: [p] }, blank: ['x', 'y', 'hm', 'psi'].filter((k) => !same(k)) };
+  }
+  function applyMulti(g) {
+    const m = model(), its = multiItems(m);
+    if (!its) return;
+    const before = multiGroup(its).group.points[0], now = g.points[0];
+    const keys = ['x', 'y', 'hm', 'psi'].filter((k) => Number.isFinite(now[k]) && !(Math.abs(now[k] - before[k]) < 1e-12));
+    if (!keys.length) return;
+    const pick = new Map();
+    for (const it of its) { if (!pick.has(it.group)) pick.set(it.group, new Set()); pick.get(it.group).add(it.index); }
+    remember(m);
+    activeRoom().model = { ...m, groups: m.groups.map((x) => (pick.has(x.id) ? { ...x, points: x.points.map((q, k) => (pick.get(x.id).has(k) ? { ...q, ...Object.fromEntries(keys.map((key) => [key, now[key]])) } : q)) } : x)) };
+    if (keys.includes('hm') || keys.includes('psi')) drafts.single = { hm: now.hm ?? drafts.single.hm, psi: now.psi ?? drafts.single.psi };
+    autosave(); refresh();
   }
   /** A group drawn: added with the type of the active luminaire and the fields of the draft. */
   function addDrawn(k, geo) {
@@ -1952,13 +2322,17 @@
     if (drawing) return e.mode === '2d' ? drawPointer(type, e) : false;
     const m = model(), tol = 4 * e.k, items = itemsNow();
     const pick = () => (e.mode === '2d' ? pickAt(items, e.x, e.y, tol) : pickScreen(items, e));
-    const gz = gizmoGeom(m, e.project);
+    const gz = gizmoGeom(m, e.project, e.mode);
     if (type === 'hover') {
       const h = gz ? gizmoHit(tool, [e.px, e.py], gz) : null;
       if (h !== hoverHandle) { hoverHandle = h; view?.refresh(); }
-      if (h) return tool === 'rotate' ? 'grab' : 'move';
-      const it = pick();
-      return it ? (tool === 'move' && isSelected(sel, it.group, it.index, it.kind) ? 'move' : 'pointer') : '';
+      const it = h ? null : pick();
+      hoverOn(it, e);
+      // cursors (21 Nov 2026): an arrow; over a luminaire a crosshair; over a selected one and over
+      // the gizmo the cursor of the tool
+      if (h) return tool === 'rotate' ? ROTATE_CURSOR : 'move';
+      if (!it) return '';
+      return isSelected(sel, it.group, it.index, it.kind) && tool !== 'select' ? (tool === 'rotate' ? ROTATE_CURSOR : 'move') : 'crosshair';
     }
     if (type === 'click') { selectAt(pick(), e); return undefined; }   // 3D: a click without a drag
     if (type === 'down') {
@@ -1966,6 +2340,11 @@
       const startMove = (axis, anchor) => {
         drag = { mode: 'move', axis, x0: e.x, y0: e.y, anchor, base: model(), items: selectedItems(itemsNow(), sel), d: [0, 0] };
       };
+      hoverOn(null);
+      if (h === 'z' && tool === 'move') {
+        drag = { mode: 'lift', axis: 'z', px0: e.px, py0: e.py, zv: gz.zv, base: m, dz: 0 };
+        view?.refresh(); return true;
+      }
       if (h && tool === 'move') { startMove(h, { x: gz.c.x, y: gz.c.y }); view?.refresh(); return true; }
       if (h && tool === 'rotate') {
         drag = { mode: 'rotate', axis: 'z', cx: gz.c.x, cy: gz.c.y, a0: Math.atan2(e.y - gz.c.y, e.x - gz.c.x), base: m, ang: 0 };
@@ -1997,6 +2376,12 @@
         }
         const d = clampDelta(drag.items, dx, dy, m.room.shape.L, m.room.shape.W);
         if (d[0] !== drag.d[0] || d[1] !== drag.d[1]) { drag.d = d; activeRoom().model = moveSelection(drag.base, sel, d[0], d[1]); previewLums(); }
+      } else if (drag.mode === 'lift') {
+        // along the Z arrow on the screen: metres of the mounting height, not above the ceiling
+        const v = drag.zv, l2 = v[0] * v[0] + v[1] * v[1];
+        let dz = l2 > 0 ? ((e.px - drag.px0) * v[0] + (e.py - drag.py0) * v[1]) / l2 : 0;
+        if (planGrid(m).snap) dz = Math.round(dz / 0.05) * 0.05;
+        if (dz !== drag.dz) { drag.dz = dz; activeRoom().model = liftSelection(drag.base, sel, dz, sizeOf); previewLums(); }
       } else if (drag.mode === 'rotate') {
         if (!Number.isFinite(e.x)) return undefined;
         let a = (Math.atan2(e.y - drag.cy, e.x - drag.cx) - drag.a0) * 180 / Math.PI;
@@ -2008,7 +2393,7 @@
     }
     // released or cancelled
     const dr = drag; drag = null; snapMark = null;
-    if (dr.mode === 'move' || dr.mode === 'rotate') {
+    if (dr.mode === 'move' || dr.mode === 'rotate' || dr.mode === 'lift') {
       if (type === 'cancel') { activeRoom().model = dr.base; previewLums(); return undefined; }
       if (model() !== dr.base) { remember(dr.base); autosave(); loadGroupForm(); refresh(); } else view?.refresh();
       return undefined;
@@ -2047,6 +2432,7 @@
     h.past.push(prev);
     if (h.past.length > 100) h.past.shift();
     h.future.length = 0;
+    histButtons();
   }
   function restore(m) {
     activeRoom().model = m;
@@ -2060,11 +2446,18 @@
     sel = pruned;
     if (!m.groups.some((g) => g.id === selGroup)) { selGroup = null; selPoint = 0; }
     if (session && !m.groups.some((g) => g.id === session)) session = null;
-    showType(m.types.some((ty) => ty.id === selType) ? selType : m.types[0].id);
+    showType(m.types.some((ty) => ty.id === selType) ? selType : m.types[0]?.id);
     loadGroupForm(); showPlanGrid(); refresh();
   }
-  function undo() { const h = hist(); if (!h.past.length) return; h.future.push(model()); restore(h.past.pop()); }
-  function redo() { const h = hist(); if (!h.future.length) return; h.past.push(model()); restore(h.future.pop()); }
+  function undo() { const h = hist(); if (!h.past.length) return; h.future.push(model()); restore(h.past.pop()); histButtons(); }
+  function redo() { const h = hist(); if (!h.future.length) return; h.past.push(model()); restore(h.future.pop()); histButtons(); }
+  /** "Undo" and "Redo" of the header: pale when there is nothing to undo or redo. */
+  function histButtons() {
+    const h = activeRoom() ? hist() : { past: [], future: [] };
+    $('#hundo').disabled = !(stage === 2 && h.past.length); $('#hredo').disabled = !(stage === 2 && h.future.length);
+  }
+  $('#hundo').addEventListener('click', () => undo());
+  $('#hredo').addEventListener('click', () => redo());
   document.addEventListener('keydown', (e) => {
     if (stage !== 2 || normDlg.isOpen() || lumDlg.open || !activeRoom()) return;
     const inField = !!e.target.closest?.('input, textarea, select, [contenteditable="true"]');
@@ -2131,6 +2524,7 @@
     for (const p of ['#gridpop', '#snappop']) $(p).hidden = true;
     for (const b of ['#gridset', '#snapset']) $(b).setAttribute('aria-expanded', 'false');
   });
+  $('#view').addEventListener('pointerleave', () => hoverOn(null));
   $('#suggest').addEventListener('click', suggestGrid);
   $('#planes').addEventListener('click', (e) => {
     const b = e.target.closest('.pplan');
@@ -2259,6 +2653,7 @@
 
   /** Loads a room into the form: its first type, its first group, the view. */
   function loadRoom(r) {
+    queueMicrotask(histButtons);
     switching = true;
     try {
       $('#roomname').value = r.name;
@@ -2269,7 +2664,7 @@
     } finally { switching = false; }
     selGroup = null; selPoint = 0;
     sel = emptySelection(); drag = null; drawing = false; pend = null; session = null;
-    showType(r.model.groups[0]?.type ?? r.model.types[0].id);
+    showType(r.model.groups[0]?.type ?? r.model.types[0]?.id);
     loadGroupForm();
     showPlanGrid();
     refresh();
@@ -2351,6 +2746,7 @@
 
   /** Shows a stage: 1 — project, 2 — rooms, 3 — results (the report). */
   function setStage(n) {
+    queueMicrotask(histButtons);
     // the documentation needs the project information; the calculation does not
     if (n === 3 && Object.keys(infoErrors(project.info)).length) {
       infoForce = true;
@@ -2375,6 +2771,7 @@
   $('#go3').addEventListener('click', () => setStage(3));
   $('#newroom').addEventListener('click', addRoom);
 
+  let savedText = null; // the project as last saved or opened (unsaved changes: another text)
   /** Downloads the project file (rooms with their photometric files; no results). */
   function saveProject() {
     const blob = new Blob([serializeProject(project)], { type: 'application/json' });
@@ -2383,6 +2780,7 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     toast(t('app.saved', { name: a.download }));
+    savedText = serializeProject(project);
   }
   let toastTimer = 0;
   /** A short message at the bottom of the page. */
@@ -2394,6 +2792,7 @@
   }
   function useProject(p, stageAfter) {
     project = p;
+    savedText = serializeProject(p);
     infoTouched.clear(); infoForce = false; $('#infomsg').hidden = true;
     roomResults.clear();
     fillInfo();
@@ -2403,6 +2802,12 @@
     setStage(stageAfter);
   }
   $('#savebtn').addEventListener('click', saveProject);
+  /** Opens a project file from the header (any stage); unsaved changes: save them first? */
+  function openFromHeader() {
+    if (savedText !== serializeProject(project) && confirm(t('app.saveFirst'))) saveProject();
+    $('#openfile').click();
+  }
+  $('#hopen').addEventListener('click', openFromHeader);
   $('#openbtn').addEventListener('click', () => $('#openfile').click());
   $('#openfile').addEventListener('change', async (e) => {
     const f = e.target.files[0]; e.target.value = '';
@@ -2424,6 +2829,7 @@
   function startProject() {
     const saved = restoreProject();
     project = saved ?? createProject();
+    savedText = serializeProject(project); // what this browser keeps counts as saved
     renderInfo();
     loadRoom(activeRoom());
     renderRoomNav();
@@ -2470,6 +2876,7 @@
     const a = hotkeyAction(e);
     if (!a) return;
     if (a === 'save') { e.preventDefault(); saveProject(); return; }
+    if (a === 'open') { e.preventDefault(); openFromHeader(); return; }
     if (a === 'help') { e.preventDefault(); contextHelp(); return; }
     if (stage !== 2 || normDlg.isOpen()) return; // the view keys belong to the calculation stage
     e.preventDefault();
@@ -2552,14 +2959,15 @@
   // shows placeholder colors by face number.
   function applyColorMode() {
     // on the plan: no luminance map, a plain fill unless false colours are on
-    const mode = faceColors ? 'faces' : falseOn ? 'false' : is2D ? 'plain' : 'real';
+    const mode = faceColors ? 'faces' : is2D ? (falsePlan ? 'false' : 'wire') : falseOn ? 'false' : 'real';
     view?.setColorMode(mode);
     applyPlane(); // on the plan the button colours the plane
     view?.refresh();
   }
   $('#falsecolors').addEventListener('click', () => {
     if (buttonOnPlane()) { planeColors = !planeColors; applyPlane(); return; }
-    falseOn = !falseOn; applyColorMode();
+    if (is2D) falsePlan = !falsePlan; else falseOn = !falseOn;
+    applyColorMode();
   });
   toggle($('#plain'), (on) => { faceColors = on; applyColorMode(); });
   $('#mapmode').addEventListener('click', (e) => {

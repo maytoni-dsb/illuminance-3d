@@ -522,6 +522,8 @@ export function createView(container, opts = {}) {
   /** False colors when values are set and that mode is on; neutral grey or placeholder colors otherwise. */
   function applyMaterials() {
     for (const p of faceParts) {
+      // 'wire': the room as its outline only (the plan without false colours, 21 Nov 2026)
+      p.mesh.visible = colorMode !== 'wire';
       p.mesh.material = colorMode === 'faces' ? p.mesh.userData.plainMaterial
         : colorMode === 'plain' ? plainMaterial
         : colorMode === 'false' && values ? fcMaterial
@@ -847,6 +849,8 @@ export function createView(container, opts = {}) {
     } else if (pointers.size === 1) {
       // on the plan the left button does nothing (touch: one finger pans)
       dragMode = e.button === 0 ? (plan ? (e.pointerType === 'touch' ? 'pan' : null) : 'rotate') : 'pan';
+      // the hand while the view is panned with a mouse button (21 Nov 2026)
+      if (dragMode === 'pan' && e.pointerType === 'mouse') el.style.cursor = 'grabbing';
     }
     if (e.button === 1) { // double click of the wheel: fit the current view
       const t = performance.now();
@@ -892,7 +896,7 @@ export function createView(container, opts = {}) {
     click = null;
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
-    if (pointers.size === 0) dragMode = null;
+    if (pointers.size === 0) { if (dragMode === 'pan') el.style.cursor = ''; dragMode = null; }
   };
   el.addEventListener('pointerup', release);
   el.addEventListener('pointercancel', release);
@@ -1096,6 +1100,14 @@ export function createView(container, opts = {}) {
     isPlan: () => !!plan,
     /** Room point → view CSS px in the 3D view (null behind the camera); view px → room (x, y) at height z. */
     project,
+    /** The room point (x, y) under a page point (clientX, clientY): on the plan, or in 3D at height z; null outside. */
+    roomAt(cx, cy, z = 0) {
+      const r = el.getBoundingClientRect(), px = cx - r.left, py = cy - r.top;
+      if (px < 0 || py < 0 || px > r.width || py > r.height || !room) return null;
+      if (plan) { const T = planTransform(); return { x: T.toRoom(px, py)[0], y: T.toRoom(px, py)[1], px, py, k: T.k, mode: '2d' }; }
+      const p = unprojectZ(px, py, z), q = unprojectZ(px + 1, py, z);
+      return p ? { x: p[0], y: p[1], px, py, k: q ? Math.hypot(q[0] - p[0], q[1] - p[1]) : 0.01, mode: '3d' } : null;
+    },
     unprojectZ,
     /** Redraws after overlays changed size (legend shown or hidden). */
     refresh() { requestRender(); },

@@ -61,6 +61,10 @@ export default {
   },
 
   lum: {
+    kindOff: 'Add a luminaire first', pick: 'Pick the count', pickTip: 'The count by the utilisation factor method, as in version 1',
+    colorMore: 'More colours', dropTitle: 'Drop an IES or LDT file', dropSub: 'or click to choose', dropAdd: 'Release to add the luminaire',
+    dropList: 'Drop IES or LDT files here', modeRoom: 'Room', modeProject: 'Project', none: 'No luminaires yet', cosine: 'No file',
+    act: { add: 'Add a luminaire from a file', file: 'Replace the file of the active one', copy: 'Copy: another light source', replace: 'Put in place of the selected ones', del: 'Delete (only if unused)' },
     typeName: 'Name',
     typeN: 'Type {n}',
     typeAdd: 'luminaire',
@@ -73,14 +77,14 @@ export default {
     dupTip: 'The same luminaire as a new type with its own colour: for example with another light source',
     listTip: 'Luminaires of the project: choose the active one, replace for the selected, add, delete',
     listKick: 'Room',
-    listTitle: 'List of luminaires',
+    listTitle: 'Luminaires',
     listLead: 'A click on a row makes the luminaire active: it is placed next, its file is loaded on the right; its card and values are in the panel on the left. Replace gives this luminaire to the ones selected on the plan.',
     active: 'active',
     use: 'Choose',
     replace: 'Replace',
     replaceTip: 'Give this luminaire to the ones selected on the plan',
     place: 'Placement',
-    kind: { single: 'Single', grid: 'Grid', line: 'Line', circle: 'Circle' },
+    kind: { auto: 'Automatically', single: 'Single', grid: 'Grid', line: 'Line', circle: 'Circle' },
     draw: {
       single: 'Click on the plan to place a luminaire; Esc to finish.',
       grid: 'Draw the rectangle of the grid on the plan.',
@@ -126,7 +130,14 @@ export default {
     lastLum: 'A room keeps at least one luminaire',
   },
   gform: {
+    way: {
+      grid: { in: 'Within the area: equal cells, half a step at the edge', edge: 'On the edge: the housings of the outer luminaires at the edge', axis: 'On the axes: the axes of the outer luminaires on the edge' },
+      line: { in: 'Within the line: half a step at the ends', edge: 'On the edge: the housings of the outer luminaires at the ends', axis: 'On the axes: the axes of the outer luminaires at the ends' },
+    },
+    measure: { r: 'Radius', d: 'Diameter', p: 'Length of the circle or the arc' },
     tip: {
+      countX: 'Count along X and spacing', countY: 'Count along Y and spacing', count: 'Count and spacing', countArc: 'Count, start and end angle, °',
+      measure: 'Radius, diameter or length (of the circle or the arc), m', tilt: 'Tilt — at stage 2.1a', fit: 'Fit to the room',
       pos: 'Position: X, Y and mounting height Z (top of the housing), m',
       rot: 'Rotation of the luminaire about Z, °',
       countXY: 'Number along X and along Y',
@@ -385,6 +396,7 @@ export default {
     stages: 'Stages', st1: 'Project', st2: 'Calculation', st3: 'Documentation',
     rooms: 'Rooms', lang: 'Interface language',
     save: 'Save', saveTip: 'Save the project to a file',
+    fileTools: 'File and history', openTip: 'Open a project', undo: 'Undo', redo: 'Redo', saveFirst: 'The project has unsaved changes. Save them to a file before opening another project?\n\nOK — save, Cancel — open without saving.',
     theme: 'Switch the theme', themeTip: 'Light or dark theme',
     step1: 'Step 1 of 3',
     st1Lead: 'This information goes to the title page of the report. The fields with an asterisk are needed for the documentation; the rooms can be calculated without them.',

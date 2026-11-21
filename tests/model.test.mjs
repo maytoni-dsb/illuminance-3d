@@ -96,7 +96,9 @@ test('the calculation refuses wrong inputs', () => {
   const p = { ...calcParams(modelFromValues({ ...DEFAULTS })), checks: false };
   const calc = createCalc();
   assert.throws(() => calc.run({ ...p, types: [...p.types, { ...p.types[0] }] }), /same id/);
-  assert.throws(() => calc.run({ ...p, types: [] }), /no luminaire types/);
+  assert.throws(() => calc.run({ ...p, types: [] }), /unknown type/);         // luminaires of no type
+  assert.equal(calc.run({ ...p, types: [], lums: [] }).balance.emitted, 0);   // a room without luminaires (21 Nov 2026)
+  assert.throws(() => calc.run({ ...p, types: undefined }), /no luminaire types/);
   assert.equal(calc.run({ ...p, lums: [] }).balance.emitted, 0); // an empty room is calculated (stage 2.1)
   assert.throws(() => calc.run({ ...p, lums: p.lums.map((l) => ({ ...l, type: 'x' })) }), /unknown type/);
   assert.throws(() => calc.run({ ...p, lums: p.lums.map((l) => ({ ...l, pos: [l.pos[0], l.pos[1], 0] })) }), /outside/);

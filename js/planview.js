@@ -301,21 +301,29 @@ export function drawEditor(ctx, size, d) {
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  // luminaires: wireframes
-  ctx.font = `600 10px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // luminaires: wireframes in the colour of their type, thicker under the pointer; the selected
+  // white; misplaced red (decided on 21 Nov 2026). In 3D only the selected and the one under the
+  // pointer: the silhouette of the whole housing.
+  const SEL = '#ffffff';
   for (const it of d.items) {
-    const sel = d.selected(it);
-    if (!plan && !sel) continue;
+    const sel = d.selected(it), hov = !sel && d.hovered?.(it);
+    if (!plan && !sel && !hov) continue;
     const bad = d.bad.has(`${it.group}:${it.index}`);
-    const col = bad ? '#EB3D00' : sel ? d.accent : d.color(it.type);
+    const col = bad ? '#EB3D00' : sel ? SEL : d.color(it.type);
     const z = it.hm ?? 0;
-    ctx.strokeStyle = col; ctx.lineWidth = sel ? 2 : 1.2;
     const c = P(it.x, it.y, z);
     if (!c) continue;
-    if (it.a > 0 && it.b > 0 && (!plan || Math.min(it.a, it.b) / d.k >= 3)) {
+    ctx.strokeStyle = col;
+    if (!plan) {
+      ctx.lineWidth = 2;
+      if (silhouette(ctx, P, it)) ctx.stroke();
+      continue;
+    }
+    ctx.lineWidth = sel ? 2.2 : hov ? 2.8 : 1.2;
+    if (it.a > 0 && it.b > 0 && Math.min(it.a, it.b) / d.k >= 3) {
       if (poly(ctx, P, outline(it.x, it.y, z, it.a, it.b, it.psi, it.round))) ctx.stroke();
       if (it.la > 0 && it.lb > 0 && (it.la < it.a - 1e-6 || it.lb < it.b - 1e-6)) {
-        ctx.lineWidth = sel ? 1.4 : 0.8;
+        ctx.lineWidth = sel || hov ? 1.3 : 0.8;
         if (poly(ctx, P, outline(it.x, it.y, z, it.la, it.lb, it.psi, it.round))) ctx.stroke();
       }
     } else {
@@ -330,6 +338,19 @@ export function drawEditor(ctx, size, d) {
       const ux = t[0] - c[0], uy = t[1] - c[1], l = Math.hypot(ux, uy) || 1, e = Math.max(l, 6);
       ctx.beginPath(); ctx.moveTo(c[0] + ux / l * (e - 3), c[1] + uy / l * (e - 3)); ctx.lineTo(c[0] + ux / l * (e + 4), c[1] + uy / l * (e + 4));
       ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  // a luminaire dragged from the card (its polar diagram): a dashed outline and its coordinates
+  if (d.ghost) {
+    const g = d.ghost, c = P(g.x, g.y, g.hm);
+    if (c) {
+      ctx.strokeStyle = g.color; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+      if (g.a > 0 && g.b > 0 && (!plan || Math.min(g.a, g.b) / d.k >= 3) && poly(ctx, P, outline(g.x, g.y, g.hm, g.a, g.b, g.psi, g.round))) ctx.stroke();
+      else { ctx.beginPath(); ctx.arc(c[0], c[1], 6, 0, 2 * Math.PI); ctx.stroke(); }
+      ctx.setLineDash([]);
+      ctx.font = `500 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const f = (v) => v.toLocaleString(meta().locale, { maximumFractionDigits: 2 });
+      halo(ctx, `X ${f(g.x)} · Y ${f(g.y)}`, c[0] + 12, c[1] - 12, '#111');
     }
   }
   // the snapped point
@@ -348,7 +369,7 @@ export function drawEditor(ctx, size, d) {
   // the selection rectangle (plan)
   if (d.box && plan) {
     const [x0, y0, x1, y1] = d.box, a = P(Math.min(x0, x1), Math.max(y0, y1)), b = P(Math.max(x0, x1), Math.min(y0, y1));
-    ctx.fillStyle = 'rgba(124,84,254,.08)'; ctx.strokeStyle = d.accent; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
     ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
     ctx.setLineDash([]);
@@ -357,41 +378,78 @@ export function drawEditor(ctx, size, d) {
   ctx.restore();
 }
 
-/** The gizmo: move — arrows X and Y and the plane square; rotate — the ring about Z. */
+/**
+ * Silhouette of a housing in 3D: the convex hull of its top (the mounting height) and bottom
+ * outlines projected to the view; a luminaire without a housing: a small box. Path only.
+ */
+function silhouette(ctx, P, it) {
+  const a = it.a > 0 ? it.a : 0.12, b = it.b > 0 ? it.b : 0.12, h = it.h > 0 ? it.h : 0.03, z = it.hm ?? 0;
+  const pts = [...outline(it.x, it.y, z, a, b, it.psi, it.round), ...outline(it.x, it.y, z - h, a, b, it.psi, it.round)].map((p) => P(p[0], p[1], p[2]));
+  if (pts.some((v) => !v)) return false;
+  const hull = convexHull(pts);
+  ctx.beginPath();
+  hull.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1])));
+  ctx.closePath();
+  return true;
+}
+/** Convex hull of points in the plane (monotone chain). */
+function convexHull(pts) {
+  const p = [...pts].sort((u, v) => u[0] - v[0] || u[1] - v[1]);
+  if (p.length < 3) return p;
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const q of p) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of p.reverse()) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+
+/**
+ * The gizmo (decided on 21 Nov 2026: as the axes in the corner of the view): thin lines, small
+ * filled heads, the letters in the colour of their axis; the handle under the pointer thicker.
+ * select — small axes that do not take the pointer; move — arrows X, Y (and Z in 3D) and the plane
+ * square; rotate — the ring about Z.
+ */
 export function drawGizmo(ctx, g) {
   const C = GIZMO_COLORS, act = g.active ?? g.hover;
-  // every handle over a white halo: readable on the false colours and on the realistic view
-  const HALO = 'rgba(255,255,255,.9)';
-  const arrow = (from, to, col) => {
-    const ux = to[0] - from[0], uy = to[1] - from[1], l = Math.hypot(ux, uy) || 1, nx = ux / l, ny = uy / l;
-    const head = () => { ctx.beginPath(); ctx.moveTo(to[0], to[1]); ctx.lineTo(to[0] - nx * 11 - ny * 4.5, to[1] - ny * 11 + nx * 4.5); ctx.lineTo(to[0] - nx * 11 + ny * 4.5, to[1] - ny * 11 - nx * 4.5); ctx.closePath(); };
-    const shaft = () => { ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0] - nx * 9, to[1] - ny * 9); };
-    ctx.strokeStyle = HALO; ctx.lineWidth = 5; shaft(); ctx.stroke(); head(); ctx.lineWidth = 3; ctx.stroke();
-    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; shaft(); ctx.stroke(); head(); ctx.fill();
+  const arrow = (from, to, col, on, head = 9) => {
+    const ux = to[0] - from[0], uy = to[1] - from[1], l = Math.hypot(ux, uy) || 1, nx = ux / l, ny = uy / l, w = head * 0.4;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = on ? 2.6 : 1.5;
+    ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0] - nx * head, to[1] - ny * head); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(to[0], to[1]); ctx.lineTo(to[0] - nx * head - ny * w, to[1] - ny * head + nx * w); ctx.lineTo(to[0] - nx * head + ny * w, to[1] - ny * head - nx * w); ctx.closePath(); ctx.fill();
+  };
+  const label = (to, text, col, size = 11) => {
+    const ux = to[0] - g.o[0], uy = to[1] - g.o[1], l = Math.hypot(ux, uy) || 1;
+    ctx.font = `600 ${size}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = col;
+    ctx.fillText(text, to[0] + ux / l * 9, to[1] + uy / l * 9);
   };
   ctx.save();
-  if (g.tool === 'move') {
+  if (g.tool === 'select') {
+    // the axes of the selection (Q): short, thin, not a handle
+    const s = (to) => [g.o[0] + (to[0] - g.o[0]) * 0.4, g.o[1] + (to[1] - g.o[1]) * 0.4];
+    for (const [k, to] of [['x', g.x], ['y', g.y], ['z', g.z]]) {
+      if (!to) continue;
+      const e = s(to);
+      ctx.strokeStyle = C[k]; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(g.o[0], g.o[1]); ctx.lineTo(e[0], e[1]); ctx.stroke();
+      label(e, k.toUpperCase(), C[k], 10);
+    }
+  } else if (g.tool === 'move') {
     const sq = planeSquareOf(g);
     ctx.beginPath(); sq.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath();
-    ctx.fillStyle = act === 'xy' ? 'rgba(245,183,0,.55)' : 'rgba(255,255,255,.55)'; ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = act === 'xy' ? C.active : C.x; ctx.beginPath(); ctx.moveTo(sq[1][0], sq[1][1]); ctx.lineTo(sq[2][0], sq[2][1]); ctx.stroke();
-    ctx.strokeStyle = act === 'xy' ? C.active : C.y; ctx.beginPath(); ctx.moveTo(sq[3][0], sq[3][1]); ctx.lineTo(sq[2][0], sq[2][1]); ctx.stroke();
-    arrow(g.o, g.x, act === 'x' || act === 'xy' ? C.active : C.x);
-    arrow(g.o, g.y, act === 'y' || act === 'xy' ? C.active : C.y);
-    ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    halo(ctx, 'X', g.x[0] + (g.x[0] - g.o[0]) * 0.18, g.x[1] + (g.x[1] - g.o[1]) * 0.18, C.x);
-    halo(ctx, 'Y', g.y[0] + (g.y[0] - g.o[0]) * 0.18, g.y[1] + (g.y[1] - g.o[1]) * 0.18, C.y);
+    ctx.fillStyle = act === 'xy' ? 'rgba(245,183,0,.55)' : 'rgba(255,255,255,.35)'; ctx.fill();
+    arrow(g.o, g.x, C.x, act === 'x' || act === 'xy');
+    arrow(g.o, g.y, C.y, act === 'y' || act === 'xy');
+    if (g.z) arrow(g.o, g.z, C.z, act === 'z');
+    label(g.x, 'X', C.x); label(g.y, 'Y', C.y);
+    if (g.z) label(g.z, 'Z', C.z);
   } else if (g.tool === 'rotate' && g.ring) {
-    const ring = () => { ctx.beginPath(); g.ring.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath(); };
-    ctx.strokeStyle = HALO; ctx.lineWidth = act === 'z' ? 6 : 5; ring(); ctx.stroke();
-    ctx.strokeStyle = act === 'z' ? C.active : C.z; ctx.lineWidth = act === 'z' ? 3 : 2; ring(); ctx.stroke();
+    ctx.beginPath(); g.ring.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath();
+    ctx.strokeStyle = C.z; ctx.lineWidth = act === 'z' ? 2.6 : 1.5; ctx.stroke();
     if (g.angle != null) {
       ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       halo(ctx, `${g.angle > 0 ? '+' : ''}${Math.round(g.angle)}°`, g.o[0] + 8, g.o[1] - 10, '#111');
     }
   }
-  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(g.o[0], g.o[1], 2.5, 0, 2 * Math.PI); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(g.o[0], g.o[1], 2, 0, 2 * Math.PI); ctx.fill();
   ctx.restore();
 }
 function planeSquareOf(g, share = 0.32) {
