@@ -20,6 +20,7 @@ export const MIX_TOL = Object.freeze({ exact: 1e-9, file: 1e-3 });
  */
 export function mixChecks(room, types, Edir) {
   const out = [];
+  if (!types.length) return out; // an empty room: nothing to check
   let emitted = 0, anyFile = false;
   for (const ty of types) {
     const err = Math.abs(ty.onFaces / ty.emitted - 1);

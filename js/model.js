@@ -281,9 +281,8 @@ export function addPoint(m, id, x, y, draft = {}) {
 /** The model with the group `id` replaced. */
 export const replaceGroup = (m, id, g) => ({ ...m, groups: m.groups.map((x) => (x.id === id ? { ...g, id } : x)) });
 
-/** The model without the group `id` (the last group stays: null). */
+/** The model without the group `id` (a room may have no luminaires, stage 2.1). */
 export function removeGroup(m, id) {
-  if (m.groups.length < 2) return null;
   return { ...m, groups: m.groups.filter((g) => g.id !== id) };
 }
 
@@ -437,7 +436,7 @@ function legacyPoints(g, room) {
  */
 export function cleanModel(d) {
   const fail = (code) => { const e = new Error(code); e.code = code; throw e; };
-  if (!d || typeof d !== 'object' || !d.room || !Array.isArray(d.types) || !Array.isArray(d.groups) || !d.types.length || !d.groups.length) fail('model');
+  if (!d || typeof d !== 'object' || !d.room || !Array.isArray(d.types) || !Array.isArray(d.groups) || !d.types.length) fail('model');
   if (!SHAPES.includes(d.room.shape?.kind)) fail('model.kind');
   const g0 = d.groups.find((g) => g?.kind === 'grid') ?? {};
   const raw = {

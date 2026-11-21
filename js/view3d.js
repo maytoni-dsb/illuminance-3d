@@ -701,6 +701,17 @@ export function createView(container, opts = {}) {
     return [(projV.x + 1) / 2 * viewW, (1 - projV.y) / 2 * viewH];
   }
 
+  /** View CSS px → room point (x, y) on the horizontal plane at height z (3D view), or null. */
+  const rayO = new THREE.Vector3(), rayD = new THREE.Vector3();
+  function unprojectZ(px, py, z) {
+    rayO.set(px / viewW * 2 - 1, 1 - py / viewH * 2, -1).unproject(camera);
+    rayD.set(px / viewW * 2 - 1, 1 - py / viewH * 2, 1).unproject(camera).sub(rayO);
+    if (Math.abs(rayD.y) < 1e-12) return null;
+    const t = (z - rayO.y) / rayD.y;          // three Y is room Z
+    if (!(t > 0)) return null;
+    return [rayO.x + t * rayD.x, -(rayO.z + t * rayD.z)];
+  }
+
   /** Redraws the 2D overlay: the page draws on it (opts.onOverlay) on the plan and in 3D. */
   function drawOverlay() {
     const dpr = renderer.getPixelRatio();
@@ -712,7 +723,7 @@ export function createView(container, opts = {}) {
     ctx.clearRect(0, 0, W, H);
     if (!room || !opts.onOverlay) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    opts.onOverlay(ctx, plan ? { mode: '2d', T: planTransform() } : { mode: '3d', project }, { w: viewW, h: viewH });
+    opts.onOverlay(ctx, plan ? { mode: '2d', T: planTransform() } : { mode: '3d', project, unprojectZ }, { w: viewW, h: viewH });
   }
 
   /** Luminaires (photometry.luminaireGrid) with an optional shape (photfile.luminaireShape). */
@@ -793,17 +804,33 @@ export function createView(container, opts = {}) {
   let lastMiddle = 0;         // time of the last wheel-button press, for the double click
 
   el.addEventListener('contextmenu', (e) => e.preventDefault());
-  // the plan editor of the page (stage 2.1): on the plan the left mouse button is its own
-  let editing = false;
+  // the luminaire editor of the page (stage 2.1): on the plan the left mouse button is its own; in
+  // 3D a press it takes (a gizmo) is its own too, a click without a drag selects, any other drag
+  // turns the view. Events carry the room point on the editing height (opts.editZ), the view px,
+  // metres per px there, the mode and a projection of room points to view px.
+  let editing = false, click = null;
   const planEvent = (e) => {
-    const T = planTransform(), r = el.getBoundingClientRect();
-    const px = e.clientX - r.left, py = e.clientY - r.top, [x, y] = T.toRoom(px, py);
-    return { x, y, px, py, k: T.k, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey };
+    const r = el.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const mods = { shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey };
+    if (plan) {
+      const T = planTransform(), [x, y] = T.toRoom(px, py);
+      return { x, y, px, py, k: T.k, mode: '2d', project: (a, b) => [T.x(a), T.y(b)], ...mods };
+    }
+    const z = opts.editZ?.() ?? 0;
+    const p = unprojectZ(px, py, z), q = unprojectZ(px + 1, py, z);
+    return {
+      x: p ? p[0] : NaN, y: p ? p[1] : NaN, px, py, k: p && q ? Math.hypot(q[0] - p[0], q[1] - p[1]) : 0.01,
+      mode: '3d', z, project: (a, b, c = z) => project(a, b, c), unproject: (u, v) => unprojectZ(u, v, z), ...mods,
+    };
   };
   el.addEventListener('pointerdown', (e) => {
     if (!orbit) return;
-    if (plan && e.button === 0 && e.pointerType !== 'touch' && opts.onPlanPointer && !pointers.size) {
-      if (opts.onPlanPointer('down', planEvent(e)) !== false) {
+    click = null;
+    if (e.button === 0 && e.pointerType !== 'touch' && opts.onPlanPointer && !pointers.size) {
+      const taken = opts.onPlanPointer('down', planEvent(e));
+      if (!plan) click = { x: e.clientX, y: e.clientY };
+      if (plan ? taken !== false : taken === true) {
+        click = null;
         editing = true;
         el.setPointerCapture(e.pointerId);
         opts.onHover?.(null);
@@ -834,9 +861,10 @@ export function createView(container, opts = {}) {
     if (editing) { opts.onPlanPointer('move', planEvent(e)); return; }
     const p = pointers.get(e.pointerId);
     if (!p) {
-      if (plan && opts.onPlanPointer) el.style.cursor = opts.onPlanPointer('hover', planEvent(e)) || '';
+      if (opts.onPlanPointer) el.style.cursor = opts.onPlanPointer('hover', planEvent(e)) || '';
       hover(e); return;
     }
+    if (click && Math.hypot(e.clientX - click.x, e.clientY - click.y) > 4) click = null;
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     p.x = e.clientX; p.y = e.clientY;
     if (pinch && pointers.size === 2) {
@@ -859,6 +887,9 @@ export function createView(container, opts = {}) {
   });
   const release = (e) => {
     if (editing) { editing = false; opts.onPlanPointer(e.type === 'pointercancel' ? 'cancel' : 'up', planEvent(e)); return; }
+    // 3D: a press and release without a drag is a click of the editor (selection)
+    if (click && e.type === 'pointerup' && Math.hypot(e.clientX - click.x, e.clientY - click.y) <= 4) opts.onPlanPointer?.('click', planEvent(e));
+    click = null;
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     if (pointers.size === 0) dragMode = null;
@@ -1063,6 +1094,9 @@ export function createView(container, opts = {}) {
     /** Room (x, y) ↔ view CSS px of the current plan, or null (for tests and the overlay). */
     planTransform,
     isPlan: () => !!plan,
+    /** Room point → view CSS px in the 3D view (null behind the camera); view px → room (x, y) at height z. */
+    project,
+    unprojectZ,
     /** Redraws after overlays changed size (legend shown or hidden). */
     refresh() { requestRender(); },
     /** Re-reads theme colors from CSS (call after switching light/dark theme). */

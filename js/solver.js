@@ -176,7 +176,7 @@ export function energyBalance(room, Edir, Eind, rho, emitted) {
     for (let g = face.offset; g < face.offset + face.count; g++) s += Edir[g] + Eind[g];
     absorbed += (1 - rho[face.id]) * s * face.elementArea;
   }
-  return { absorbed, emitted, rel: absorbed / emitted - 1 };
+  return { absorbed, emitted, rel: emitted > 0 ? absorbed / emitted - 1 : absorbed > 0 ? Infinity : 0 }; // an empty room: 0
 }
 
 /**

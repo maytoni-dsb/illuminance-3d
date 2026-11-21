@@ -30,7 +30,8 @@ export function isSelected(s, group, index, kind) {
 /**
  * Items of the plan: every luminaire with its mounting point and the half sizes of its housing.
  * @param {(type) => ({ a, b }|null)} sizeOf — housing of a type (a along C0, b along C90)
- * @returns {{ group, kind, type, index, x, y, psi, hx, hy, a, b }[]}
+ * @returns {{ group, kind, type, index, x, y, hm, psi, hx, hy, a, b, la, lb, round }[]} — a × b the housing,
+ *   la × lb the luminous area, round: a circular housing
  */
 export function planItems(m, sizeOf = () => null) {
   const room = { L: m.room.shape.L, W: m.room.shape.W };
@@ -40,7 +41,7 @@ export function planItems(m, sizeOf = () => null) {
     const size = sizeOf(types.get(g.type)) ?? null;
     groupPoints(g, room).forEach((p, index) => {
       const [hx, hy] = housingHalf(size, p.psi);
-      out.push({ group: g.id, kind: g.kind, type: g.type, index, x: p.x, y: p.y, psi: p.psi, hx, hy, a: size?.a ?? 0, b: size?.b ?? 0 });
+      out.push({ group: g.id, kind: g.kind, type: g.type, index, x: p.x, y: p.y, hm: p.hm, psi: p.psi, hx, hy, a: size?.a ?? 0, b: size?.b ?? 0, la: size?.la ?? 0, lb: size?.lb ?? 0, round: !!size?.round });
     });
   }
   return out;
@@ -68,13 +69,14 @@ export function selectionOf(it) {
   return s;
 }
 
-/** Union (add) or symmetric difference (toggle) of two selections. */
+/** Union (add), difference (remove) or symmetric difference (toggle) of two selections. */
 export function combine(a, b, mode = 'add') {
   const s = { groups: new Set(a.groups), points: new Map([...a.points].map(([k, v]) => [k, new Set(v)])) };
-  for (const g of b.groups) { if (mode === 'toggle' && s.groups.has(g)) s.groups.delete(g); else s.groups.add(g); }
+  const one = (has, del, add) => { if (mode === 'remove' || (mode === 'toggle' && has)) del(); else add(); };
+  for (const g of b.groups) one(s.groups.has(g), () => s.groups.delete(g), () => s.groups.add(g));
   for (const [g, idx] of b.points) {
     const set = s.points.get(g) ?? new Set();
-    for (const i of idx) { if (mode === 'toggle' && set.has(i)) set.delete(i); else set.add(i); }
+    for (const i of idx) one(set.has(i), () => set.delete(i), () => set.add(i));
     s.points.set(g, set);
   }
   return s;
@@ -153,7 +155,7 @@ export function moveSelection(m, s, dx, dy) {
 
 /**
  * The model without the selection: whole groups, and single luminaires (a group of single
- * luminaires left empty goes too). The last luminaire of the room stays: null.
+ * luminaires left empty goes too). The room may be left without luminaires.
  */
 export function deleteSelection(m, s) {
   const groups = [];
@@ -170,7 +172,7 @@ export function deleteSelection(m, s) {
     groups.push(g);
   }
   if (!changed) return m;
-  return groups.length ? { ...m, groups } : null;
+  return { ...m, groups }; // a room may have no luminaires (decided on 21 Nov 2026)
 }
 
 /** Cleans a plan grid read from a file; a wrong value gets its default. */
@@ -252,4 +254,63 @@ export function replaceType(m, s, type) {
     groups.push(g);
   }
   return changed ? { model: { ...m, groups }, sel: nsel } : m;
+}
+
+// ---- gizmo (stage 2.1, after 3ds Max): handles in view pixels, the same on the plan and in 3D ----
+
+/** Sizes of the gizmo, CSS px: arrow length, plane square (share of the arrow), ring radius, hit distance. */
+export const GIZMO = Object.freeze({ arrow: 70, plane: 0.32, ring: 52, hit: 7 });
+
+const segDist = (p, a, b) => {
+  const ex = b[0] - a[0], ey = b[1] - a[1], l2 = ex * ex + ey * ey;
+  const t = l2 > 0 ? Math.min(1, Math.max(0, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / l2)) : 0;
+  return Math.hypot(a[0] + t * ex - p[0], a[1] + t * ey - p[1]);
+};
+
+/** Corners of the plane square of the move gizmo: between the axes near the origin. */
+export function planeSquare(o, x, y, share = GIZMO.plane) {
+  const ux = [(x[0] - o[0]) * share, (x[1] - o[1]) * share], uy = [(y[0] - o[0]) * share, (y[1] - o[1]) * share];
+  return [o, [o[0] + ux[0], o[1] + ux[1]], [o[0] + ux[0] + uy[0], o[1] + ux[1] + uy[1]], [o[0] + uy[0], o[1] + uy[1]]];
+}
+
+/** True when the point lies inside the convex polygon (any orientation). */
+function inConvex(p, poly) {
+  let sign = 0;
+  for (let k = 0; k < poly.length; k++) {
+    const a = poly[k], b = poly[(k + 1) % poly.length];
+    const c = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+    if (Math.abs(c) < 1e-12) continue;
+    if (sign === 0) sign = Math.sign(c); else if (Math.sign(c) !== sign) return false;
+  }
+  return sign !== 0;
+}
+
+/**
+ * The gizmo handle under the pointer p (view px), or null.
+ *   move:   'xy' (the plane square), 'x' or 'y' (the arrows from o to x and to y)
+ *   rotate: 'z' (the ring, a polyline of view points)
+ */
+export function gizmoHit(tool, p, g, hit = GIZMO.hit) {
+  if (tool === 'move') {
+    if (inConvex(p, planeSquare(g.o, g.x, g.y))) return 'xy';
+    const dx = segDist(p, g.o, g.x), dy = segDist(p, g.o, g.y);
+    if (Math.min(dx, dy) > hit) return null;
+    return dx <= dy ? 'x' : 'y';
+  }
+  if (tool === 'rotate' && g.ring) {
+    let d = Infinity;
+    for (let k = 0; k < g.ring.length; k++) d = Math.min(d, segDist(p, g.ring[k], g.ring[(k + 1) % g.ring.length]));
+    return d <= hit ? 'z' : null;
+  }
+  return null;
+}
+
+/** The move of a drag on a gizmo handle: the pointer offset (room metres) kept on the handle's axis. */
+export const constrain = (axis, dx, dy) => (axis === 'x' ? [dx, 0] : axis === 'y' ? [0, dy] : [dx, dy]);
+
+/** Centre of the selected items (the gizmo's origin), with their mean mounting height. */
+export function selectionCentre(items) {
+  if (!items.length) return null;
+  const n = items.length;
+  return { x: items.reduce((a, it) => a + it.x, 0) / n, y: items.reduce((a, it) => a + it.y, 0) / n, z: items.reduce((a, it) => a + (it.hm ?? 0), 0) / n };
 }

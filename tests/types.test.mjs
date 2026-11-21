@@ -114,3 +114,13 @@ test('symmetry with arbitrary placement: mirrored pairs of one type are used, th
   const f1 = planeField(room, 0.8, [{ lums, phot: cos }], M), f2 = planeField(room, 0.8, [{ lums: turned, phot: ph }], M);
   assert.ok(relMax(f.Edir, Float64Array.from(f1.Edir, (v, k) => v + f2.Edir[k])) < 1e-14);
 });
+
+test('a room without luminaires: everything is dark, the checks hold', () => {
+  const r = createCalc().run({ ...base, types: [T1], lums: [] });
+  assert.ok(r.Edir.every((v) => v === 0) && r.Eind.every((v) => v === 0));
+  assert.equal(r.balance.emitted, 0);
+  assert.equal(r.balance.rel, 0);
+  assert.ok(r.planes.every((pl) => pl.stats.avg === 0));
+  assert.deepEqual(r.types, []);
+  assert.deepEqual(r.checks3, []);
+});

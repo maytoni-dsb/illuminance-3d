@@ -220,6 +220,7 @@ export function planeReflected(room, t, M, out = new Float64Array(t.nL * t.nW)) 
  */
 export function planeDirect(room, z, lums, phot) {
   const face = planeFace(room, z);
+  if (!lums.length) return new Float64Array(face.count); // an empty room
   const pr = { L: room.L, W: room.W, H: room.H, N: face.count, faces: [face] };
   if (phot.lobes) return elementDirectExact(pr, lums, phot, undefined, true);
   return elementDirectAdaptive(pr, lums, phot, { balance: Infinity, maxRetries: 0, symmetric: true });

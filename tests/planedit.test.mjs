@@ -86,9 +86,9 @@ test('moving and deleting a selection; the model stays valid', () => {
   assert.deepEqual(d.groups.map((x) => x.id), ['g2']);
   assert.equal(d.groups[0].points.length, 1);
   assert.equal(deleteSelection(m, emptySelection()), m);
-  // everything: the last luminaire stays
+  // everything: the room is left empty
   const all = combine(selectionOf({ group: 'g1', kind: 'grid' }), { groups: new Set(), points: new Map([['g2', new Set([0, 1])]]) });
-  assert.equal(deleteSelection(m, all), null);
+  assert.deepEqual(deleteSelection(m, all).groups, []);      // a room may have no luminaires
 });
 
 test('the plan grid is kept in the room and cleaned when read', () => {
@@ -139,4 +139,26 @@ test('keys of the editor', async () => {
   assert.deepEqual(editorKey({ key: 'ArrowUp' }), { move: [0, 1] });
   assert.equal(editorKey({ key: 'ArrowUp', altKey: true }), null);
   assert.equal(editorKey({ key: 'a' }), null);
+});
+
+test('gizmo: the arrows, the plane square and the ring in view pixels', async () => {
+  const { gizmoHit, planeSquare, constrain, selectionCentre, GIZMO } = await import('../js/planedit.js');
+  const g = { o: [100, 100], x: [170, 100], y: [100, 30] };       // X right, Y up on the screen
+  assert.equal(gizmoHit('move', [110, 90], g), 'xy');                // inside the plane square
+  assert.equal(gizmoHit('move', [150, 103], g), 'x');
+  assert.equal(gizmoHit('move', [98, 50], g), 'y');
+  assert.equal(gizmoHit('move', [150, 140], g), null);
+  assert.equal(gizmoHit('move', [180, 100], g), null);              // past the arrow tip by more than the hit
+  // a skewed 3D projection: the square is a parallelogram
+  const s = planeSquare([0, 0], [70, 20], [-30, -60]);
+  assert.deepEqual(s[2].map((v) => Math.round(v * 100) / 100), [12.8, -12.8]);
+  const ring = Array.from({ length: 64 }, (_, k) => [100 + GIZMO.ring * Math.cos(k * Math.PI / 32), 100 + GIZMO.ring * Math.sin(k * Math.PI / 32)]);
+  assert.equal(gizmoHit('rotate', [100 + GIZMO.ring + 3, 100], { o: [100, 100], ring }), 'z');
+  assert.equal(gizmoHit('rotate', [100, 100], { o: [100, 100], ring }), null);
+  assert.equal(gizmoHit('select', [100, 100], g), null);
+  assert.deepEqual(constrain('x', 0.3, 0.2), [0.3, 0]);
+  assert.deepEqual(constrain('y', 0.3, 0.2), [0, 0.2]);
+  assert.deepEqual(constrain('xy', 0.3, 0.2), [0.3, 0.2]);
+  assert.deepEqual(selectionCentre([{ x: 1, y: 1, hm: 3 }, { x: 3, y: 2, hm: 2 }]), { x: 2, y: 1.5, z: 2.5 });
+  assert.equal(selectionCentre([]), null);
 });

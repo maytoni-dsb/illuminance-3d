@@ -239,76 +239,163 @@ export function drawPlane3D(ctx, project, size, d) {
   ctx.restore();
 }
 
+/** Colours of the gizmo, after 3ds Max: X red, Y green, Z blue, the active handle yellow (over a white halo). */
+export const GIZMO_COLORS = Object.freeze({ x: '#e03131', y: '#2f9e44', z: '#1c7ed6', active: '#f5b700' });
+
 /**
- * The plan editor (stage 2.1): the plan grid (when shown and its lines are not too dense),
- * the guides of the selected groups (line, circle), every luminaire as its housing turned by ψ
- * (a dot without a housing) in the colour of its type with the type's letter when there is room,
- * the selection and the selection rectangle.
- * @param {{ items: object[], color: (type) => string, letter: (type) => string, selected: (it) => boolean,
- *           grid: { sx, sy, ox, oy, show }, L, W, guides: object[], box: [x0, y0, x1, y1] | null,
- *           accent: string, bad: Set<string>, snap: { x, y, kind } | null }} d — bad: "group:index" of
- *           the misplaced luminaires; snap: the snapped point under the pointer
+ * Outline of a luminaire in room coordinates (stage 2.1): a rectangle a × b turned by ψ, or an
+ * ellipse (round), as a list of points at height z.
  */
-export function drawEditor(ctx, T, size, d) {
+export function outline(x, y, z, a, b, psiDeg, round = false) {
+  const c = Math.cos(psiDeg * Math.PI / 180), s = Math.sin(psiDeg * Math.PI / 180);
+  const pts = round
+    ? Array.from({ length: 24 }, (_, k) => [a / 2 * Math.cos(k * Math.PI / 12), b / 2 * Math.sin(k * Math.PI / 12)])
+    : [[-a / 2, -b / 2], [a / 2, -b / 2], [a / 2, b / 2], [-a / 2, b / 2]];
+  return pts.map(([u, v]) => [x + u * c - v * s, y + u * s + v * c, z]);
+}
+
+function poly(ctx, P, pts) {
+  const q = pts.map((p) => P(p[0], p[1], p[2]));
+  if (q.some((v) => !v)) return false;
+  ctx.beginPath();
+  q.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1])));
+  ctx.closePath();
+  return true;
+}
+
+/**
+ * The luminaire editor (stage 2.1, after 3ds Max) on the plan and in 3D: the plan grid (plan, when
+ * shown), guides of the selected lines and circles and of the group being drawn, the luminaires as
+ * wireframes (the housing and the luminous area; a small circle with a cross without a file) in the
+ * colour of their type — all of them on the plan, the selected ones in 3D — the selected in the
+ * accent colour, misplaced in red; the snapped point, the selection rectangle and the gizmo.
+ * @param {{ mode: '2d' | '3d', P: (x, y, z) => [px, py] | null, k: number, items, color, letter,
+ *   selected, grid, L, W, guides, box, accent, bad: Set<string>, snap, gizmo }} d
+ *   P — room point → view px; k — metres per px (plan); gizmo — { tool, o, x, y, ring, active }
+ */
+export function drawEditor(ctx, size, d) {
+  const P = d.P, plan = d.mode === '2d';
   ctx.save();
   // plan grid: thin lines inside the room
-  if (d.grid.show) {
-    const px = d.grid.sx / T.k, py = d.grid.sy / T.k;
+  if (plan && d.grid.show) {
+    const px = d.grid.sx / d.k, py = d.grid.sy / d.k;
     if (px >= 6 && py >= 6) {
       ctx.strokeStyle = 'rgba(124,84,254,.16)'; ctx.lineWidth = 0.6;
       ctx.beginPath();
       const i0 = Math.ceil((0 - d.grid.ox) / d.grid.sx), i1 = Math.floor((d.L - d.grid.ox) / d.grid.sx);
-      for (let i = i0; i <= i1; i++) { const x = T.x(d.grid.ox + i * d.grid.sx); ctx.moveTo(x, T.y(0)); ctx.lineTo(x, T.y(d.W)); }
+      for (let i = i0; i <= i1; i++) { const a = P(d.grid.ox + i * d.grid.sx, 0), b = P(d.grid.ox + i * d.grid.sx, d.W); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
       const j0 = Math.ceil((0 - d.grid.oy) / d.grid.sy), j1 = Math.floor((d.W - d.grid.oy) / d.grid.sy);
-      for (let j = j0; j <= j1; j++) { const y = T.y(d.grid.oy + j * d.grid.sy); ctx.moveTo(T.x(0), y); ctx.lineTo(T.x(d.L), y); }
+      for (let j = j0; j <= j1; j++) { const a = P(0, d.grid.oy + j * d.grid.sy), b = P(d.L, d.grid.oy + j * d.grid.sy); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
       ctx.stroke();
     }
   }
-  // guides of the selected groups
+  // guides
   ctx.setLineDash([6, 4]); ctx.strokeStyle = d.accent; ctx.lineWidth = 1;
   for (const g of d.guides) {
-    ctx.beginPath();
-    if (g.kind === 'circle') ctx.arc(T.x(g.cx), T.y(g.cy), g.r / T.k, 0, 2 * Math.PI);
-    else for (const [a, b] of g.segments) { ctx.moveTo(T.x(a[0]), T.y(a[1])); ctx.lineTo(T.x(b[0]), T.y(b[1])); }
+    const z = g.z ?? 0;
+    if (g.kind === 'circle') poly(ctx, P, Array.from({ length: 64 }, (_, k) => [g.cx + g.r * Math.cos(k * Math.PI / 32), g.cy + g.r * Math.sin(k * Math.PI / 32), z]));
+    else {
+      ctx.beginPath();
+      for (const [a, b] of g.segments) { const u = P(a[0], a[1], z), v = P(b[0], b[1], z); if (u && v) { ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); } }
+    }
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  // luminaires
-  ctx.font = `700 10px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // luminaires: wireframes
+  ctx.font = `600 10px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const it of d.items) {
-    const cx = T.x(it.x), cy = T.y(it.y), col = d.color(it.type), sel = d.selected(it);
+    const sel = d.selected(it);
+    if (!plan && !sel) continue;
     const bad = d.bad.has(`${it.group}:${it.index}`);
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(-it.psi * Math.PI / 180); // room +Y is up on the screen: counter-clockwise turns
-    const w = it.a / T.k, h = it.b / T.k;
-    ctx.beginPath();
-    if (w >= 3 && h >= 3) ctx.rect(-w / 2, -h / 2, w, h); else ctx.arc(0, 0, 5, 0, 2 * Math.PI);
-    ctx.globalAlpha = sel ? 0.55 : 0.35; ctx.fillStyle = bad ? '#EB3D00' : col; ctx.fill();
-    ctx.globalAlpha = 1; ctx.lineWidth = sel ? 2 : 1.2; ctx.strokeStyle = bad ? '#EB3D00' : sel ? d.accent : col; ctx.stroke();
-    // the C0 direction: a short tick
-    const r = Math.max(w / 2, 5);
-    ctx.beginPath(); ctx.moveTo(r - 3, 0); ctx.lineTo(r + 3, 0); ctx.strokeStyle = sel ? d.accent : col; ctx.lineWidth = 1; ctx.stroke();
-    ctx.restore();
-    if (Math.min(w, h) >= 13 || (w < 3 && sel)) halo(ctx, d.letter(it.type), cx, Math.min(w, h) >= 13 ? cy : cy - 12, '#111');
+    const col = bad ? '#EB3D00' : sel ? d.accent : d.color(it.type);
+    const z = it.hm ?? 0;
+    ctx.strokeStyle = col; ctx.lineWidth = sel ? 2 : 1.2;
+    const c = P(it.x, it.y, z);
+    if (!c) continue;
+    if (it.a > 0 && it.b > 0 && (!plan || Math.min(it.a, it.b) / d.k >= 3)) {
+      if (poly(ctx, P, outline(it.x, it.y, z, it.a, it.b, it.psi, it.round))) ctx.stroke();
+      if (it.la > 0 && it.lb > 0 && (it.la < it.a - 1e-6 || it.lb < it.b - 1e-6)) {
+        ctx.lineWidth = sel ? 1.4 : 0.8;
+        if (poly(ctx, P, outline(it.x, it.y, z, it.la, it.lb, it.psi, it.round))) ctx.stroke();
+      }
+    } else {
+      // no housing (cosine model) or too small: a circle with a cross
+      ctx.beginPath(); ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI);
+      ctx.moveTo(c[0] - 3.5, c[1] - 3.5); ctx.lineTo(c[0] + 3.5, c[1] + 3.5); ctx.moveTo(c[0] + 3.5, c[1] - 3.5); ctx.lineTo(c[0] - 3.5, c[1] + 3.5);
+      ctx.stroke();
+    }
+    // the C0 direction
+    const r = Math.max(it.a / 2, 0), t = P(it.x + Math.cos(it.psi * Math.PI / 180) * r, it.y + Math.sin(it.psi * Math.PI / 180) * r, z);
+    if (t) {
+      const ux = t[0] - c[0], uy = t[1] - c[1], l = Math.hypot(ux, uy) || 1, e = Math.max(l, 6);
+      ctx.beginPath(); ctx.moveTo(c[0] + ux / l * (e - 3), c[1] + uy / l * (e - 3)); ctx.lineTo(c[0] + ux / l * (e + 4), c[1] + uy / l * (e + 4));
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+    if (plan && Math.min(it.a, it.b) / d.k >= 16) halo(ctx, d.letter(it.type), c[0], c[1], '#111');
   }
-  // the snapped point under the pointer: a vertex, a midpoint or a centre
+  // the snapped point
   if (d.snap) {
-    const x = T.x(d.snap.x), y = T.y(d.snap.y);
-    ctx.strokeStyle = d.accent; ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    if (d.snap.kind === 'vertex') ctx.rect(x - 5, y - 5, 10, 10);
-    else if (d.snap.kind === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
-    else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
-    ctx.stroke();
+    const v = P(d.snap.x, d.snap.y, d.snap.z ?? 0);
+    if (v) {
+      const [x, y] = v;
+      ctx.strokeStyle = d.accent; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (d.snap.kind === 'vertex') ctx.rect(x - 5, y - 5, 10, 10);
+      else if (d.snap.kind === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
+      else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
   }
-  // the selection rectangle
-  if (d.box) {
-    const [x0, y0, x1, y1] = d.box;
-    const a = T.x(Math.min(x0, x1)), b = T.y(Math.max(y0, y1));
+  // the selection rectangle (plan)
+  if (d.box && plan) {
+    const [x0, y0, x1, y1] = d.box, a = P(Math.min(x0, x1), Math.max(y0, y1)), b = P(Math.max(x0, x1), Math.min(y0, y1));
     ctx.fillStyle = 'rgba(124,84,254,.08)'; ctx.strokeStyle = d.accent; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-    ctx.fillRect(a, b, Math.abs(x1 - x0) / T.k, Math.abs(y1 - y0) / T.k);
-    ctx.strokeRect(a, b, Math.abs(x1 - x0) / T.k, Math.abs(y1 - y0) / T.k);
+    ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    ctx.setLineDash([]);
   }
+  if (d.gizmo) drawGizmo(ctx, d.gizmo);
   ctx.restore();
+}
+
+/** The gizmo: move — arrows X and Y and the plane square; rotate — the ring about Z. */
+export function drawGizmo(ctx, g) {
+  const C = GIZMO_COLORS, act = g.active ?? g.hover;
+  // every handle over a white halo: readable on the false colours and on the realistic view
+  const HALO = 'rgba(255,255,255,.9)';
+  const arrow = (from, to, col) => {
+    const ux = to[0] - from[0], uy = to[1] - from[1], l = Math.hypot(ux, uy) || 1, nx = ux / l, ny = uy / l;
+    const head = () => { ctx.beginPath(); ctx.moveTo(to[0], to[1]); ctx.lineTo(to[0] - nx * 11 - ny * 4.5, to[1] - ny * 11 + nx * 4.5); ctx.lineTo(to[0] - nx * 11 + ny * 4.5, to[1] - ny * 11 - nx * 4.5); ctx.closePath(); };
+    const shaft = () => { ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(to[0] - nx * 9, to[1] - ny * 9); };
+    ctx.strokeStyle = HALO; ctx.lineWidth = 5; shaft(); ctx.stroke(); head(); ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2; shaft(); ctx.stroke(); head(); ctx.fill();
+  };
+  ctx.save();
+  if (g.tool === 'move') {
+    const sq = planeSquareOf(g);
+    ctx.beginPath(); sq.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath();
+    ctx.fillStyle = act === 'xy' ? 'rgba(245,183,0,.55)' : 'rgba(255,255,255,.55)'; ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = act === 'xy' ? C.active : C.x; ctx.beginPath(); ctx.moveTo(sq[1][0], sq[1][1]); ctx.lineTo(sq[2][0], sq[2][1]); ctx.stroke();
+    ctx.strokeStyle = act === 'xy' ? C.active : C.y; ctx.beginPath(); ctx.moveTo(sq[3][0], sq[3][1]); ctx.lineTo(sq[2][0], sq[2][1]); ctx.stroke();
+    arrow(g.o, g.x, act === 'x' || act === 'xy' ? C.active : C.x);
+    arrow(g.o, g.y, act === 'y' || act === 'xy' ? C.active : C.y);
+    ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    halo(ctx, 'X', g.x[0] + (g.x[0] - g.o[0]) * 0.18, g.x[1] + (g.x[1] - g.o[1]) * 0.18, C.x);
+    halo(ctx, 'Y', g.y[0] + (g.y[0] - g.o[0]) * 0.18, g.y[1] + (g.y[1] - g.o[1]) * 0.18, C.y);
+  } else if (g.tool === 'rotate' && g.ring) {
+    const ring = () => { ctx.beginPath(); g.ring.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath(); };
+    ctx.strokeStyle = HALO; ctx.lineWidth = act === 'z' ? 6 : 5; ring(); ctx.stroke();
+    ctx.strokeStyle = act === 'z' ? C.active : C.z; ctx.lineWidth = act === 'z' ? 3 : 2; ring(); ctx.stroke();
+    if (g.angle != null) {
+      ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      halo(ctx, `${g.angle > 0 ? '+' : ''}${Math.round(g.angle)}°`, g.o[0] + 8, g.o[1] - 10, '#111');
+    }
+  }
+  ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(g.o[0], g.o[1], 2.5, 0, 2 * Math.PI); ctx.fill();
+  ctx.restore();
+}
+function planeSquareOf(g, share = 0.32) {
+  const ux = [(g.x[0] - g.o[0]) * share, (g.x[1] - g.o[1]) * share], uy = [(g.y[0] - g.o[0]) * share, (g.y[1] - g.o[1]) * share];
+  return [g.o, [g.o[0] + ux[0], g.o[1] + ux[1]], [g.o[0] + ux[0] + uy[0], g.o[1] + ux[1] + uy[1]], [g.o[0] + uy[0], g.o[1] + uy[1]]];
 }

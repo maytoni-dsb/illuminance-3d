@@ -88,7 +88,6 @@ export function createCalc() {
     const ms = { kernel: 0, coarse: 0, direct: 0, solve: 0, planes: 0, checks: 0 };
     const reused = { kernel: true, direct: true };
     if (!Array.isArray(p.types) || !p.types.length) throw new RangeError('calc: no luminaire types');
-    if (!p.lums.length) throw new RangeError('calc: no luminaires');
     const byType = new Map(p.types.map((ty) => [ty.id, []]));
     if (byType.size !== p.types.length) throw new RangeError('calc: two luminaire types with the same id');
     for (const l of p.lums) {
@@ -141,7 +140,8 @@ export function createCalc() {
       });
       parts = next;
       // one type: its array as it is (results of version 1 bit for bit); several: the sum
-      let Edir = sources[0].Edir;
+      // no luminaires (an empty room, stage 2.1): no light anywhere
+      let Edir = sources.length ? sources[0].Edir : new Float64Array(room.N);
       if (sources.length > 1) {
         Edir = new Float64Array(room.N);
         for (const src of sources) for (let k = 0; k < room.N; k++) Edir[k] += src.Edir[k];
@@ -179,7 +179,8 @@ export function createCalc() {
       const zk = z.toFixed(6);
       if (!tables.has(zk)) tables.set(zk, planeTables(room, z));
       for (const src of sources) if (!src.planes.has(zk)) src.planes.set(zk, planeDirect(room, z, src.lums, src.phot));
-      let Ed = sources[0].planes.get(zk);
+      let Ed = sources.length ? sources[0].planes.get(zk) : null;
+      if (!sources.length) Ed = planeDirect(room, z, [], null);
       if (sources.length > 1) {
         Ed = new Float64Array(Ed.length);
         for (const src of sources) { const e = src.planes.get(zk); for (let k = 0; k < Ed.length; k++) Ed[k] += e[k]; }
@@ -208,7 +209,7 @@ export function createCalc() {
       iterations: s.iterations, converged: s.converged, change: s.change,
       balance, sumpner: sp, ms, reused,
       lums: sources.flatMap((src) => src.lums.map((l) => ({ type: src.id, pos: [...l.pos], psi: l.psi }))),
-      planes, flux: sources[0].phot.flux, lost, types: typeFlux, directStats: dir.stats,
+      planes, flux: sources.length ? sources[0].phot.flux : 0, lost, types: typeFlux, directStats: dir.stats,
       fileKey: sources.length === 1 && sources[0].type.phot === 'file' ? sources[0].type.fileKey : null,
     };
     if (p.checks !== false) {

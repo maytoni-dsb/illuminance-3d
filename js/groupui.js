@@ -49,10 +49,12 @@ const ROW_ICON = {
   end: SVG(`<path d="M2 8h9" stroke-dasharray="1.6 1.6"/>${DOT(12, 8, 2.4)}`),
 };
 
-/** The buttons of the placement kinds: single (default), grid, line, circle. */
+/** The buttons of the placement kinds: single, grid, line, circle; the one being drawn is pressed. */
 export function renderKinds(host, kind, drawing) {
-  host.innerHTML = ['single', 'grid', 'line', 'circle'].map((k) =>
-    `<button type="button" data-kind="${k}" aria-pressed="${k === kind}" class="tipl${k === kind && drawing ? ' draw' : ''}" data-tip="${esc(t(`lum.kind.${k}`))}" aria-label="${esc(t(`lum.kind.${k}`))}">${KIND_ICON[k]}</button>`).join('');
+  host.innerHTML = ['single', 'grid', 'line', 'circle'].map((k) => {
+    const on = drawing && k === kind;
+    return `<button type="button" data-kind="${k}" aria-pressed="${on}" class="gschipb tipl${on ? ' sel' : ''}" data-tip="${esc(t(`lum.kind.${k}`))}" aria-label="${esc(t(`lum.kind.${k}`))}">${KIND_ICON[k]}</button>`;
+  }).join('');
 }
 
 const UP = '<svg viewBox="0 0 8 5" width="7" height="4" aria-hidden="true"><path d="M0 5 4 0 8 5z" fill="currentColor"/></svg>';
@@ -149,8 +151,8 @@ export function initGroupForm(host, onChange) {
 
 /**
  * The luminaires of the project (dialog "List"): a row per type with its mark, name (editable),
- * file, count; the active one marked; actions per row: make active, replace the luminaires of the
- * selection, delete (only an unused type).
+ * file, count; the active one marked (a click on a row makes it active); actions per row: replace
+ * the luminaires of the selection, delete (only an unused type).
  * @param {{ nameOf(ty, k), fileOf(ty), active, canReplace: boolean }} o
  */
 export function renderLumList(host, m, o) {
@@ -164,10 +166,9 @@ export function renderLumList(host, m, o) {
       <td>${typeMark(k)}</td>
       <td><input class="lname" data-name="${ty.id}" value="${esc(ty.name ?? '')}" placeholder="${esc(typeName({ ...ty, name: undefined }, k, f))}" maxlength="80" aria-label="${esc(t('lum.typeName'))}"><small>${file} · ${esc(flux)}</small></td>
       <td class="n">${n}</td>
-      <td class="acts">${on ? `<span class="lact">${esc(t('lum.active'))}</span>` : `<button type="button" class="gschipb sm" data-use="${ty.id}">${esc(t('lum.use'))}</button>`}
-        ${o.canReplace ? `<button type="button" class="gschipb sm" data-replace="${ty.id}" data-tip="${esc(t('lum.replaceTip'))}">${esc(t('lum.replace'))}</button>` : ''}
+      <td class="acts">${o.canReplace ? `<button type="button" class="gschipb sm" data-replace="${ty.id}" data-tip="${esc(t('lum.replaceTip'))}">${esc(t('lum.replace'))}</button>` : ''}
         <button type="button" class="ldel" data-del="${ty.id}"${n || m.types.length < 2 ? ` disabled data-tip="${esc(t('lum.typeUsed'))}"` : ''} aria-label="${esc(t('lum.typeDel'))}">×</button></td></tr>`;
   }).join('');
-  host.innerHTML = `<table class="ltable"><thead><tr><th></th><th>${esc(t('lum.typeName'))}</th><th class="n">${esc(t('rui.count'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    <button type="button" class="gschipb" data-addtype="1">+ ${esc(t('lum.typeAdd'))}</button>`;
+  host.innerHTML = `<table class="ltable"><thead><tr><th></th><th>${esc(t('lum.typeName'))}</th><th class="n">${esc(t('unit.pcs'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <button type="button" class="gschipb sm" data-addtype="1">+ ${esc(t('lum.typeAdd'))}</button>`;
 }

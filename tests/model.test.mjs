@@ -97,7 +97,7 @@ test('the calculation refuses wrong inputs', () => {
   const calc = createCalc();
   assert.throws(() => calc.run({ ...p, types: [...p.types, { ...p.types[0] }] }), /same id/);
   assert.throws(() => calc.run({ ...p, types: [] }), /no luminaire types/);
-  assert.throws(() => calc.run({ ...p, lums: [] }), /no luminaires/);
+  assert.equal(calc.run({ ...p, lums: [] }).balance.emitted, 0); // an empty room is calculated (stage 2.1)
   assert.throws(() => calc.run({ ...p, lums: p.lums.map((l) => ({ ...l, type: 'x' })) }), /unknown type/);
   assert.throws(() => calc.run({ ...p, lums: p.lums.map((l) => ({ ...l, pos: [l.pos[0], l.pos[1], 0] })) }), /outside/);
   assert.throws(() => calc.run({ ...p, outline: [[0, 0], [6, 0], [6, 4], [3, 4], [3, 6], [0, 6]] }), RangeError);
