@@ -39,8 +39,8 @@ export function renderSwatches(host, color) { host.innerHTML = swatchesHtml(colo
 /** The HTML of the swatches of the colour of a type. */
 export function swatchesHtml(color) {
   const own = !TYPE_COLORS.includes(color);
-  return `<div class="swrow">${TYPE_COLORS.map((c) => `<button type="button" class="sw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
-    <label class="sw own${own ? ' sel' : ''}" style="--ty:${own ? color : '#ffffff'}" data-tip="${esc(t('lum.colorOwn'))}"><input type="color" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></label></div>`;
+  return `<div class="swrow">${TYPE_COLORS.map((c) => `<button type="button" class="tsw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}
+    <label class="tsw own${own ? ' sel' : ''}" style="--ty:${own ? color : '#ffffff'}" data-tip="${esc(t('lum.colorOwn'))}"><input type="color" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></label></div>`;
 }
 
 const SVG = (d, extra = '') => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"${extra}>${d}</svg>`;

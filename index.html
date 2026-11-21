@@ -26,7 +26,7 @@
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
       "./js/groupform.js": "./js/groupform.js?v=fe9956af",
       "./js/groups.js": "./js/groups.js?v=06614448",
-      "./js/groupui.js": "./js/groupui.js?v=4a989918",
+      "./js/groupui.js": "./js/groupui.js?v=2f234c46",
       "./js/help.js": "./js/help.js?v=98159935",
       "./js/hotkeys.js": "./js/hotkeys.js?v=e9d8ff5c",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
@@ -561,13 +561,13 @@
     .pfdesc.top{justify-content:flex-start}
     .pfdesc.top .pfmid{gap:2px}
     .pfsize{margin-top:6px}
-    .swhost{margin-top:-2px}
-    .swrow{display:flex;gap:8px;align-items:center}
-    .sw{width:20px;height:20px;border-radius:50%;border:2px solid #fff;padding:0;background:var(--ty);box-shadow:0 0 0 1px var(--rule);cursor:pointer;position:relative;flex:none}
-    .sw.sel{box-shadow:0 0 0 2px var(--ink)}
-    .sw.own{background:conic-gradient(#e03131,#f5b700,#2f9e44,#1c7ed6,#9c36b5,#e03131)}
-    .sw.own.sel{background:var(--ty)}
-    .sw input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .swhost{margin-top:auto;padding-top:10px}
+    .swrow{display:grid;grid-template-columns:repeat(9,minmax(0,18px));gap:5px;align-items:center}
+    .tsw{width:100%;height:auto;aspect-ratio:1;border-radius:50%;border:1.5px solid #fff;padding:0;background:var(--ty);box-shadow:0 0 0 1px var(--rule);cursor:pointer;position:relative;flex:none}
+    .tsw.sel{box-shadow:0 0 0 2px var(--ink)}
+    .tsw.own{background:conic-gradient(#e03131,#f5b700,#2f9e44,#1c7ed6,#9c36b5,#e03131)}
+    .tsw.own.sel{background:var(--ty)}
+    .tsw input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
     .tydel{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 8px 0 2px;cursor:pointer}
     .tydel:hover{color:var(--err)}
     .tydel:disabled{opacity:.35;cursor:not-allowed}
@@ -732,7 +732,6 @@
             <button type="button" class="gschipb sm" id="lumlistbtn" aria-haspopup="dialog" data-i18n="lum.list" data-i18n-attr="title:lum.listTip"></button></div>
           <div id="lumedit">
             <div class="pfcard" id="lumcard"></div>
-            <div class="swhost" id="tycolors" data-i18n-attr="title:lum.color"></div>
             <div class="fld wide" id="lampsets" hidden></div>
             <div class="fgrid" data-group="lumdata" style="--cols:3"></div>
           </div>
@@ -958,7 +957,7 @@
     addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType,
   } from './js/model.js';
   import { groupPoints, groupCount } from './js/groups.js';
-  import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, renderSwatches } from './js/groupui.js';
+  import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, renderSwatches, swatchesHtml, TYPE_COLORS } from './js/groupui.js';
   import { createProject, createRoomState, serializeProject, parseProject, projectFileName, nextRoomName, INFO_FIELDS, formatPhone, infoErrors, phoneCodes, phoneCode } from './js/project.js';
   import { hotkeyAction, editorKey } from './js/hotkeys.js';
   import {
@@ -1651,7 +1650,10 @@
     const g = model().groups.find((x) => x.id === selGroup);
     if (f && f.reason !== 'set' && g?.kind === 'grid' && g.type === selType) suggestGrid();
     renderLumList();
-  }, { restore: false, tail: () => '' });
+  }, { restore: false, tail: () => {
+    const m = activeRoom()?.model;
+    return `<div class="swhost" id="tycolors" title="${t('lum.color').replace(/"/g, '&quot;')}">${swatchesHtml(m ? typeColorOf(m, typeIndex(m, selType)) : TYPE_COLORS[0])}</div>`;
+  } });
 
   // the colour of the active luminaire (21 Nov 2026: a type is told by its colour): the palette and
   // a colour of one's own, under the name and the article of the card
@@ -1665,9 +1667,9 @@
     remember(m); activeRoom().model = next; autosave();
     showColors(); report.invalidate('rooms'); renderLumList(); view?.refresh();
   }
-  $('#tycolors').addEventListener('click', (e) => { const b = e.target.closest('button[data-color]'); if (b) setColor(b.dataset.color); });
-  $('#tycolors').addEventListener('input', (e) => { if (e.target.type === 'color') { e.stopPropagation(); setColor(e.target.value); } });
-  $('#tycolors').addEventListener('change', (e) => { if (e.target.type === 'color') e.stopPropagation(); });
+  $('#lumcard').addEventListener('click', (e) => { const b = e.target.closest('button[data-color]'); if (b) setColor(b.dataset.color); });
+  $('#lumcard').addEventListener('input', (e) => { if (e.target.type === 'color') { e.stopPropagation(); setColor(e.target.value); } });
+  $('#lumcard').addEventListener('change', (e) => { if (e.target.type === 'color') e.stopPropagation(); });
 
   /** Makes a luminaire type the active one: its file and values in the form. */
   function showType(id) {
