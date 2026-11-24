@@ -148,12 +148,12 @@ export function initGroupForm(host, onChange) {
       return `<div class="gways" role="group">${['in', 'edge', 'axis'].map((w) => {
         const off = n < 2 && w !== 'in' && !(x === 'm' && w === 'axis');
         const tip = t(`gform.way.${x === 'm' ? 'line' : 'grid'}.${w}`);
-        return `<button type="button" class="tipl${w === cur ? ' on' : ''}" data-way="${x}:${w}"${off ? ' disabled' : ''} data-tip="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${w === cur}">${wayIcon(w, x === 'm')}</button>`;
+        return `<button type="button" class="tipr${w === cur ? ' on' : ''}" data-way="${x}:${w}"${off ? ' disabled' : ''} data-tip="${esc(tip)}" aria-label="${esc(tip)}" aria-pressed="${w === cur}">${wayIcon(w, x === 'm')}</button>`;
       }).join('')}</div>`;
     }
-    if (x === 'fit') return `<button type="button" class="gfit tipl" data-fit="1" data-tip="${esc(t('gform.tip.fit'))}" aria-label="${esc(t('gform.tip.fit'))}">${FIT_ICON}</button>`;
+    if (x === 'fit') return `<button type="button" class="gfit tipr" data-fit="1" data-tip="${esc(t('gform.tip.fit'))}" aria-label="${esc(t('gform.tip.fit'))}">${FIT_ICON}</button>`;
     if (x === 'measure') {
-      return `<div class="gways" role="group">${MEASURES.map((m) => `<button type="button" class="tipl${m === measure ? ' on' : ''}" data-measure="${m}" data-tip="${esc(t(`gform.measure.${m}`))}" aria-label="${esc(t(`gform.measure.${m}`))}" aria-pressed="${m === measure}">${MEASURE_ICON[m]}</button>`).join('')}</div>`;
+      return `<div class="gways" role="group">${MEASURES.map((m) => `<button type="button" class="tipr${m === measure ? ' on' : ''}" data-measure="${m}" data-tip="${esc(t(`gform.measure.${m}`))}" aria-label="${esc(t(`gform.measure.${m}`))}" aria-pressed="${m === measure}">${MEASURE_ICON[m]}</button>`).join('')}</div>`;
     }
     return '';
   }
