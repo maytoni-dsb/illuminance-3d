@@ -411,8 +411,9 @@ export function createView(container, opts = {}) {
     const hHalf = Math.atan(Math.tan(vHalf) * (viewW / viewH));
     const fit = R / Math.sin(Math.min(vHalf, hHalf)) + 0.5 * r.H;
     const angles = keepAngles && orbit ? { azimuth: orbit.azimuth, elevation: orbit.elevation } : anglesOf(DEFAULT_DIR);
+    // the pivot in the centre of the room, no lens shift (24 Nov 2026: no stretching when close)
     orbit = createOrbit({
-      target: toThree([r.L / 2, r.W / 2, 0]),
+      target: toThree([r.L / 2, r.W / 2, r.H / 2]),
       ...angles,
       distance: fit,
       minDistance: 0.05 * R,
@@ -420,13 +421,6 @@ export function createView(container, opts = {}) {
     });
     camera.near = 0.01 * R; camera.far = 100 * fit;
     applyCamera(false);
-    // center the room in the free part of the viewport (between the buttons at the top and the
-    // legend at the bottom) by a lens shift; the pivot does not move
-    const c = v3(toThree([r.L / 2, r.W / 2, r.H / 2])).project(camera);
-    const ins = insets();
-    orbit.shiftX = -c.x * viewW / 2;
-    orbit.shiftY = c.y * viewH / 2 + (ins.top - ins.bottom) / 2;
-    applyCamera(true);
     viewTouched = false;
   }
 
@@ -805,7 +799,12 @@ export function createView(container, opts = {}) {
   let pinch = null;           // { d, mx, my } for two-finger touch
   let lastMiddle = 0;         // time of the last wheel-button press, for the double click
 
-  el.addEventListener('contextmenu', (e) => e.preventDefault());
+  let rclick = null; // a press of the right button: a click without a drag opens the menu of the page
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (rclick && Math.hypot(e.clientX - rclick.x, e.clientY - rclick.y) <= 4) opts.onPlanPointer?.('context', { ...planEvent(e), cx: e.clientX, cy: e.clientY });
+    rclick = null;
+  });
   // the luminaire editor of the page (stage 2.1): on the plan the left mouse button is its own; in
   // 3D a press it takes (a gizmo) is its own too, a click without a drag selects, any other drag
   // turns the view. Events carry the room point on the editing height (opts.editZ), the view px,
@@ -848,7 +847,9 @@ export function createView(container, opts = {}) {
       dragMode = null;
     } else if (pointers.size === 1) {
       // on the plan the left button does nothing (touch: one finger pans)
-      dragMode = e.button === 0 ? (plan ? (e.pointerType === 'touch' ? 'pan' : null) : 'rotate') : 'pan';
+      // as in 3ds Max (25 Nov 2026): the middle button pans, the right one only opens the menu
+      dragMode = e.button === 0 ? (plan ? (e.pointerType === 'touch' ? 'pan' : null) : 'rotate') : e.button === 1 ? 'pan' : null;
+      if (e.button === 2) rclick = { x: e.clientX, y: e.clientY };
       // the hand while the view is panned with a mouse button (21 Nov 2026)
       if (dragMode === 'pan' && e.pointerType === 'mouse') el.style.cursor = 'grabbing';
     }
@@ -879,13 +880,13 @@ export function createView(container, opts = {}) {
         panPlan(plan, mx - pinch.mx, my - pinch.my, viewH);
       } else {
         if (pinch.d > 0) zoomBy(orbit, d / pinch.d);
-        pan(orbit, mx - pinch.mx, my - pinch.my);
+        pan(orbit, mx - pinch.mx, my - pinch.my, viewH, camera.fov);
       }
       pinch = { d, mx, my };
     } else if (dragMode === 'rotate') {
       rotate(orbit, dx, dy, viewH);
     } else if (dragMode === 'pan') {
-      if (plan) panPlan(plan, dx, dy, viewH); else pan(orbit, dx, dy);
+      if (plan) panPlan(plan, dx, dy, viewH); else pan(orbit, dx, dy, viewH, camera.fov);
     }
     requestRender();
   });
@@ -907,7 +908,7 @@ export function createView(container, opts = {}) {
     // toward the pointer: its offset from the viewport centre
     const rect = el.getBoundingClientRect();
     const px = e.clientX - rect.left - viewW / 2, py = e.clientY - rect.top - viewH / 2;
-    if (plan) zoomPlanAt(plan, e.deltaY * k, px, py, viewH); else zoomAt(orbit, e.deltaY * k, px, py);
+    if (plan) zoomPlanAt(plan, e.deltaY * k, px, py, viewH); else zoomAt(orbit, e.deltaY * k, px, py, viewH, camera.fov);
     viewTouched = true;
     requestRender();
   }, { passive: false });

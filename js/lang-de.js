@@ -63,6 +63,8 @@ export default {
   },
 
   lum: {
+    tipGrid: 'Raster {nx} × {ny}', tipLine: 'Linie, {n} Stk.', tipCircle: 'Kreis, {n} Stk.',
+    menu: { move: 'Verschieben', rotate: 'Drehen', typeIn: 'Werte eingeben', ungroup: 'Gruppierung aufheben', selType: 'Alle dieses Typs auswählen', del: 'Löschen', abs: 'Absolut', off: 'Versatz' },
     kindOff: 'Zuerst eine Leuchte hinzufügen', pick: 'Anzahl ermitteln', pickTip: 'Anzahl nach dem Wirkungsgradverfahren, wie in Version 1',
     colorMore: 'Weitere Farben', dropTitle: 'IES- oder LDT-Datei hierher ziehen', dropSub: 'oder klicken, um zu wählen', dropAdd: 'Loslassen, um die Leuchte hinzuzufügen',
     dropList: 'IES- oder LDT-Dateien hierher ziehen', modeRoom: 'Raum', modeProject: 'Projekt', none: 'Noch keine Leuchten', cosine: 'Ohne Datei',

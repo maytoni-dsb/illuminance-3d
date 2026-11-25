@@ -139,11 +139,20 @@ export function validateGroup(g, raw, ctx) {
         const same = ['gx', 'gy', 'gw', 'gh'].every((k) => Math.abs(v[k] - cur[k]) < 1e-9);
         if (!same || g.area) out.area = same && g.area ? g.area : areaOf(v.gx, v.gy, v.gw, v.gh);
       }
+      // own axes (25 Nov 2026): another count drops them, another size scales them
+      if (out.nx !== g.nx) delete out.xs;
+      if (out.ny !== g.ny) delete out.ys;
+      const w0 = cur.gw, h0 = cur.gh, a2 = out.area;
+      if (out.xs && a2 && Math.abs(a2.x1 - a2.x0 - w0) > 1e-9) out.xs = out.xs.map((x) => (x * (a2.x1 - a2.x0)) / w0);
+      if (out.ys && a2 && Math.abs(a2.y1 - a2.y0 - h0) > 1e-9) out.ys = out.ys.map((y) => (y * (a2.y1 - a2.y0)) / h0);
       break;
     }
     case 'line': {
       for (const k of ['n', 'hm', 'hm1', 'psi', 'x0', 'y0', 'x1', 'y1']) if (has(k)) out[k] = v[k];
       if (out.x0 === out.x1 && out.y0 === out.y1 && !errors.x1) errors.x1 = t('gform.err.line');
+      // own distances: another count drops them, a shorter line keeps them on it
+      if (out.n !== g.n) delete out.ts;
+      if (out.ts) { const len = Math.hypot(out.x1 - out.x0, out.y1 - out.y0); out.ts = out.ts.map((d) => Math.min(d, len)); }
       break;
     }
     case 'circle': {

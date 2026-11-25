@@ -69,3 +69,23 @@ test('the project keeps the ways and the arc; version 1 projects are unchanged',
   assert.deepEqual([c.groups[2].a0, c.groups[2].a1], [300, 420]);
   assert.deepEqual(calcParams(modelFromValues(DEFAULTS)).lums, v1.lums);
 });
+
+test('own axes of a grid and own distances of a line (25 Nov 2026); counts drop them', async () => {
+  const { validateGroup, fieldValues } = await import('../js/groupform.js');
+  const g = { kind: 'grid', nx: 3, ny: 1, hm: 3, psi: 0, area: { x0: 1, y0: 1, x1: 5, y1: 3 }, xs: [0.5, 1, 3.5] };
+  assert.ok(near(groupPoints(g, room).map((p) => p.x), [1.5, 2, 4.5]));
+  const l = { kind: 'line', x0: 0, y0: 1, x1: 4, y1: 1, n: 3, hm: 3, hm1: 3, psi: 0, ts: [0, 1, 4] };
+  assert.ok(near(groupPoints(l, room).map((p) => p.x), [0, 1, 4]));
+  // the project keeps them when they fit, drops them when not
+  const m0 = modelFromValues(DEFAULTS);
+  const keep = cleanModel({ ...m0, groups: [{ ...g, id: 'g1', type: 't1' }, { ...l, id: 'g2', type: 't1' }] });
+  assert.deepEqual([keep.groups[0].xs, keep.groups[1].ts], [[0.5, 1, 3.5], [0, 1, 4]]);
+  const drop = cleanModel({ ...m0, groups: [{ ...g, id: 'g1', type: 't1', xs: [3, 1, 2] }, { ...l, id: 'g2', type: 't1', ts: [0, 1] }] });
+  assert.deepEqual([drop.groups[0].xs, drop.groups[1].ts], [undefined, undefined]);
+  // another count in the fields: equal spacing again
+  const ctx = { H: 3, L: 6, W: 4, others: 0 };
+  const raw = (x, over = {}) => Object.fromEntries(Object.entries({ ...fieldValues(x, ctx), ...over }).map(([k, v]) => [k, String(v)]));
+  const gg = { ...g, id: 'g1', type: 't1' };
+  assert.equal(validateGroup(gg, raw(gg, { nx: 4 }), ctx).group.xs, undefined);
+  assert.deepEqual(validateGroup(gg, raw(gg, { hm: 2.5 }), ctx).group.xs, [0.5, 1, 3.5]);
+});

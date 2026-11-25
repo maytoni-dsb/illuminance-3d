@@ -305,6 +305,12 @@ export function drawEditor(ctx, size, d) {
   // white; misplaced red (decided on 21 Nov 2026). In 3D only the selected and the one under the
   // pointer: the silhouette of the whole housing.
   const SEL = '#ffffff';
+  // the selected: white with a dark edge (24 Nov 2026), seen on any background
+  const stroke = (sel, w) => {
+    if (!sel) { ctx.lineWidth = w; ctx.stroke(); return; }
+    ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = w + 2; ctx.stroke();
+    ctx.strokeStyle = SEL; ctx.lineWidth = w; ctx.stroke();
+  };
   for (const it of d.items) {
     const sel = d.selected(it), hov = !sel && d.hovered?.(it);
     if (!plan && !sel && !hov) continue;
@@ -315,23 +321,22 @@ export function drawEditor(ctx, size, d) {
     if (!c) continue;
     ctx.strokeStyle = col;
     if (!plan) {
-      ctx.lineWidth = 2;
-      if (silhouette(ctx, P, it)) ctx.stroke();
+      if (silhouette(ctx, P, it)) stroke(sel && !bad, 2);
       continue;
     }
-    ctx.lineWidth = sel ? 2.2 : hov ? 2.8 : 1.2;
+    const w = sel ? 2 : hov ? 2.8 : 1.2;
     if (it.a > 0 && it.b > 0 && Math.min(it.a, it.b) / d.k >= 3) {
-      if (poly(ctx, P, outline(it.x, it.y, z, it.a, it.b, it.psi, it.round))) ctx.stroke();
+      if (poly(ctx, P, outline(it.x, it.y, z, it.a, it.b, it.psi, it.round))) stroke(sel && !bad, w);
       if (it.la > 0 && it.lb > 0 && (it.la < it.a - 1e-6 || it.lb < it.b - 1e-6)) {
-        ctx.lineWidth = sel || hov ? 1.3 : 0.8;
-        if (poly(ctx, P, outline(it.x, it.y, z, it.la, it.lb, it.psi, it.round))) ctx.stroke();
+        if (poly(ctx, P, outline(it.x, it.y, z, it.la, it.lb, it.psi, it.round))) stroke(sel && !bad, sel || hov ? 1.2 : 0.8);
       }
     } else {
       // no housing (cosine model) or too small: a circle with a cross
       ctx.beginPath(); ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI);
       ctx.moveTo(c[0] - 3.5, c[1] - 3.5); ctx.lineTo(c[0] + 3.5, c[1] + 3.5); ctx.moveTo(c[0] + 3.5, c[1] - 3.5); ctx.lineTo(c[0] - 3.5, c[1] + 3.5);
-      ctx.stroke();
+      stroke(sel && !bad, w);
     }
+    ctx.strokeStyle = sel && !bad ? '#1f1f1f' : col;
     // the C0 direction
     const r = Math.max(it.a / 2, 0), t = P(it.x + Math.cos(it.psi * Math.PI / 180) * r, it.y + Math.sin(it.psi * Math.PI / 180) * r, z);
     if (t) {
@@ -339,6 +344,28 @@ export function drawEditor(ctx, size, d) {
       ctx.beginPath(); ctx.moveTo(c[0] + ux / l * (e - 3), c[1] + uy / l * (e - 3)); ctx.lineTo(c[0] + ux / l * (e + 4), c[1] + uy / l * (e + 4));
       ctx.lineWidth = 1; ctx.stroke();
     }
+  }
+  // the handles of the selected group and its dimensions (25 Nov 2026)
+  for (const q of d.handles ?? []) {
+    const [x, y] = q.at;
+    ctx.beginPath();
+    if (q.shape === 'sq') ctx.rect(x - 4, y - 4, 8, 8);
+    else if (q.shape === 'dot') ctx.arc(x, y, 4.5, 0, 2 * Math.PI);
+    else if (q.shape === 'tri-d') { ctx.moveTo(x - 5, y - 13); ctx.lineTo(x + 5, y - 13); ctx.lineTo(x, y - 5); ctx.closePath(); }
+    else if (q.shape === 'tri-r') { ctx.moveTo(x - 13, y - 5); ctx.lineTo(x - 13, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); }
+    if (q.shape.startsWith('tri')) { ctx.fillStyle = '#1971c2'; ctx.fill(); }
+    else { ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = 1.2; ctx.stroke(); }
+  }
+  for (const dm of d.dims ?? []) {
+    const [a, b] = [dm.a, dm.b], ux = b[0] - a[0], uy = b[1] - a[1], l = Math.hypot(ux, uy) || 1, nx = -uy / l * 5, ny = ux / l * 5;
+    ctx.strokeStyle = '#1971c2'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+    ctx.moveTo(a[0] - nx, a[1] - ny); ctx.lineTo(a[0] + nx, a[1] + ny); ctx.moveTo(b[0] - nx, b[1] - ny); ctx.lineTo(b[0] + nx, b[1] + ny); ctx.stroke();
+    const [x, y, w, h] = dm.r;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2);
+    ctx.fillStyle = dm.on ? '#1971c2' : '#ffffff'; ctx.fill(); ctx.strokeStyle = '#1971c2'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.font = `500 11px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = dm.on ? '#ffffff' : '#0c447c'; ctx.fillText(dm.text, x + w / 2, y + h / 2 + 0.5);
   }
   // a luminaire dragged from the card (its polar diagram): a dashed outline and its coordinates
   if (d.ghost) {
@@ -391,6 +418,12 @@ function silhouette(ctx, P, it) {
   hull.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1])));
   ctx.closePath();
   return true;
+}
+/** The silhouette of a housing on the screen (convex polygon), or null. */
+export function silhouettePoly(P, it) {
+  const a = it.a > 0 ? it.a : 0.12, b = it.b > 0 ? it.b : 0.12, h = it.h > 0 ? it.h : 0.03, z = it.hm ?? 0;
+  const pts = [...outline(it.x, it.y, z, a, b, it.psi, it.round), ...outline(it.x, it.y, z - h, a, b, it.psi, it.round)].map((p) => P(p[0], p[1], p[2]));
+  return pts.some((v) => !v) ? null : convexHull(pts);
 }
 /** Convex hull of points in the plane (monotone chain). */
 function convexHull(pts) {

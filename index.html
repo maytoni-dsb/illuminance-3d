@@ -24,27 +24,27 @@
       "./js/estimate.js": "./js/estimate.js?v=8e837379",
       "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
-      "./js/groupform.js": "./js/groupform.js?v=0538b122",
-      "./js/groups.js": "./js/groups.js?v=152a9a49",
-      "./js/groupui.js": "./js/groupui.js?v=76415873",
+      "./js/groupform.js": "./js/groupform.js?v=ef6249e6",
+      "./js/groups.js": "./js/groups.js?v=86d71f13",
+      "./js/groupui.js": "./js/groupui.js?v=ae224926",
       "./js/help.js": "./js/help.js?v=98159935",
       "./js/hotkeys.js": "./js/hotkeys.js?v=4d1be303",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=7a4d2313",
-      "./js/lang-en.js": "./js/lang-en.js?v=7ec51b72",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=ceb76897",
-      "./js/model.js": "./js/model.js?v=f6385a6b",
+      "./js/lang-de.js": "./js/lang-de.js?v=f22b2371",
+      "./js/lang-en.js": "./js/lang-en.js?v=5b2f0ab1",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=06400623",
+      "./js/model.js": "./js/model.js?v=b7d566f0",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
-      "./js/orbit.js": "./js/orbit.js?v=502539fe",
+      "./js/orbit.js": "./js/orbit.js?v=a8dabfb7",
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=51d36bb9",
       "./js/planedit.js": "./js/planedit.js?v=21ce5f07",
-      "./js/planview.js": "./js/planview.js?v=2573e143",
+      "./js/planview.js": "./js/planview.js?v=620b239b",
       "./js/project.js": "./js/project.js?v=3155618c",
       "./js/report.js": "./js/report.js?v=82058f86",
       "./js/reportsvg.js": "./js/reportsvg.js?v=aee5f3b6",
@@ -52,7 +52,7 @@
       "./js/solver.js": "./js/solver.js?v=a5376c19",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=1cd77bb9",
-      "./js/view3d.js": "./js/view3d.js?v=819b3074",
+      "./js/view3d.js": "./js/view3d.js?v=4e722243",
       "./js/worker.js": "./js/worker.js?v=a2071819",
       "./js/workplane.js": "./js/workplane.js?v=dc6a0497"
     }
@@ -70,7 +70,7 @@
       --accent:#7C54FE; --accent-hov:#5b34e6; --accent-soft:#DEDAEB; --on-accent:#fff;
       --sel:#000; --on-sel:#fff; --sel-sub:#BDBDBD;
       --err:#EB3D00; --ok:#1D874D; --ok-soft:#ECFFBF;
-      --room-bg:#a6a6a6; --view-edge:#7a7a78;
+      --room-bg:#F6F6F5; --view-edge:#7a7a78;
       --sans:"Suisse Intl","SuisseIntl","Suisse","Helvetica Neue",Helvetica,Arial,sans-serif;
     }
     @media (prefers-color-scheme:dark){
@@ -207,8 +207,7 @@
     /* 3D view */
     .viewcard{position:relative;overflow:hidden;min-height:0;background:var(--room-bg);container:view / inline-size}
     #view{position:absolute;inset:0}
-    #view canvas{display:block;width:100%;height:100%;cursor:grab}
-    #view canvas:active{cursor:grabbing}
+    #view canvas{display:block;width:100%;height:100%;cursor:default}
     .vbottom{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
     /* status pill: top centre, level with the view buttons */
     .vtop{position:absolute;top:12px;left:0;right:0;height:34px;display:flex;align-items:center;justify-content:center;pointer-events:none}
@@ -334,8 +333,8 @@
 
 
     /* stages in the top bar (as in Maytoni Track Configurator): number, name; the current one filled */
-    .stnav{display:flex;align-items:center;gap:8px;margin:0 auto 0 14px}
-    .hbtns{display:flex;align-items:center;gap:2px;margin-left:auto}
+    .stnav{display:flex;align-items:center;gap:8px;margin:0 auto}
+    .hbtns{display:flex;align-items:center;gap:2px;margin-left:12px}
     .hib{width:34px;height:34px;border-radius:999px;border:0;background:transparent;color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer}
     .hib:hover:not(:disabled){background:var(--soft)}
     .hib:disabled{opacity:.35;cursor:default}
@@ -644,8 +643,8 @@
     .eprow input:focus{outline:none;border-color:var(--accent)}
     .eprow input[aria-invalid]{border-color:var(--err)}
     .eck{display:flex;align-items:center;gap:8px;height:30px;font-size:13px;cursor:pointer}
-    .kcap{display:inline-flex;gap:2px;background:var(--soft);border-radius:999px;padding:3px;align-self:flex-start}
-    .kcap button{width:40px;height:30px;border-radius:999px;border:0;background:transparent;color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer;position:relative}
+    .kcap{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:var(--soft);border-radius:999px;padding:3px}
+    .kcap button{height:30px;border-radius:999px;border:0;background:transparent;color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer;position:relative}
     .kcap button.on{background:var(--card);box-shadow:0 0 0 1px var(--rule)}
     .kcap button:disabled{opacity:.35;cursor:default}
     .lempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:128px;border:1.5px dashed var(--line);border-radius:10px;color:var(--ink3);text-align:center;cursor:pointer;font-size:12.5px;padding:10px}
@@ -669,11 +668,11 @@
     .grow{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:center;gap:6px;margin-top:8px}
     .gcells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;align-items:center}
     .gf.off input{background:var(--soft);color:var(--muted)}
-    .gways{grid-column:span 2;justify-self:end;display:inline-flex;gap:2px;background:var(--soft);border-radius:999px;padding:2px}
-    .gways button{width:40px;height:24px;border-radius:999px;border:0;background:transparent;color:var(--ink);padding:0;display:inline-grid;place-items:center;cursor:pointer;position:relative}
+    .gways{grid-column:span 2;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--soft);border-radius:999px;padding:2px;height:28px;box-sizing:border-box}
+    .gways button{height:100%;border-radius:999px;border:0;background:transparent;color:var(--ink);padding:0;display:inline-grid;place-items:center;cursor:pointer;position:relative}
     .gways button.on{background:var(--card);box-shadow:0 0 0 1px var(--rule)}
     .gways button:disabled{opacity:.3;cursor:default}
-    .gfit{height:26px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer;position:relative}
+    .gfit{height:28px;width:100%;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--ink);display:inline-grid;place-items:center;padding:0;cursor:pointer;position:relative}
     .gpick{display:flex;justify-content:flex-end;margin-top:8px}
     .ldlg2{width:400px;max-width:calc(100vw - 32px);height:fit-content;max-height:min(640px,calc(100vh - 48px));padding:0;border:1px solid var(--rule);border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 8px 24px rgba(0,0,0,.10);overflow:visible}
     .ldlg2[open]{display:flex;flex-direction:column}
@@ -698,6 +697,22 @@
     .lbar .lsp{flex:1}
     .tipt{position:relative}
     .tipt:hover::after{content:attr(data-tip);position:absolute;bottom:40px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--ink);color:var(--card);font-size:11px;padding:3px 7px;border-radius:5px;z-index:9;pointer-events:none}
+    .cmenu{position:absolute;z-index:8;min-width:220px;padding:5px;border-radius:10px}
+    .cmi{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;font-size:13px;color:var(--ink);cursor:pointer}
+    .cmi:hover{background:var(--soft)}
+    .cmi span{flex:1}
+    .cmi.off{opacity:.4;pointer-events:none}
+    .cmi kbd{font:11px inherit;color:var(--ink3)}
+    .cmi .cmbox{width:22px;height:22px;flex:none;border-radius:5px;border:1px solid var(--line);background:var(--card);color:var(--ink2);display:inline-grid;place-items:center;padding:0;cursor:pointer}
+    .cmi .cmbox:hover{color:var(--ink);background:var(--soft);border-color:var(--ink3)}
+    .cmsep{height:1px;background:var(--rule);margin:4px 6px}
+    .typein{position:absolute;z-index:8;width:270px;padding:12px 14px}
+    .tihd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:13px}
+    .ndclose.sm{width:24px;height:24px;font-size:14px}
+    .tilab{font-size:12px;color:var(--ink3);margin-top:8px}
+    .tirow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:4px}
+    .tirow .gf input{height:26px}
+    .dimedit{position:absolute;z-index:9;height:23px;border:1.5px solid #1971c2;border-radius:6px;padding:0 6px;font:12px var(--font, inherit);text-align:center;background:#fff;color:#111;outline:none}
     .ltip{position:absolute;z-index:7;pointer-events:none;padding:4px 8px;font-size:12px;color:#fff;background:#1f1f1f;border-radius:5px;white-space:nowrap}
     .ehint{position:absolute;left:16px;top:60px;z-index:5;max-width:60%;padding:6px 12px;font-size:12px;color:var(--ink2);background:var(--card);border:1px solid var(--rule);border-radius:999px}
     .ndlg.ldlg{width:min(980px,94vw);height:fit-content;max-height:88vh}
@@ -733,7 +748,6 @@
       <path d="M31.3,21.7h2.9L27.9,6.1h-3.1l-6.3,15.7h2.9l1.3-3.3h7.1L31.3,21.7z M23.8,15.9l2.5-6.1l2.5,6.1H23.8z"/>
       <circle cx="103.9" cy="2.3" r="2.1"/></g></svg></span>
     <span class="apptitle" data-i18n-html="app.appTitle"></span>
-    <span class="beta" data-i18n="app.beta" data-i18n-attr="title:app.betaTip"></span>
     <div class="hbtns" role="group" data-i18n-attr="aria-label:app.fileTools">
       <button type="button" class="hib tipr" id="hopen" data-i18n-attr="data-tip:app.openTip;aria-label:app.openTip" data-key="Ctrl+O"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6V4.5h5l1.5 1.5h7.5v2"/><path d="M2.5 6v9.5h13l2-7.5h-13l-2 7.5"/></svg></button>
       <button type="button" class="hib tipr" id="savebtn" data-i18n-attr="data-tip:app.saveTip;aria-label:app.saveTip" data-key="Ctrl+S"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5"/><path d="M3.5 13v3.5h13V13"/></svg></button>
@@ -755,6 +769,7 @@
       <button type="button" class="gsst" data-s="3"><span class="gsn">3</span><span data-i18n="app.st3"></span></button>
     </nav>
     <div class="sbtools">
+  <span class="beta" data-i18n="app.beta" data-i18n-attr="title:app.betaTip"></span>
       <div class="langw"><button type="button" class="langpill" id="langpill" aria-haspopup="menu" aria-expanded="false" data-i18n-attr="aria-label:app.lang"></button>
         <div class="vmenu langmenu" id="langsw" role="menu" hidden></div></div>
       <button type="button" class="sbbtn round tipr" id="apphelp" data-i18n-attr="data-tip:help.title;aria-label:help.title" data-key="F1" aria-expanded="false">?</button>
@@ -882,6 +897,20 @@
       </div>
       <div class="ehint" id="ehint" hidden></div>
       <div class="ltip" id="ltip" hidden></div>
+      <div class="vmenu cmenu" id="cmenu" role="menu" hidden>
+        <div class="cmi" role="menuitem" data-cm="move"><span data-i18n="lum.menu.move"></span><button type="button" class="cmbox" data-box="move" data-i18n-attr="title:lum.menu.typeIn;aria-label:lum.menu.typeIn"><svg viewBox="0 0 14 14" width="12" height="12" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button></div>
+        <div class="cmi" role="menuitem" data-cm="rotate"><span data-i18n="lum.menu.rotate"></span><button type="button" class="cmbox" data-box="rotate" data-i18n-attr="title:lum.menu.typeIn;aria-label:lum.menu.typeIn"><svg viewBox="0 0 14 14" width="12" height="12" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button></div>
+        <div class="cmsep"></div>
+        <div class="cmi" role="menuitem" data-cm="ungroup"><span data-i18n="lum.menu.ungroup"></span></div>
+        <div class="cmi" role="menuitem" data-cm="seltype"><span data-i18n="lum.menu.selType"></span></div>
+        <div class="cmsep"></div>
+        <div class="cmi" role="menuitem" data-cm="del"><span data-i18n="lum.menu.del"></span><kbd>Del</kbd></div>
+      </div>
+      <div class="epop typein" id="typein" hidden>
+        <div class="tihd"><b id="tititle"></b><button type="button" class="ndclose sm" id="ticlose" data-i18n-attr="aria-label:app.close">×</button></div>
+        <div class="tilab" data-i18n="lum.menu.abs"></div><div class="tirow" id="tiabs"></div>
+        <div class="tilab" data-i18n="lum.menu.off"></div><div class="tirow" id="tioff"></div>
+      </div>
       <div class="vtop"><div class="vstatus" id="hover"></div></div>
       <div class="vbottom">
         <div class="legend" id="legend" data-i18n-attr="aria-label:app.legend"><span class="lt" data-i18n="app.legendUnit"></span><ol></ol></div>
@@ -1028,13 +1057,13 @@
   import { initHelp } from './js/help.js';
   import { levelStatus, bilinear, cellStats } from './js/workplane.js';
   import { isolineSet } from './js/isolines.js';
-  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D, drawEditor } from './js/planview.js';
+  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D, drawEditor, silhouettePoly } from './js/planview.js';
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry } from './js/photometry.js';
   import {
     formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors,
+    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors, ungroupGroup,
   } from './js/model.js';
   import { groupPoints, groupCount, fullCircle } from './js/groups.js';
   import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, swatchesHtml, paletteHtml, PALETTE } from './js/groupui.js';
@@ -1119,7 +1148,7 @@
         if (info.mode === '2d') {
           // the axes of the selected grid (stage 2.1; the plan editor draws every luminaire)
           const m = activeRoom()?.model, g = m?.groups.find((x) => x.id === selGroup);
-          const gp = g?.kind === 'grid' ? groupPoints(g, { L: room.L, W: room.W }, sizeOf(m.types.find((ty) => ty.id === g.type))) : [];
+          const gp = g?.kind === 'grid' && !(m && editGroup(m)) ? groupPoints(g, { L: room.L, W: room.W }, sizeOf(m.types.find((ty) => ty.id === g.type))) : [];
           const xs = gp.slice(0, g?.nx ?? 0).map((p) => p.x), ys = gp.filter((_, k) => k % (g?.nx || 1) === 0).map((p) => p.y);
           const css = getComputedStyle($('.viewcard'));
           drawRoomPlan(ctx, info.T, size, { L: room.L, W: room.W, xs, ys, ink: css.getPropertyValue('--ink2').trim() || '#2e2e2e' });
@@ -1323,7 +1352,8 @@
   }
   /** The active luminaire line, the placement buttons and "Suggest" (a grid in focus). */
   function renderLum(m, per = new Map()) {
-    renderKinds($('#kinds'), kind, drawing, !m.types.length);
+    const selKind = !drawing && !isEmpty(sel) ? m.groups.find((g) => g.id === selGroup)?.kind ?? null : null;
+    renderKinds($('#kinds'), drawing ? kind : selKind, drawing ? true : selKind ? null : false, !m.types.length);
     const g = m.groups.find((x) => x.id === selGroup);
     $('#suggest').hidden = !(g?.kind === 'grid' && !isEmpty(sel));
   }
@@ -1362,6 +1392,7 @@
     const m = ar.model, values = current;
     renderNormSrc();
     showCentre(m);
+    fillTypeIn();
     const place = showPlacement(m);
     lastPer = place.per;
     renderLum(m, place.per);
@@ -2100,13 +2131,16 @@
   const ROTATE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 11a6 6 0 1 1-1.8-4.3" stroke="#fff" stroke-width="4"/><path d="M15.8 3.6v3.4h-3.4" stroke="#fff" stroke-width="4"/><path d="M17 11a6 6 0 1 1-1.8-4.3" stroke="#111" stroke-width="1.6"/><path d="M15.8 3.6v3.4h-3.4" stroke="#111" stroke-width="1.6"/></g></svg>')}") 11 11, pointer`;
   /** The luminaire under the pointer: drawn thicker; after 0.6 s its name and article (21 Nov 2026). */
   function hoverOn(it, e) {
-    const key = it ? `${it.group}:${it.index}` : null, tip = $('#ltip');
+    // a luminaire of a group: the whole group (24 Nov 2026)
+    const key = it ? (it.kind === 'single' ? `${it.group}:${it.index}` : `${it.group}:*`) : null, tip = $('#ltip');
     if (key === hoverItem) { if (key && !tip.hidden) placeTip(e); return; }
     hoverItem = key; clearTimeout(tipTimer); tip.hidden = true;
     view?.refresh();
     if (!it) return;
     const ty = model().types.find((x) => x.id === it.type);
-    tipTimer = setTimeout(() => { if (hoverItem !== key || !ty) return; tip.textContent = lumLabel(ty); tip.hidden = false; placeTip(e); }, 600);
+    const g = model().groups.find((x) => x.id === it.group);
+    const what = !g || g.kind === 'single' ? '' : ` · ${g.kind === 'grid' ? t('lum.tipGrid', { nx: g.nx, ny: g.ny }) : t(g.kind === 'line' ? 'lum.tipLine' : 'lum.tipCircle', { n: g.n })}`;
+    tipTimer = setTimeout(() => { if (hoverItem !== key || !ty) return; tip.textContent = lumLabel(ty) + what; tip.hidden = false; placeTip(e); }, 600);
   }
   function placeTip(e) { if (!e) return; const t2 = $('#ltip'); t2.style.left = `${e.px + 14}px`; t2.style.top = `${e.py + 18}px`; }
   function setTool(t, { keepDrawing = false } = {}) {
@@ -2183,15 +2217,281 @@
   }
   /** The luminaire nearest to the pointer in 3D (its top centre within 12 px). */
   function pickScreen(items, e) {
-    let best = null, bd = 12;
+    // the whole silhouette of the housing (24 Nov 2026); of several the nearest to the camera — the
+    // largest on the screen; else within 8 px of its outline
+    let best = null, ba = -1, near = null, nd = 8;
     for (const it of items) {
-      const q = e.project(it.x, it.y, it.hm);
-      if (!q) continue;
-      const d = Math.hypot(q[0] - e.px, q[1] - e.py);
-      if (d < bd) { bd = d; best = it; }
+      const poly = silhouettePoly(e.project, it);
+      if (!poly || poly.length < 3) continue;
+      let pos = 0, neg = 0;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [x1, y1] = poly[j], [x2, y2] = poly[i];
+        if ((x2 - x1) * (e.py - y1) - (y2 - y1) * (e.px - x1) >= 0) pos++; else neg++;
+      }
+      let area = 0;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) area += poly[j][0] * poly[i][1] - poly[i][0] * poly[j][1];
+      if ((!pos || !neg) && Math.abs(area) > ba) { ba = Math.abs(area); best = it; }
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [x1, y1] = poly[j], [x2, y2] = poly[i], dx = x2 - x1, dy = y2 - y1, l = dx * dx + dy * dy || 1;
+        const t2 = Math.max(0, Math.min(1, ((e.px - x1) * dx + (e.py - y1) * dy) / l));
+        const d = Math.hypot(e.px - x1 - t2 * dx, e.py - y1 - t2 * dy);
+        if (d < nd) { nd = d; near = it; }
+      }
     }
-    return best;
+    return best ?? near;
   }
+  // ---- handles and dimensions of the selected group on the view (25 Nov 2026) ----
+  let hoverDim = null;
+  /** The one group (grid, line, circle) selected with W: it shows its handles and dimensions. */
+  function editGroup(m) {
+    if (tool !== 'move' || drawing || isEmpty(sel) || sel.points.size || sel.groups.size !== 1) return null;
+    const g = m.groups.find((x) => x.id === [...sel.groups][0]);
+    return g && g.kind !== 'single' ? g : null;
+  }
+  const areaOfGrid = (m, g) => g.area ?? { x0: 0, y0: 0, x1: m.room.shape.L, y1: m.room.shape.W };
+  /** Offsets of the axes of a grid from its area start (own or by the way). */
+  function gridAxes(m, g) {
+    const pts = groupPoints(g, { L: m.room.shape.L, W: m.room.shape.W }, sizeOf(m.types.find((ty) => ty.id === g.type)));
+    const a = areaOfGrid(m, g);
+    return { xs: pts.slice(0, g.nx).map((p) => p.x - a.x0), ys: pts.filter((_, k) => k % g.nx === 0).map((p) => p.y - a.y0), a };
+  }
+  /** Distances of the luminaires of a line from its start. */
+  function lineDists(m, g) {
+    const pts = groupPoints(g, { L: m.room.shape.L, W: m.room.shape.W }, sizeOf(m.types.find((ty) => ty.id === g.type)));
+    return pts.map((p) => Math.hypot(p.x - g.x0, p.y - g.y0));
+  }
+  /** Handles: { id, at: view px, shape, cursor }. */
+  function handlesOf(m, g, P) {
+    const out = [], z = g.hm, add = (id, x, y, shape, cursor, zz = z) => { const q = P(x, y, zz); if (q) out.push({ id, at: q, shape, cursor }); };
+    if (g.kind === 'grid') {
+      const { xs, ys, a } = gridAxes(m, g);
+      for (const [i, x] of [[0, a.x0], [1, a.x1]]) for (const [j, y] of [[0, a.y0], [1, a.y1]]) add(`c:${i}${j}`, x, y, 'sq', (i === j) ? 'nesw-resize' : 'nwse-resize');
+      add('sx:0', a.x0, (a.y0 + a.y1) / 2, 'dot', 'ew-resize'); add('sx:1', a.x1, (a.y0 + a.y1) / 2, 'dot', 'ew-resize');
+      add('sy:0', (a.x0 + a.x1) / 2, a.y0, 'dot', 'ns-resize'); add('sy:1', (a.x0 + a.x1) / 2, a.y1, 'dot', 'ns-resize');
+      xs.forEach((x, i) => add(`ax:${i}`, a.x0 + x, a.y1, 'tri-d', 'ew-resize'));
+      ys.forEach((y, j) => add(`ay:${j}`, a.x0, a.y0 + y, 'tri-r', 'ns-resize'));
+    } else if (g.kind === 'line') {
+      add('p0', g.x0, g.y0, 'sq', 'move', g.hm); add('p1', g.x1, g.y1, 'sq', 'move', g.hm1);
+      const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1;
+      lineDists(m, g).forEach((d, i) => { const t2 = d / len; add(`lt:${i}`, g.x0 + (g.x1 - g.x0) * t2, g.y0 + (g.y1 - g.y0) * t2, 'none', 'move', g.hm + (g.hm1 - g.hm) * t2); });
+    } else if (g.kind === 'circle') {
+      const a0 = g.a0 ?? 0, a1 = g.a1 ?? 360, n = Math.max(1, g.n), step = (a1 - a0) / (fullCircle(g) ? n : Math.max(1, n - 1));
+      const ang = (a0 + step / 2) * Math.PI / 180;
+      add('r', g.cx + g.r * Math.cos(ang), g.cy + g.r * Math.sin(ang), 'dot', 'move');
+    }
+    return out;
+  }
+  /** Dimensions (plan only): { id, a, b (view px), text, r: pill rect [x, y, w, h], seg }. */
+  function dimsOf(m, g, P) {
+    const out = [], fmt = (v) => formatNumber(v, 3);
+    const pill = (id, a, b, off, value, seg) => {
+      const nx = off[0], ny = off[1];
+      const A = [a[0] + nx, a[1] + ny], B = [b[0] + nx, b[1] + ny], text = fmt(value), w = text.length * 6.6 + 14, h = 17;
+      const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
+      out.push({ id, a: A, b: B, text, value, seg, r: [mx - w / 2, my - h / 2, w, h], on: hoverDim === id });
+    };
+    if (g.kind === 'grid') {
+      const { xs, ys, a } = gridAxes(m, g), z = g.hm;
+      const px = [0, ...xs, a.x1 - a.x0], py = [0, ...ys, a.y1 - a.y0];
+      for (let k = 0; k < px.length - 1; k++) {
+        if (px[k + 1] - px[k] < 1e-6) continue;
+        const A = P(a.x0 + px[k], a.y0, z), B = P(a.x0 + px[k + 1], a.y0, z);
+        if (A && B) pill(`dx:${k}`, A, B, [0, 26], px[k + 1] - px[k], k);
+      }
+      for (let k = 0; k < py.length - 1; k++) {
+        if (py[k + 1] - py[k] < 1e-6) continue;
+        const A = P(a.x0, a.y0 + py[k], z), B = P(a.x0, a.y0 + py[k + 1], z);
+        if (A && B) pill(`dy:${k}`, A, B, [-30, 0], py[k + 1] - py[k], k);
+      }
+    } else if (g.kind === 'line') {
+      const ds = lineDists(m, g), len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1, ux = (g.x1 - g.x0) / len, uy = (g.y1 - g.y0) / len;
+      const A0 = P(g.x0, g.y0, g.hm), B0 = P(g.x1, g.y1, g.hm1);
+      const sx = B0 && A0 ? B0[0] - A0[0] : 1, sy = B0 && A0 ? B0[1] - A0[1] : 0, sl = Math.hypot(sx, sy) || 1;
+      for (let k = 0; k < ds.length - 1; k++) {
+        const A = P(g.x0 + ux * ds[k], g.y0 + uy * ds[k], g.hm), B = P(g.x0 + ux * ds[k + 1], g.y0 + uy * ds[k + 1], g.hm);
+        if (A && B && ds[k + 1] - ds[k] > 1e-6) pill(`dl:${k}`, A, B, [sy / sl * 22, -sx / sl * 22], ds[k + 1] - ds[k], k);
+      }
+    } else if (g.kind === 'circle') {
+      const h = handlesOf(m, g, P).find((q) => q.id === 'r'), c = P(g.cx, g.cy, g.hm);
+      if (h && c) pill('dr', c, h.at, [0, 0], g.r, 0);
+    }
+    return out;
+  }
+  /** A handle dragged to the room point (x, y): the group changed. */
+  function applyHandle(m, id, h, x, y) {
+    const g = m.groups.find((q) => q.id === id);
+    if (!g) return m;
+    const L = m.room.shape.L, W = m.room.shape.W, cl = (v, lo, hi) => Math.min(hi, Math.max(lo, v)), r6 = (v) => Math.round(v * 1e6) / 1e6;
+    let ng = g;
+    if (g.kind === 'grid') {
+      const { xs, ys, a } = gridAxes(m, g), na = { ...a };
+      const [k, s2] = h.split(':');
+      if (k === 'c' || k === 'sx') { const i = k === 'c' ? s2[0] : s2; if (i === '0') na.x0 = r6(cl(x, 0, a.x1 - 0.05)); else na.x1 = r6(cl(x, a.x0 + 0.05, L)); }
+      if (k === 'c' || k === 'sy') { const j = k === 'c' ? s2[1] : s2; if (j === '0') na.y0 = r6(cl(y, 0, a.y1 - 0.05)); else na.y1 = r6(cl(y, a.y0 + 0.05, W)); }
+      if (k === 'ax' || k === 'ay') {
+        const i = Number(s2), v = k === 'ax' ? xs.slice() : ys.slice(), len = k === 'ax' ? a.x1 - a.x0 : a.y1 - a.y0;
+        const lo = i ? v[i - 1] + 0.01 : 0, hi = i < v.length - 1 ? v[i + 1] - 0.01 : len;
+        v[i] = r6(cl((k === 'ax' ? x - a.x0 : y - a.y0), lo, hi));
+        ng = { ...g, [k === 'ax' ? 'xs' : 'ys']: v };
+      } else {
+        ng = { ...g, area: na };
+        const wOld = a.x1 - a.x0, hOld = a.y1 - a.y0;
+        if (g.xs) ng.xs = g.xs.map((v) => r6(v * (na.x1 - na.x0) / wOld));
+        if (g.ys) ng.ys = g.ys.map((v) => r6(v * (na.y1 - na.y0) / hOld));
+      }
+    } else if (g.kind === 'line') {
+      if (h === 'p0' || h === 'p1') {
+        ng = h === 'p0' ? { ...g, x0: r6(cl(x, 0, L)), y0: r6(cl(y, 0, W)) } : { ...g, x1: r6(cl(x, 0, L)), y1: r6(cl(y, 0, W)) };
+        if (ng.x0 === ng.x1 && ng.y0 === ng.y1) return m;
+        if (g.ts) { const len = Math.hypot(ng.x1 - ng.x0, ng.y1 - ng.y0); ng.ts = g.ts.map((d) => Math.min(d, len)); }
+      } else {
+        const i = Number(h.split(':')[1]), ds = lineDists(m, g), len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1;
+        const d = ((x - g.x0) * (g.x1 - g.x0) + (y - g.y0) * (g.y1 - g.y0)) / len;
+        ds[i] = r6(cl(d, i ? ds[i - 1] + 0.01 : 0, i < ds.length - 1 ? ds[i + 1] - 0.01 : len));
+        ng = { ...g, ts: ds };
+      }
+    } else if (g.kind === 'circle') {
+      ng = { ...g, r: r6(Math.max(0.05, Math.hypot(x - g.cx, y - g.cy))) };
+    }
+    return replaceGroup(m, id, ng);
+  }
+  /** A dimension typed: the axis or luminaire after it moves (the last one: the one before it). */
+  function applyDim(m, g, d, v) {
+    if (!(v > 0)) return m;
+    const r6 = (x) => Math.round(x * 1e6) / 1e6, k = d.seg;
+    let ng = null;
+    const setSeg = (pts, inner) => { // pts with the ends; inner: indices that may move
+      const p = pts.slice();
+      if (inner.includes(k + 1)) p[k + 1] = p[k] + v; else if (inner.includes(k)) p[k] = p[k + 1] - v; else return null;
+      for (let i = 1; i < p.length; i++) if (p[i] < p[i - 1] - 1e-9) return null;
+      return p;
+    };
+    if (g.kind === 'grid') {
+      const { xs, ys, a } = gridAxes(m, g), dx = d.id.startsWith('dx');
+      const list = dx ? xs : ys, len = dx ? a.x1 - a.x0 : a.y1 - a.y0;
+      const p = setSeg([0, ...list, len], list.map((_, i) => i + 1));
+      if (!p) return m;
+      ng = { ...g, [dx ? 'xs' : 'ys']: p.slice(1, -1).map(r6) };
+    } else if (g.kind === 'line') {
+      const ds = lineDists(m, g), len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);
+      const p = setSeg(ds, ds.map((_, i) => i));
+      if (!p || p[p.length - 1] > len + 1e-9 || p[0] < -1e-9) return m;
+      ng = { ...g, ts: p.map(r6) };
+    } else if (g.kind === 'circle') ng = { ...g, r: r6(v) };
+    return ng ? replaceGroup(m, g.id, ng) : m;
+  }
+  /** The field over a dimension: Enter applies, Esc cancels. */
+  function openDimEdit(d, g) {
+    const box = document.createElement('input');
+    box.className = 'dimedit'; box.value = d.text; box.setAttribute('inputmode', 'decimal');
+    box.style.left = `${d.r[0] - 6}px`; box.style.top = `${d.r[1] - 3}px`; box.style.width = `${Math.max(56, d.r[2] + 12)}px`;
+    $('#view').append(box); box.focus(); box.select();
+    let done = false;
+    const finish = (ok) => {
+      if (done) return; done = true;
+      const v = parseNumber(box.value); box.remove();
+      if (!ok) return;
+      const m = model(), cur = m.groups.find((x) => x.id === g.id), next = cur ? applyDim(m, cur, d, v) : m;
+      if (next !== m) { remember(m); activeRoom().model = next; autosave(); loadGroupForm(); refresh(); } else view?.refresh();
+    };
+    box.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
+    box.addEventListener('blur', () => finish(true));
+  }
+
+  // ---- the menu of the right button and the type-in of Move and Rotate (25 Nov 2026, after 3ds Max) ----
+  const cmenu = $('#cmenu'), typein = $('#typein');
+  let typeinTool = null;
+  /** The right button: while drawing it cancels the half-drawn group or leaves the drawing; else the menu. */
+  function contextAt(e, m) {
+    if (drawing) {
+      if (pend) { pend = null; snapMark = null; showHint(); view?.refresh(); } else stopDrawing();
+      return;
+    }
+    const items = planItems(m, sizeOf);
+    const it = e.mode === '2d' ? pickAt(items, e.x, e.y, 6 * e.k) : pickScreen(items, e);
+    if (it && !isSelected(sel, it.group, it.index, it.kind)) selectAt(it, {});
+    const has = !isEmpty(sel), groupsSel = has && selectedItems(items, sel).some((x) => x.kind !== 'single');
+    for (const [k, on] of [['move', has], ['rotate', has], ['ungroup', groupsSel], ['seltype', has], ['del', has]]) cmenu.querySelector(`[data-cm="${k}"]`).classList.toggle('off', !on);
+    const host = $('#view').getBoundingClientRect();
+    cmenu.hidden = false;
+    const w = cmenu.offsetWidth, h = cmenu.offsetHeight;
+    cmenu.style.left = `${Math.min(e.cx - host.left, host.width - w - 8)}px`;
+    cmenu.style.top = `${Math.min(e.cy - host.top, host.height - h - 8)}px`;
+  }
+  const closeCMenu = () => { cmenu.hidden = true; };
+  document.addEventListener('pointerdown', (e) => { if (!cmenu.hidden && !e.target.closest('#cmenu')) closeCMenu(); });
+  cmenu.addEventListener('click', (e) => {
+    const box = e.target.closest('[data-box]');
+    const it = e.target.closest('[data-cm]');
+    if (!it || it.classList.contains('off')) return;
+    closeCMenu();
+    const k = it.dataset.cm, m = model();
+    if (box) { setTool(k === 'move' ? 'move' : 'rotate'); openTypeIn(box.dataset.box); return; }
+    if (k === 'move') setTool('move');
+    else if (k === 'rotate') setTool('rotate');
+    else if (k === 'del') deleteSel();
+    else if (k === 'ungroup') {
+      const ids = [...new Set(selectedItems(planItems(m, sizeOf), sel).filter((x) => x.kind !== 'single').map((x) => x.group))];
+      let next = m;
+      for (const id of ids) { const g = next.groups.find((x) => x.id === id); next = ungroupGroup(next, id, sizeOf(next.types.find((ty) => ty.id === g.type))); }
+      remember(m); activeRoom().model = next; autosave();
+      sel = { groups: new Set(ids), points: new Map() };
+      const f = firstOf(sel); if (f) focusGroup(f.group, 0);
+      loadGroupForm(); refresh();
+    } else if (k === 'seltype') {
+      const f = firstOf(sel), ty = f && m.groups.find((g) => g.id === f.group)?.type;
+      if (!ty) return;
+      sel = { groups: new Set(m.groups.filter((g) => g.type === ty).map((g) => g.id)), points: new Map() };
+      const g0 = firstOf(sel); if (g0) focusGroup(g0.group, 0);
+      loadGroupForm(); refresh();
+    }
+  });
+  /** The type-in of Move or Rotate: absolute values of the selection and an offset; it follows the selection. */
+  function openTypeIn(kind) {
+    typeinTool = kind;
+    $('#tititle').textContent = t(kind === 'move' ? 'lum.menu.move' : 'lum.menu.rotate');
+    typein.hidden = false;
+    const host = $('#view');
+    typein.style.left = '12px'; typein.style.top = `${Math.max(56, host.clientHeight - typein.offsetHeight - 60)}px`;
+    fillTypeIn();
+  }
+  function fillTypeIn() {
+    if (!typeinTool || typein.hidden) return;
+    const m = model(), items = selectedItems(planItems(m, sizeOf), sel), c = selectionCentre(items);
+    const rot = typeinTool === 'rotate', f = (v) => (Number.isFinite(v) ? formatNumber(v, 3) : '');
+    const abs = rot ? [0, 0, items.length ? items[0].psi : NaN] : [c?.x, c?.y, c?.z];
+    const cell = (row, a, i, v) => {
+      const off = rot && i < 2;
+      return `<div class="gf${off ? ' off' : ''}"><span class="gax">${a}</span><input data-ti="${row}${i}" value="${off ? '0' : f(v)}"${off || !items.length ? ' disabled' : ''}><span class="gu">${rot ? '°' : t('unit.m')}</span></div>`;
+    };
+    $('#tiabs').innerHTML = ['X', 'Y', 'Z'].map((a, i) => cell('a', a, i, abs[i])).join('');
+    $('#tioff').innerHTML = ['X', 'Y', 'Z'].map((a, i) => cell('o', a, i, 0)).join('');
+  }
+  function applyTypeIn(el) {
+    const v = parseNumber(el.value);
+    if (!Number.isFinite(v)) { fillTypeIn(); return; }
+    const m = model(), items = selectedItems(planItems(m, sizeOf), sel), c = selectionCentre(items);
+    if (!items.length || !c) return;
+    const row = el.dataset.ti[0], i = Number(el.dataset.ti[1]);
+    let next = m;
+    if (typeinTool === 'rotate') {
+      const d = row === 'a' ? v - items[0].psi : v;
+      if (d) next = rotateSelection(m, sel, d);
+    } else if (i === 2) {
+      next = liftSelection(m, sel, row === 'a' ? v - c.z : v);
+    } else {
+      const want = row === 'a' ? v - (i ? c.y : c.x) : v;
+      const [dx, dy] = clampDelta(items, i === 0 ? want : 0, i === 1 ? want : 0, m.room.shape.L, m.room.shape.W);
+      next = moveSelection(m, sel, dx, dy);
+    }
+    if (next !== m) { remember(m); activeRoom().model = next; autosave(); loadGroupForm(); refresh(); }
+    fillTypeIn();
+  }
+  typein.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.dataset.ti) { e.preventDefault(); applyTypeIn(e.target); } e.stopPropagation(); });
+  typein.addEventListener('change', (e) => { e.stopPropagation(); if (e.target.dataset.ti) applyTypeIn(e.target); });
+  typein.addEventListener('input', (e) => e.stopPropagation());
+  $('#ticlose').addEventListener('click', () => { typein.hidden = true; typeinTool = null; });
+
   /** A click on a luminaire (or on nothing): Shift adds, Ctrl removes, else the selection is replaced. */
   function selectAt(it, e) {
     if (it) {
@@ -2234,9 +2534,11 @@
     return {
       mode: info.mode, P, k: info.mode === '2d' ? info.T.k : 0.01,
       items: planItems(m, sizeOf), color: (ty) => typeColorOf(m, kOf.get(ty) ?? 0),
-      selected: (it) => isSelected(sel, it.group, it.index, it.kind), hovered: (it) => hoverItem === `${it.group}:${it.index}`, grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
+      selected: (it) => isSelected(sel, it.group, it.index, it.kind), hovered: (it) => hoverItem === `${it.group}:${it.index}` || hoverItem === `${it.group}:*`, grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
       guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad, snap: snapMark,
       gizmo: gz && { ...gz, active: drag?.axis ?? null, hover: hoverHandle, angle: drag?.mode === 'rotate' ? drag.ang : null },
+      handles: (() => { const eg = editGroup(m); return eg ? handlesOf(m, eg, P).filter((q) => q.shape !== 'none') : null; })(),
+      dims: info.mode === '2d' ? (() => { const eg = editGroup(m); return eg ? dimsOf(m, eg, P) : null; })() : null,
       ghost: kssDrag?.in ? (() => { const ty = m.types.find((x) => x.id === selType), z2 = sizeOf(ty); return { x: kssDrag.x, y: kssDrag.y, hm: kssDrag.hm, psi: drafts.single.psi ?? 0, a: z2?.a ?? 0, b: z2?.b ?? 0, h: z2?.h ?? 0, round: !!z2?.round, color: typeColorOf(m, typeIndex(m, selType)) }; })() : null,
     };
   }
@@ -2319,11 +2621,26 @@
    */
   function planPointer(type, e) {
     if (stage !== 2 || !activeRoom()) return false;
+    if (type === 'context') { contextAt(e, model()); return undefined; }
     if (drawing) return e.mode === '2d' ? drawPointer(type, e) : false;
     const m = model(), tol = 4 * e.k, items = itemsNow();
     const pick = () => (e.mode === '2d' ? pickAt(items, e.x, e.y, tol) : pickScreen(items, e));
     const gz = gizmoGeom(m, e.project, e.mode);
+    // the handles and dimensions of the selected group (25 Nov 2026)
+    const eg = editGroup(m);
+    if (eg && (type === 'hover' || type === 'down')) {
+      const dm = e.mode === '2d' ? dimsOf(m, eg, e.project).find((d) => e.px >= d.r[0] && e.px <= d.r[0] + d.r[2] && e.py >= d.r[1] && e.py <= d.r[1] + d.r[3]) : null;
+      const hd = dm ? null : handlesOf(m, eg, e.project).find((q) => Math.hypot(q.at[0] - e.px, q.at[1] - e.py) <= 8);
+      if (type === 'hover') {
+        const hid = dm?.id ?? null;
+        if (hid !== hoverDim) { hoverDim = hid; view?.refresh(); }
+        if (dm) { hoverOn(null); return 'pointer'; }
+        if (hd) { hoverOn(null); return hd.cursor ?? 'move'; }
+      } else if (dm) { openDimEdit(dm, eg); return true; }
+      else if (hd) { hoverOn(null); drag = { mode: 'handle', h: hd.id, g: eg.id, base: m }; return true; }
+    }
     if (type === 'hover') {
+      if (hoverDim) { hoverDim = null; view?.refresh(); }
       const h = gz ? gizmoHit(tool, [e.px, e.py], gz) : null;
       if (h !== hoverHandle) { hoverHandle = h; view?.refresh(); }
       const it = h ? null : pick();
@@ -2376,6 +2693,11 @@
         }
         const d = clampDelta(drag.items, dx, dy, m.room.shape.L, m.room.shape.W);
         if (d[0] !== drag.d[0] || d[1] !== drag.d[1]) { drag.d = d; activeRoom().model = moveSelection(drag.base, sel, d[0], d[1]); previewLums(); }
+      } else if (drag.mode === 'handle') {
+        if (!Number.isFinite(e.x)) return undefined;
+        const p = planGrid(m).snap && e.mode === '2d' ? snapped(e.x, e.y, e.k) : { x: e.x, y: e.y };
+        const next = applyHandle(drag.base, drag.g, drag.h, p.x, p.y);
+        if (next !== model()) { activeRoom().model = next; previewLums(); }
       } else if (drag.mode === 'lift') {
         // along the Z arrow on the screen: metres of the mounting height, not above the ceiling
         const v = drag.zv, l2 = v[0] * v[0] + v[1] * v[1];
@@ -2393,7 +2715,7 @@
     }
     // released or cancelled
     const dr = drag; drag = null; snapMark = null;
-    if (dr.mode === 'move' || dr.mode === 'rotate' || dr.mode === 'lift') {
+    if (dr.mode === 'move' || dr.mode === 'rotate' || dr.mode === 'lift' || dr.mode === 'handle') {
       if (type === 'cancel') { activeRoom().model = dr.base; previewLums(); return undefined; }
       if (model() !== dr.base) { remember(dr.base); autosave(); loadGroupForm(); refresh(); } else view?.refresh();
       return undefined;
@@ -2466,6 +2788,7 @@
     if (a === 'undo') { e.preventDefault(); undo(); return; }
     if (a === 'redo') { e.preventDefault(); redo(); return; }
     if (a === 'escape') {
+      if (!cmenu.hidden) { closeCMenu(); return; }
       if (pend) { pend = null; showHint(); view.refresh(); }
       else if (drag?.base) { activeRoom().model = drag.base; drag = null; previewLums(); }
       else if (drawing) stopDrawing();

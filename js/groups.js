@@ -60,7 +60,7 @@ export function groupPoints(g, room, size = null) {
     case 'grid': {
       const out = [];
       const a = g.area, mx = g.mx ?? 'in', my = g.my ?? 'in';
-      if (mx === 'in' && my === 'in') {
+      if (mx === 'in' && my === 'in' && !g.xs && !g.ys) {
         for (let j = 0; j < g.ny; j++) {
           for (let i = 0; i < g.nx; i++) {
             // without an area: the expressions of photometry.luminaireGrid (version 1 bit for bit)
@@ -73,7 +73,8 @@ export function groupPoints(g, room, size = null) {
       }
       const ar = a ?? { x0: 0, y0: 0, x1: room.L, y1: room.W };
       const [hx, hy] = housingHalf(size, g.psi);
-      const xs = spacing(g.nx, ar.x1 - ar.x0, mx, hx), ys = spacing(g.ny, ar.y1 - ar.y0, my, hy);
+      // own offsets of the axes from the area start (axes dragged on the view, 25 Nov 2026)
+      const xs = g.xs ?? spacing(g.nx, ar.x1 - ar.x0, mx, hx), ys = g.ys ?? spacing(g.ny, ar.y1 - ar.y0, my, hy);
       for (const y of ys) for (const x of xs) out.push({ x: ar.x0 + x, y: ar.y0 + y, hm: g.hm, psi: g.psi });
       return out;
     }
@@ -82,7 +83,7 @@ export function groupPoints(g, room, size = null) {
       const dir = dx || dy ? Math.atan2(dy, dx) / DEG : 0;
       const way = g.m ?? 'axis';
       const out = [];
-      if (way === 'axis') {
+      if (way === 'axis' && !g.ts) {
         for (let k = 0; k < g.n; k++) {
           const t = g.n === 1 ? 0.5 : k / (g.n - 1);
           out.push({ x: g.x0 + t * dx, y: g.y0 + t * dy, hm: g.hm + t * (g.hm1 - g.hm), psi: wrapDeg(dir + g.psi) });
@@ -92,7 +93,8 @@ export function groupPoints(g, room, size = null) {
       const len = Math.hypot(dx, dy);
       // half of the housing along the line: ψ counts from its direction
       const h = size ? housingHalf(size, g.psi)[0] : 0;
-      for (const d of spacing(g.n, len, way, h)) {
+      // own distances from the start (luminaires dragged along the line, 25 Nov 2026)
+      for (const d of g.ts ?? spacing(g.n, len, way, h)) {
         const t = len > 0 ? d / len : 0.5;
         out.push({ x: g.x0 + t * dx, y: g.y0 + t * dy, hm: g.hm + t * (g.hm1 - g.hm), psi: wrapDeg(dir + g.psi) });
       }

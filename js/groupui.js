@@ -97,8 +97,9 @@ const FIT_ICON = SVG('<path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2
 
 /** The buttons of the placement kinds: single, grid, line, circle; the one being drawn is pressed. */
 export function renderKinds(host, kind, drawing, off = false) {
+  // lit: the kind being drawn, or the kind of the selected group (24 Nov 2026); kind null: none
   host.innerHTML = ['auto', 'single', 'grid', 'line', 'circle'].map((k) => {
-    const on = drawing && k === kind;
+    const on = !!kind && k === kind && (drawing || drawing === null);
     return `<button type="button" data-kind="${k}" aria-pressed="${on}" class="tipl${on ? ' on' : ''}"${off ? ` disabled data-tip="${esc(t('lum.kindOff'))}"` : ` data-tip="${esc(t(`lum.kind.${k}`))}"`} aria-label="${esc(t(`lum.kind.${k}`))}">${KIND_ICON[k]}</button>`;
   }).join('');
 }
@@ -144,7 +145,9 @@ export function initGroupForm(host, onChange) {
   /** The extra control of a row: the ways of spacing, "fit to the room", the measure of a circle. */
   function extraOf(x) {
     if (x === 'mx' || x === 'my' || x === 'm') {
-      const cur = g[x] ?? (x === 'm' ? 'axis' : 'in'), n = x === 'mx' ? g.nx : x === 'my' ? g.ny : g.n;
+      // own spacing (axes dragged): no way is lit until one is chosen again
+      const own = g[{ mx: 'xs', my: 'ys', m: 'ts' }[x]];
+      const cur = own ? null : g[x] ?? (x === 'm' ? 'axis' : 'in'), n = x === 'mx' ? g.nx : x === 'my' ? g.ny : g.n;
       return `<div class="gways" role="group">${['in', 'edge', 'axis'].map((w) => {
         const off = n < 2 && w !== 'in' && !(x === 'm' && w === 'axis');
         const tip = t(`gform.way.${x === 'm' ? 'line' : 'grid'}.${w}`);
@@ -196,10 +199,11 @@ export function initGroupForm(host, onChange) {
       const [k, way] = w.dataset.way.split(':');
       const def = k === 'm' ? 'axis' : 'in', next = { ...g };
       if (way === def) delete next[k]; else next[k] = way;
+      delete next[{ mx: 'xs', my: 'ys', m: 'ts' }[k]];
       g = next; onChange({ group: next }); build(); return;
     }
     if (e.target.closest('[data-fit]') && g) {
-      const { area: _, ...next } = g;
+      const { area: _, xs: __, ys: ___, ...next } = g;
       g = next; onChange({ group: next }); build(); return;
     }
     const ms = e.target.closest('[data-measure]');

@@ -49,17 +49,31 @@ export function zoom(s, deltaY) {
 }
 
 /**
- * Zooms toward the pointer: the image around the pivot scales by d / d', and the lens shift is
- * changed so that the point under the pointer stays where it is (exact for points at the pivot's
- * depth, close enough for the rest). The pivot itself does not move in the scene.
+ * The screen axes of the camera in Three.js coordinates and metres per CSS px at the pivot's depth.
+ * @param {number} viewH — viewport height, CSS px; @param {number} fovDeg — vertical field of view
+ */
+function screenAxes(s, viewH, fovDeg) {
+  const d = direction(s);
+  const rl = Math.hypot(d[2], d[0]) || 1;
+  const right = [d[2] / rl, 0, -d[0] / rl];
+  const up = [d[1] * right[2] - d[2] * right[1], d[2] * right[0] - d[0] * right[2], d[0] * right[1] - d[1] * right[0]];
+  const m = (2 * s.distance * Math.tan((fovDeg * Math.PI) / 360)) / viewH;
+  return { right, up, m };
+}
+
+/**
+ * Zooms toward the pointer (24 Nov 2026, as in 3ds Max): the camera comes closer to the point under
+ * the pointer at the pivot's depth, and the pivot moves with it, so that point stays where it is;
+ * the lens is never shifted (no stretching at the edges of the view).
  * @param {number} px, py — pointer offset from the viewport centre, CSS px (right, down)
  */
-export function zoomAt(s, deltaY, px, py) {
+export function zoomAt(s, deltaY, px, py, viewH, fovDeg) {
+  const { right, up, m } = screenAxes(s, viewH, fovDeg);
+  const P = s.target.map((t, i) => t + right[i] * (px - s.shiftX) * m - up[i] * (py - s.shiftY) * m);
   const d0 = s.distance;
   zoom(s, deltaY);
-  const k = d0 / s.distance; // image scale factor
-  s.shiftX = px - (px - s.shiftX) * k;
-  s.shiftY = py - (py - s.shiftY) * k;
+  const k = s.distance / d0;
+  s.target = s.target.map((t, i) => P[i] + (t - P[i]) * k);
 }
 
 /** Zooms by a factor (pinch): factor > 1 moves the camera closer. */
@@ -67,10 +81,10 @@ export function zoomBy(s, factor) {
   s.distance = clamp(s.distance / factor, s.minDistance, s.maxDistance);
 }
 
-/** Pans by a pointer drag of (dx, dy) CSS px: the image follows the pointer; the pivot stays. */
-export function pan(s, dx, dy) {
-  s.shiftX += dx;
-  s.shiftY += dy;
+/** Pans by a pointer drag of (dx, dy) CSS px: the image follows the pointer, the pivot moves with it. */
+export function pan(s, dx, dy, viewH, fovDeg) {
+  const { right, up, m } = screenAxes(s, viewH, fovDeg);
+  s.target = s.target.map((t, i) => t - right[i] * dx * m + up[i] * dy * m);
 }
 
 /** Unit vector from the pivot to the camera. */
@@ -156,9 +170,6 @@ export function zoomPlanBy(s, factor) {
  */
 export function planToOrbit(s, target, vHalf, viewH, limits) {
   const distance = s.half / Math.tan(vHalf);
-  const pxPerM = viewH / (2 * s.half);
-  const o = createOrbit({ target, azimuth: 0, elevation: EL_MAX, distance, ...limits });
-  o.shiftX = (target[0] - s.cx) * pxPerM;
-  o.shiftY = (target[2] - s.cz) * pxPerM;
-  return o;
+  // the pivot under the centre of the plan view, at the height of `target` (no lens shift)
+  return createOrbit({ target: [s.cx, target[1], s.cz], azimuth: 0, elevation: EL_MAX, distance, ...limits });
 }

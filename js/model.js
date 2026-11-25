@@ -345,9 +345,9 @@ export function duplicateGroup(m, id, dx = 0, dy = 0) {
 }
 
 /** The model with the group `id` turned into single luminaires (groups.ungroup). */
-export function ungroupGroup(m, id) {
+export function ungroupGroup(m, id, size = null) {
   const g = m.groups.find((x) => x.id === id);
-  return g ? replaceGroup(m, id, ungroup(g, roomSize(m))) : m;
+  return g ? replaceGroup(m, id, ungroup(g, roomSize(m), size)) : m;
 }
 
 /** The grid of the plan editor of the room (steps, origin, snapping). */
@@ -414,7 +414,15 @@ function cleanGroup(g, id, type, room) {
       // the ways along X and Y (21 Nov 2026); 'in' — version 1 — is not written
       for (const k of ['mx', 'my']) if (SPACINGS.includes(g[k]) && g[k] !== 'in') out[k] = g[k];
       const a = g.area;
+      const offsets = (v, n, len) => Array.isArray(v) && v.length === n && v.every((x, i) => Number.isFinite(x) && x >= -1e-9 && x <= len + 1e-9 && (i === 0 || x >= v[i - 1])) ? v.map((x) => +x) : null;
       if (a && [a.x0, a.y0, a.x1, a.y1].every((v) => coord(v, NaN) === v) && a.x1 > a.x0 && a.y1 > a.y0) out.area = { x0: a.x0, y0: a.y0, x1: a.x1, y1: a.y1 };
+      // own axes (25 Nov 2026): offsets from the area start, as many as luminaires, in order
+      {
+        const ar = out.area ?? { x0: 0, y0: 0, x1: L, y1: W };
+        const xs = offsets(g.xs, out.nx, ar.x1 - ar.x0), ys = offsets(g.ys, out.ny, ar.y1 - ar.y0);
+        if (xs) out.xs = xs;
+        if (ys) out.ys = ys;
+      }
       return out;
     }
     case 'line': {
@@ -424,6 +432,10 @@ function cleanGroup(g, id, type, room) {
       };
       out.hm1 = g.hm1 === undefined ? out.hm : hm(g.hm1);
       if (SPACINGS.includes(g.m) && g.m !== 'axis') out.m = g.m;
+      {
+        const len = Math.hypot(out.x1 - out.x0, out.y1 - out.y0), v = g.ts;
+        if (Array.isArray(v) && v.length === out.n && v.every((x, k) => Number.isFinite(x) && x >= -1e-9 && x <= len + 1e-9 && (k === 0 || x >= v[k - 1]))) out.ts = v.map((x) => +x);
+      }
       if (g.hm1 === undefined && (g.by === 'step' || g.off > 0)) {
         // the first editor: luminaires by step between offsets — the same luminaires as single ones
         return { ...base, kind: 'single', points: legacyPoints(g, room) };
