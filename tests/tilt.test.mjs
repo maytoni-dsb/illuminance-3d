@@ -151,7 +151,7 @@ test('MATLAB: direct illuminance of tilted luminaires at points and element aver
       if (!elems.has(k)) elems.set(k, elementDirect(createRoom({ L: c.room[0], W: c.room[1], H: c.room[2], h: c.h }), [lum(c)], phot, undefined, false));
       got = elems.get(k)[r[2]];
       if (c.file) tol = 2e-3; // adaptive cubature (eps 1e-3) against integral2
-    } else { got = downwardFlux(phot, lumMatrix(lum(c))); tol = 1e-6; }
+    } else { got = downwardFlux(phot, lumMatrix(lum(c))); tol = 2e-6; } // quadratures: JS 1° Gauss 4 × 4 against MATLAB 0.1° Gauss 3 × 3 (JS off by ≤ 1e-6)
     const err = Math.abs(got - want) / Math.max(Math.abs(want), r[0] === 2 && c.file ? 1 : 1e-6);
     if (tol === 1e-9) { worst = Math.max(worst, err); n++; }
     assert.ok(err <= tol, `case ${r[1]} row ${r.join(' ')}: JS ${got}, MATLAB ${want}`);

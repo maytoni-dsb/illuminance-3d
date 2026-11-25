@@ -17,6 +17,7 @@
 %     2 case g E                   element average, g = global element index from 0
 %                                  (js/geometry.js order: faces 0..5, k = i + j*nu)
 %     3 case 0 Phi                 flux below the horizontal of the turned distribution, lm
+%                                  (Gauss 3 x 3 on 0.1 deg cells; the test allows 2e-6)
 %                                  (a luminaire in the ceiling plane)
 
 here = fileparts(mfilename('fullpath'));
@@ -82,10 +83,14 @@ for c = 1:numel(C)
     rows{end+1} = [2, c, g, Ev]; %#ok<AGROW>
   end
 
-  % 3. flux below the horizontal (files): integral over the lower hemisphere of the room
+  % 3. flux below the horizontal (files): integral over the lower hemisphere of the room.
+  %    Not integral2: the table has a kink at every tabulated angle, an adaptive rule refines
+  %    without end (25 Nov 2026). A vectorised 3-point Gauss rule on 0.1 deg cells instead; the
+  %    same on 0.2 deg cells is printed as the estimate of its error.
   if K.phot == 3
-    f3 = @(th, ph) reshape(arrayfun(@(a, b) Idir(R, I, [sin(a) * cos(b), sin(a) * sin(b), -cos(a)]) * sin(a), th(:), ph(:)), size(th));
-    Phi = integral2(f3, 0, pi/2, 0, 2*pi, 'Method', 'iterated', 'AbsTol', 1e-6, 'RelTol', 1e-9);
+    Phi = hemiFlux(R, t, Cf, If, 900, 3600);
+    Phi2 = hemiFlux(R, t, Cf, If, 450, 1800);
+    fprintf('case %d: flux below the horizontal %.9g lm (0.2 deg: rel. diff %.1e)\n', c, Phi, abs(Phi2 / Phi - 1));
     rows{end+1} = [3, c, 0, Phi]; %#ok<AGROW>
   end
   fprintf('case %d done\n', c);
@@ -114,6 +119,38 @@ g = atan2d(norm(dl(1:2)), -dl(3));
 Cd = 0;
 if norm(dl(1:2)) > 0, Cd = mod(atan2d(dl(2), dl(1)), 360); end
 v = I(Cd, g);
+end
+
+function Phi = hemiFlux(R, t, Cf, If, nT, nP)
+% integral of I over the lower hemisphere of the room (theta from the downward vertical), Gauss
+% 3 x 3 on every cell of an nT x nP grid; vectorised over a ring of cells at a time
+gx = [0.5 - sqrt(15) / 10, 0.5, 0.5 + sqrt(15) / 10]; gw = [5 8 5] / 18;
+dT = pi / 2 / nT; dP = 2 * pi / nP;
+ph = reshape((0:nP-1) + gx.', 1, []) * dP;          % all phi nodes, 3 nP
+wp = repmat(gw.', nP, 1).';                          % their weights
+wp = reshape(wp, 1, []);
+cp = cos(ph); sp = sin(ph);
+Phi = 0;
+for i = 0:nT-1
+  for a = 1:3
+    th = (i + gx(a)) * dT; st = sin(th); ct = cos(th);
+    D = R.' * [st * cp; st * sp; -ct * ones(size(cp))]; % directions in the luminaire frame
+    g = atan2d(hypot(D(1, :), D(2, :)), -D(3, :));
+    C = mod(atan2d(D(2, :), D(1, :)), 360);
+    Phi = Phi + gw(a) * st * (wp * intensityV(t, Cf, If, C, g).');
+  end
+end
+Phi = Phi * dT * dP;
+end
+
+function I = intensityV(t, Cf, If, C, g)
+% the bilinear interpolant of intensity() for vectors of angles, deg
+if numel(Cf) == 1
+  I = interp1(t.G, If, g, 'linear', 0);
+else
+  I = interp2(Cf, t.G, If, C, g, 'linear', 0);
+end
+I(g < t.G(1) | g > t.G(end)) = 0;
 end
 
 function E = Epoint(x, n, s, R, I)
