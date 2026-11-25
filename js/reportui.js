@@ -66,11 +66,15 @@ export function summaryRows(v, file, norm = null, zc = null, lums = {}) {
   const grid = lums.grid ?? true, n = lums.count ?? v.nx * v.ny;
   const hms = [...new Set(lums.hm ?? [v.hm])].sort((a, b) => a - b);
   const hmText = hms.length > 1 ? `${n2(hms[0])}…${n2(hms[hms.length - 1])}${NB}${m}` : `${n2(hms[0])}${NB}${m}`;
+  // the tilt about X and Y (stage 2.1a): a row only when a luminaire is tilted; ranges of the room
+  const tilts = lums.tilt ?? [];
+  const range = (k) => { const vs = tilts.map((q) => q[k]); const a = Math.min(...vs), b = Math.max(...vs); return Math.abs(b - a) < 0.05 ? `${formatNumber(a, 1)}°` : `${formatNumber(a, 1)}…${formatNumber(b, 1)}°`; };
+  const tiltRow = tilts.some((q) => q[0] || q[1]) ? [[t('rui.tilt'), `X${NB}${range(0)}, Y${NB}${range(1)}`]] : [];
   if (lums.types?.length > 1) {
     // several types: a row per type (colour and article: count and flux), the total and the heights
     const lumRows = lums.types.map((ty) => [`${ty.color ? `<i class="tyc${ty.no ? ' no' : ''}" style="background:${esc(ty.color)}">${ty.no ?? ''}</i>` : ''}${esc(ty.article)}`,
       `${ty.count}${NB}${t('unit.pcsDot')} · ${formatNumber(ty.flux, 0)}${NB}${t('unit.lm')}`]);
-    lumRows.push([t('rui.count'), `${n}${NB}${t('unit.pcsDot')}`], [t('rui.hm'), hmText]);
+    lumRows.push([t('rui.count'), `${n}${NB}${t('unit.pcsDot')}`], [t('rui.hm'), hmText], ...tiltRow);
     return { roomRows, normRows, lumRows };
   }
   const lumRows = [
@@ -83,6 +87,7 @@ export function summaryRows(v, file, norm = null, zc = null, lums = {}) {
     ['CRI', cri ? formatNumber(cri, 0) : dash],
     [t('rui.dims'), size],
     [t('rui.hm'), hmText],
+    ...tiltRow,
     [t('rui.centre'), zc != null && hms.length === 1 ? t('rui.at', { z: `${n2(zc)}${NB}${m}` }) : dash],
   ];
   return { roomRows, normRows, lumRows };
@@ -146,7 +151,7 @@ export function prepareRoom(rd) {
   return {
     id: rd.id, name: rd.name?.trim() || t('app.untitled'), key: rd.key, L: v.L, W: v.W, H: v.H, xs, ys, marks,
     psi: rd.params.lums[0].psi, shape: rd.file?.shape ?? null, planes, lum: lums[0], lums,
-    ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2], { count, grid, hm, types: many ? lums : null }), images: null,
+    ...summaryRows(v, rd.file, rd.norm, rd.params.lums[0].pos[2], { count, grid, hm, types: many ? lums : null, tilt: rd.params.lums.map((l) => [(l.tx || 0) * 180 / Math.PI, (l.ty || 0) * 180 / Math.PI]) }), images: null,
     polar: many ? null : polarOf(rd.file?.phot ?? createPhotometry({ type: 'cosine', flux: v.flux })),
   };
 }

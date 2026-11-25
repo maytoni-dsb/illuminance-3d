@@ -11,6 +11,7 @@ import { facePoint, faceVertexValues } from './geometry.js';
 import { LEVELS, COLORS } from './colorscale.js';
 import { SHOULDER } from './tonemap.js';
 import { t } from './i18n.js';
+import { lumMatrix } from './direct.js';
 
 /** Room → Three.js. */
 export const toThree = (p) => [p[0], p[2], -p[1]];
@@ -234,6 +235,22 @@ function buildFaceGrid(face) {
 }
 
 /**
+ * Orientation of a tilted luminaire in Three.js (stage 2.1a): T·R·Tᵀ, T the room → Three mapping,
+ * R = Rz(ψ)·Ry(ty)·Rx(tx) (direct.lumMatrix); null when not tilted (rotation.y = ψ as before).
+ */
+export function tiltQuaternion(s) {
+  if (!(s.tx || s.ty)) return null;
+  const R = lumMatrix(s), T = ROOM_TO_THREE;
+  const M = [0, 1, 2].map((i) => [0, 1, 2].map((j) => {
+    let v = 0;
+    for (let k = 0; k < 3; k++) for (let l = 0; l < 3; l++) v += T[i][k] * R[3 * k + l] * T[j][l];
+    return v;
+  }));
+  const m4 = new THREE.Matrix4().set(M[0][0], M[0][1], M[0][2], 0, M[1][0], M[1][1], M[1][2], 0, M[2][0], M[2][1], M[2][2], 0, 0, 0, 0, 1);
+  return new THREE.Quaternion().setFromRotationMatrix(m4);
+}
+
+/**
  * Luminaires: the luminous surface (light, facing down) at the photometric centre, turned by ψ,
  * and for pendants the grey housing above it with a suspension line to the ceiling. Sizes come
  * from the photometric file (photfile.luminaireShape: `a` along C0, `b` along C90); without a
@@ -284,16 +301,21 @@ function buildLuminaires(r, lums, edgeColor, shape = null) {
     const t = toThree([s.pos[0], s.pos[1], zMark]);
     const m = new THREE.Mesh(lumGeo, fill);
     m.position.set(t[0], t[1], t[2]);
-    m.rotation.y = s.psi; // Three.js +Y is room +Z: rotation about it is counterclockwise viewed from above
+    const q = tiltQuaternion(s);
+    if (q) m.quaternion.copy(q);
+    else m.rotation.y = s.psi; // Three.js +Y is room +Z: rotation about it is counterclockwise viewed from above
     // no lines along the edges (25 Nov 2026): the housing is told by its shading
     group.add(m);
     if (houGeo) {
       const hm = new THREE.Mesh(houGeo, houMat);
-      const ht = toThree([s.pos[0], s.pos[1], zs]);
-      hm.position.set(ht[0], ht[1], ht[2]); hm.rotation.y = s.psi;
+      const ht = toThree([s.pos[0], s.pos[1], q ? s.pos[2] : zs]);
+      hm.position.set(ht[0], ht[1], ht[2]);
+      if (q) hm.quaternion.copy(q); else hm.rotation.y = s.psi;
       group.add(hm);
     }
-    if (pendant && zs + houH < r.H - 1e-6) hangs.push(...toThree([s.pos[0], s.pos[1], r.H]), ...toThree([s.pos[0], s.pos[1], zs + houH]));
+    // the suspension from the top of the housing (the mounting point; tilted: turned with it)
+    const R = q ? lumMatrix(s) : null, top = R ? [s.pos[0] + R[2] * houH, s.pos[1] + R[5] * houH, s.pos[2] + R[8] * houH] : [s.pos[0], s.pos[1], zs + houH];
+    if (pendant && top[2] < r.H - 1e-6) hangs.push(...toThree([top[0], top[1], r.H]), ...toThree(top));
   }
   if (hangs.length) {
     const g = new THREE.BufferGeometry();

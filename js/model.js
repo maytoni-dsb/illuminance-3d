@@ -20,7 +20,8 @@
 import { DEFAULTS, validateParams, faceRho, ceilingDrop, photometricHeight, HM_MIN, MAX_LUMINAIRES } from './ui.js';
 import { rectOutline } from './geometry.js';
 import { luminaireShape } from './photfile.js';
-import { GROUP_KINDS, SPACINGS, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup, normArc } from './groups.js';
+import { GROUP_KINDS, SPACINGS, groupPoints, groupCount, housingHalf, boxInOutline, wrapDeg, moveGroup, ungroup, normArc, housingExtent, tiltOf } from './groups.js';
+import { lumMatrix } from './direct.js';
 import { cleanPlanGrid, PLAN_GRID } from './planedit.js';
 
 /** Shapes of the room the model takes (stage 2.3 adds L, U and T). */
@@ -242,6 +243,12 @@ export function instances(m, housing = () => 0, sizeOf = () => null) {
     if (!ty) throw new RangeError(`instances: group ${g.id} has no type ${g.type}`);
     const hh = housing(ty);
     groupPoints(g, size, sizeOf(ty)).forEach((p, index) => {
+      if (p.tx || p.ty) {
+        // tilted (stage 2.1a): the photometric centre turns about the mounting point with the housing
+        const l = { psi: p.psi * DEG, tx: (p.tx || 0) * DEG, ty: (p.ty || 0) * DEG }, R = lumMatrix(l);
+        out.push({ type: ty.id, group: g.id, index, pos: [p.x - R[2] * hh, p.y - R[5] * hh, p.hm - R[8] * hh], ...l, at: [p.x, p.y], hm: p.hm });
+        return;
+      }
       const z = H - ceilingDrop(H, p.hm, hh);
       out.push({ type: ty.id, group: g.id, index, pos: [p.x, p.y, z], psi: p.psi * DEG, at: [p.x, p.y], hm: p.hm });
     });
@@ -272,10 +279,19 @@ export function placementErrors(m, sizeOf = () => null) {
     const ty = types.get(g.type);
     const hs = ty ? sizeOf(ty) : null;
     groupPoints(g, size, hs).forEach((p, index) => {
-      const [hx, hy] = housingHalf(hs, p.psi);
-      if (!boxInOutline(outline, p.x, p.y, hx, hy)) out.push({ group: g.id, index, code: 'outside' });
+      const tilted = !!(p.tx || p.ty);
+      if (tilted) {
+        // the plan box of the turned housing (stage 2.1a); a corner above the ceiling is allowed
+        const [x0, x1, y0, y1] = housingExtent(hs, p.psi, p.tx, p.ty);
+        if (!boxInOutline(outline, p.x + (x0 + x1) / 2, p.y + (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2)) out.push({ group: g.id, index, code: 'outside' });
+      } else {
+        const [hx, hy] = housingHalf(hs, p.psi);
+        if (!boxInOutline(outline, p.x, p.y, hx, hy)) out.push({ group: g.id, index, code: 'outside' });
+      }
+      if (!(Math.abs(p.tx || 0) <= 90 + 1e-9 && Math.abs(p.ty || 0) <= 90 + 1e-9)) out.push({ group: g.id, index, code: 'tilt' });
+      const pz = tilted ? p.hm - (hs?.h ?? 0) * Math.cos((p.tx || 0) * DEG) * Math.cos((p.ty || 0) * DEG) : photometricHeight(p.hm, hs?.h ?? 0);
       if (!(p.hm >= HM_MIN - 1e-12 && p.hm <= H + 1e-12)) out.push({ group: g.id, index, code: 'height' });
-      else if (!(photometricHeight(p.hm, hs?.h ?? 0) > m.design.hwp)) out.push({ group: g.id, index, code: 'low' });
+      else if (!(pz > m.design.hwp)) out.push({ group: g.id, index, code: 'low' });
     });
   }
   return out;
@@ -298,7 +314,7 @@ export function calcParams(m, fileOf = () => null) {
     const label = ty.name || String(f?.table?.catalog || f?.table?.name || '').trim() || `#${k + 1}`;
     return f ? { id: ty.id, label, phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, label, phot: 'cosine', flux: ty.flux };
   });
-  const lums = instances(m, housing, plan).map(({ type, pos, psi }) => ({ type, pos: [...pos], psi }));
+  const lums = instances(m, housing, plan).map(({ type, pos, psi, tx, ty }) => (tx || ty ? { type, pos: [...pos], psi, tx, ty } : { type, pos: [...pos], psi }));
   return { outline: outlineOf(m), H: m.room.H, rho: modelRho(m), hwp: m.design.hwp, types, lums };
 }
 
@@ -329,7 +345,7 @@ export function removeType(m, id) {
 export function addGroup(m, kind, type, geo = null, draft = {}) {
   const { L, W } = roomSize(m), H = m.room.H, id = newId(m.groups, 'g');
   const r2 = (x) => Math.round(x * 1e6) / 1e6;
-  const hm = Math.min(H, draft.hm ?? H), psi = draft.psi ?? 0;
+  const hm = Math.min(H, draft.hm ?? H), psi = draft.psi ?? 0, tl = tiltOf(draft.tx, draft.ty);
   let g;
   switch (kind) {
     case 'grid': {
@@ -352,11 +368,12 @@ export function addGroup(m, kind, type, geo = null, draft = {}) {
     }
     case 'single': {
       const a = geo ?? { x: L / 2, y: W / 2 };
-      g = { id, type, kind, points: [{ x: r2(a.x), y: r2(a.y), hm, psi }] };
+      g = { id, type, kind, points: [{ x: r2(a.x), y: r2(a.y), hm, psi, ...tl }] };
       break;
     }
     default: throw new RangeError(`addGroup: group kind ${kind}`);
   }
+  if (kind !== 'single') Object.assign(g, tl);
   return { model: { ...m, groups: [...m.groups, g] }, id };
 }
 
@@ -364,7 +381,7 @@ export function addGroup(m, kind, type, geo = null, draft = {}) {
 export function addPoint(m, id, x, y, draft = {}) {
   const H = m.room.H, r2 = (v) => Math.round(v * 1e6) / 1e6;
   return { ...m, groups: m.groups.map((g) => (g.id === id && g.kind === 'single'
-    ? { ...g, points: [...g.points, { x: r2(x), y: r2(y), hm: Math.min(H, draft.hm ?? H), psi: draft.psi ?? 0 }] } : g)) };
+    ? { ...g, points: [...g.points, { x: r2(x), y: r2(y), hm: Math.min(H, draft.hm ?? H), psi: draft.psi ?? 0, ...tiltOf(draft.tx, draft.ty) }] } : g)) };
 }
 
 /** The model with the group `id` replaced. */
@@ -421,6 +438,8 @@ const int = (v, lo, hi, def) => (Number.isInteger(v) && v >= lo && v <= hi ? v :
 /** A plan coordinate: any finite value within a kilometre (a luminaire outside is a placement error). */
 const coord = (v, def) => num(v, -1000, 1000, def);
 const angle = (v) => (typeof v === 'number' && Number.isFinite(v) ? wrapDeg(v) : 0);
+/** A tilt read from a file (stage 2.1a): −90…90°, otherwise 0. */
+const tilt = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-90, Math.min(90, v)) : 0);
 
 /** A luminaire type read from a file; a wrong value gets its default (form of version 1). */
 function cleanType(ty, id) {
@@ -455,13 +474,16 @@ function cleanGroup(g, id, type, room) {
     for (const [k, o] of Object.entries(g.offs)) {
       const i = Number(k);
       if (!Number.isInteger(i) || i < 0 || i >= n || !o || typeof o !== 'object') continue;
-      const v = Object.fromEntries(['dx', 'dy', 'dz', 'dpsi'].filter((q) => Number.isFinite(o[q]) && o[q] !== 0).map((q) => [q, Math.max(-1000, Math.min(1000, o[q]))]));
+      const v = Object.fromEntries(['dx', 'dy', 'dz', 'dpsi', 'dtx', 'dty'].filter((q) => Number.isFinite(o[q]) && o[q] !== 0).map((q) => [q, Math.max(-1000, Math.min(1000, o[q]))]));
       if (Object.keys(v).length) offs[i] = v;
     }
     if (Object.keys(offs).length) out.offs = offs;
     return out;
   };
-  return withOffs(cleanGroupKind(g, base, room));
+  const out = cleanGroupKind(g, base, room);
+  // tilt of every luminaire of the group (stage 2.1a): written only when not zero
+  if (out && out.kind !== 'single') Object.assign(out, tiltOf(tilt(g.tx), tilt(g.ty)));
+  return withOffs(out);
 }
 
 function cleanGroupKind(g, base, room) {
@@ -521,7 +543,7 @@ function cleanGroupKind(g, base, room) {
       return {
         ...base,
         points: (Array.isArray(g.points) ? g.points : []).filter((p) => p && typeof p === 'object')
-          .map((p) => ({ x: coord(p.x, L / 2), y: coord(p.y, W / 2), hm: hm(p.hm), psi: angle(p.psi) })),
+          .map((p) => ({ x: coord(p.x, L / 2), y: coord(p.y, W / 2), hm: hm(p.hm), psi: angle(p.psi), ...tiltOf(tilt(p.tx), tilt(p.ty)) })),
       };
     default:
       return null;

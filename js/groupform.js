@@ -9,7 +9,7 @@
 // geo?: part of the drawn geometry (not in the draft) }; max may be a function of { H }.
 
 import { HM_MIN, MAX_LUMINAIRES, parseNumber, formatNumber } from './ui.js';
-import { groupCount, areaCentre, areaOf, normArc } from './groups.js';
+import { groupCount, areaCentre, areaOf, normArc, tiltOf } from './groups.js';
 import { t } from './i18n.js';
 
 const C = (key, ax) => ({ key, ax, unit: 'm', min: -1000, max: 1000, step: 0.1, geo: true });
@@ -18,9 +18,9 @@ const PSI = { key: 'psi', ax: 'Z', unit: '°', min: 0, max: 360, step: 15 };
 const N = (key, ax, max = MAX_LUMINAIRES) => ({ key, ax, unit: 'pcs', int: true, min: 1, max, step: 1 });
 const LEN = (key, ax) => ({ key, ax, unit: 'm', gt: 0, max: 1000, step: 0.1, geo: true });
 const ANG = (key, ax) => ({ key, ax, unit: '°', min: -720, max: 720, step: 15 });
-// the tilt about X and Y comes with stage 2.1a: shown, not editable
-const TILT = (key, ax) => ({ key, ax, unit: '°', off: true });
-const ROT = (tip) => ({ icon: 'rot', tip, fields: [TILT('rx', 'X'), TILT('ry', 'Y'), PSI] });
+// the tilt about the luminaire's own X (C0) and Y (C90) axes (stage 2.1a, 25 Nov 2026): −90…90°
+const TILT = (key, ax) => ({ key, ax, unit: '°', min: -90, max: 90, step: 15 });
+const ROT = (tip) => ({ icon: 'rot', tip, fields: [TILT('tx', 'X'), TILT('ty', 'Y'), PSI] });
 
 /**
  * Rows of every kind: { icon, tip, fields, extra? } — extra: 'mx' | 'my' | 'm' (the ways of spacing
@@ -63,7 +63,7 @@ export function rowsOf(kind, draft = false) {
 }
 
 /** Defaults of the next group to draw. */
-export const DRAFT = Object.freeze({ single: { hm: null, psi: 0 }, grid: { nx: 2, ny: 2, hm: null, psi: 0 }, line: { n: 3, hm: null, hm1: null, psi: 0 }, circle: { n: 6, hm: null, psi: 0 } });
+export const DRAFT = Object.freeze({ single: { hm: null, psi: 0, tx: 0, ty: 0 }, grid: { nx: 2, ny: 2, hm: null, psi: 0, tx: 0, ty: 0 }, line: { n: 3, hm: null, hm1: null, psi: 0, tx: 0, ty: 0 }, circle: { n: 6, hm: null, psi: 0, tx: 0, ty: 0 } });
 
 /** The selection of a grid over the whole room (it gets "Pick the count"). */
 export const gridOverRoom = (g, L, W) => g.kind === 'grid' && (!g.area || (Math.abs(g.area.x0) < 1e-9 && Math.abs(g.area.y0) < 1e-9 && Math.abs(g.area.x1 - L) < 1e-9 && Math.abs(g.area.y1 - W) < 1e-9));
@@ -76,7 +76,7 @@ export const gridOverRoom = (g, L, W) => g.kind === 'grid' && (!g.area || (Math.
 export function fieldValues(g, ctx) {
   if (g.kind === 'single') {
     const p = g.points[Math.min(ctx.at ?? 0, g.points.length - 1)] ?? {};
-    return { x: p.x, y: p.y, hm: p.hm, psi: p.psi };
+    return { x: p.x, y: p.y, hm: p.hm, psi: p.psi, tx: p.tx ?? 0, ty: p.ty ?? 0 };
   }
   const v = { ...g };
   if (g.kind === 'grid') {
@@ -84,7 +84,7 @@ export function fieldValues(g, ctx) {
     Object.assign(v, { gx: a.cx, gy: a.cy, gw: a.w, gh: a.h });
   }
   if (g.kind === 'circle') Object.assign(v, { a0: g.a0 ?? 0, a1: g.a1 ?? 360, sz: measureOf(g, ctx.measure ?? 'r') });
-  v.rx = 0; v.ry = 0;
+  v.tx = g.tx ?? 0; v.ty = g.ty ?? 0;
   return v;
 }
 
@@ -129,7 +129,9 @@ export function validateGroup(g, raw, ctx) {
   switch (g.kind) {
     case 'single': {
       const at = Math.min(ctx.at ?? 0, g.points.length - 1);
-      out.points = g.points.map((p, k) => (k === at ? { x: v.x ?? p.x, y: v.y ?? p.y, hm: v.hm ?? p.hm, psi: v.psi ?? p.psi } : p));
+      // the tilt (2.1a): kept only when not zero; NaN — different values of several luminaires — stays
+      const pt = (p) => { const q = { x: v.x ?? p.x, y: v.y ?? p.y, hm: v.hm ?? p.hm, psi: v.psi ?? p.psi, tx: v.tx ?? p.tx ?? 0, ty: v.ty ?? p.ty ?? 0 }; if (!q.tx && !q.ty) { delete q.tx; delete q.ty; } return q; };
+      out.points = g.points.map((p, k) => (k === at ? pt(p) : p));
       break;
     }
     case 'grid': {
@@ -170,6 +172,13 @@ export function validateGroup(g, raw, ctx) {
       break;
     }
     default:
+  }
+  // the tilt of the luminaires of a group (2.1a): kept only when not zero
+  if (g.kind !== 'single') {
+    for (const k of ['tx', 'ty']) if (has(k)) out[k] = v[k];
+    const tl = tiltOf(out.tx, out.ty);
+    delete out.tx; delete out.ty;
+    Object.assign(out, tl);
   }
   if (!Object.keys(errors).length) {
     const n = groupCount(out), total = n + (ctx.others ?? 0);

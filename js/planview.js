@@ -8,6 +8,7 @@
 
 import { labelPlaces } from './isolines.js';
 import { meta } from './i18n.js';
+import { lumMatrix } from './direct.js';
 
 const FONT = '"Suisse Intl","Helvetica Neue",Helvetica,Arial,sans-serif';
 /** Spacing of the isoline labels along a line: px on the plan, m in 3D. */
@@ -248,13 +249,22 @@ export const GIZMO_COLORS = Object.freeze({ x: '#e03131', y: '#2f9e44', z: '#1c7
  * Outline of a luminaire in room coordinates (stage 2.1): a rectangle a × b turned by ψ, or an
  * ellipse (round), as a list of points at height z.
  */
-export function outline(x, y, z, a, b, psiDeg, round = false) {
-  const c = Math.cos(psiDeg * Math.PI / 180), s = Math.sin(psiDeg * Math.PI / 180);
+export function outline(x, y, z, a, b, psiDeg, round = false, txDeg = 0, tyDeg = 0, w = 0) {
   const pts = round
     ? Array.from({ length: 24 }, (_, k) => [a / 2 * Math.cos(k * Math.PI / 12), b / 2 * Math.sin(k * Math.PI / 12)])
     : [[-a / 2, -b / 2], [a / 2, -b / 2], [a / 2, b / 2], [-a / 2, b / 2]];
-  return pts.map(([u, v]) => [x + u * c - v * s, y + u * s + v * c, z]);
+  if (txDeg || tyDeg) {
+    // tilted (stage 2.1a): the outline at the depth w below the mounting point in the luminaire frame
+    const R = lumMatrix({ psi: psiDeg * DEG, tx: txDeg * DEG, ty: tyDeg * DEG });
+    return pts.map(([u, v]) => [x + R[0] * u + R[1] * v + R[2] * w, y + R[3] * u + R[4] * v + R[5] * w, z + R[6] * u + R[7] * v + R[8] * w]);
+  }
+  const c = Math.cos(psiDeg * Math.PI / 180), s = Math.sin(psiDeg * Math.PI / 180);
+  return pts.map(([u, v]) => [x + u * c - v * s, y + u * s + v * c, z + w]);
 }
+const DEG = Math.PI / 180;
+/** The top and bottom outlines of a housing (with its tilt): the points of its box. */
+const boxPoints = (it, a, b, h, z) => [...outline(it.x, it.y, z, a, b, it.psi, it.round, it.tx, it.ty), ...outline(it.x, it.y, z, a, b, it.psi, it.round, it.tx, it.ty, -h)];
+const tilted = (it) => !!(it.tx || it.ty);
 
 function poly(ctx, P, pts) {
   const q = pts.map((p) => P(p[0], p[1], p[2]));
@@ -350,7 +360,11 @@ export function drawEditor(ctx, size, d) {
       continue;
     }
     const w = sel ? 2 : hov ? 2.8 : 1.2;
-    if (it.a > 0 && it.b > 0 && Math.min(it.a, it.b) / d.k >= 3) {
+    if (tilted(it) && it.a > 0 && it.b > 0 && Math.min(it.a, it.b) / d.k >= 3) {
+      // tilted (2.1a): the plan projection of the turned housing and the axis of the beam
+      if (silhouette(ctx, P, it)) stroke(sel && !bad, w);
+      if (it.la > 0 && it.lb > 0 && poly(ctx, P, outline(it.x, it.y, z, it.la, it.lb, it.psi, it.round, it.tx, it.ty, -(it.h || 0)))) stroke(sel && !bad, sel || hov ? 1.2 : 0.8);
+    } else if (it.a > 0 && it.b > 0 && Math.min(it.a, it.b) / d.k >= 3) {
       if (poly(ctx, P, outline(it.x, it.y, z, it.a, it.b, it.psi, it.round))) stroke(sel && !bad, w);
       if (it.la > 0 && it.lb > 0 && (it.la < it.a - 1e-6 || it.lb < it.b - 1e-6)) {
         if (poly(ctx, P, outline(it.x, it.y, z, it.la, it.lb, it.psi, it.round))) stroke(sel && !bad, sel || hov ? 1.2 : 0.8);
@@ -362,6 +376,20 @@ export function drawEditor(ctx, size, d) {
       stroke(sel && !bad, w);
     }
     ctx.strokeStyle = sel && !bad ? '#1f1f1f' : col;
+    if (tilted(it)) {
+      // the axis of the beam (γ = 0) in plan: an arrow from the mounting point, longer the more it leans
+      const R = lumMatrix({ psi: it.psi * DEG, tx: it.tx * DEG, ty: it.ty * DEG }), hx = -R[2], hy = -R[5], hl = Math.hypot(hx, hy);
+      const tq = hl > 1e-6 ? P(it.x + hx / hl, it.y + hy / hl, z) : null;
+      if (tq) {
+        const sx = tq[0] - c[0], sy = tq[1] - c[1], sl = Math.hypot(sx, sy) || 1;
+        const ux = sx / sl, uy = sy / sl, L2 = 10 + 26 * hl;
+        const ex = c[0] + ux * L2, ey = c[1] + uy * L2;
+        ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(ex, ey); ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - ux * 6 - uy * 3, ey - uy * 6 + ux * 3); ctx.lineTo(ex - ux * 6 + uy * 3, ey - uy * 6 - ux * 3); ctx.closePath();
+        ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+      }
+      continue;
+    }
     // the C0 direction
     const r = Math.max(it.a / 2, 0), t = P(it.x + Math.cos(it.psi * Math.PI / 180) * r, it.y + Math.sin(it.psi * Math.PI / 180) * r, z);
     if (t) {
@@ -469,7 +497,7 @@ export function drawEditor(ctx, size, d) {
  */
 function silhouette(ctx, P, it) {
   const a = it.a > 0 ? it.a : 0.12, b = it.b > 0 ? it.b : 0.12, h = it.h > 0 ? it.h : 0.03, z = it.hm ?? 0;
-  const pts = [...outline(it.x, it.y, z, a, b, it.psi, it.round), ...outline(it.x, it.y, z - h, a, b, it.psi, it.round)].map((p) => P(p[0], p[1], p[2]));
+  const pts = boxPoints(it, a, b, h, z).map((p) => P(p[0], p[1], p[2]));
   if (pts.some((v) => !v)) return false;
   const hull = convexHull(pts);
   ctx.beginPath();
@@ -480,7 +508,7 @@ function silhouette(ctx, P, it) {
 /** The silhouette of a housing on the screen (convex polygon), or null. */
 export function silhouettePoly(P, it) {
   const a = it.a > 0 ? it.a : 0.12, b = it.b > 0 ? it.b : 0.12, h = it.h > 0 ? it.h : 0.03, z = it.hm ?? 0;
-  const pts = [...outline(it.x, it.y, z, a, b, it.psi, it.round), ...outline(it.x, it.y, z - h, a, b, it.psi, it.round)].map((p) => P(p[0], p[1], p[2]));
+  const pts = boxPoints(it, a, b, h, z).map((p) => P(p[0], p[1], p[2]));
   return pts.some((v) => !v) ? null : convexHull(pts);
 }
 /** Convex hull of points in the plane (monotone chain). */
@@ -533,8 +561,10 @@ export function drawGizmo(ctx, g) {
     label(g.x, 'X', C.x); label(g.y, 'Y', C.y);
     if (g.z) label(g.z, 'Z', C.z);
   } else if (g.tool === 'rotate' && g.ring) {
-    ctx.beginPath(); g.ring.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath();
-    ctx.strokeStyle = C.z; ctx.lineWidth = act === 'z' ? 2.6 : 1.5; ctx.stroke();
+    const ring = (pts, col, on) => { ctx.beginPath(); pts.forEach((v, k) => (k ? ctx.lineTo(v[0], v[1]) : ctx.moveTo(v[0], v[1]))); ctx.closePath(); ctx.strokeStyle = col; ctx.lineWidth = on ? 2.6 : 1.5; ctx.stroke(); };
+    // in 3D the tilt rings X and Y in the axes of the luminaire (2.1a)
+    if (g.tilt) { ring(g.tilt.x, C.x, act === 'x'); ring(g.tilt.y, C.y, act === 'y'); }
+    ring(g.ring, C.z, act === 'z');
     if (g.angle != null) {
       ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       halo(ctx, `${g.angle > 0 ? '+' : ''}${Math.round(g.angle)}°`, g.o[0] + 8, g.o[1] - 10, '#111');

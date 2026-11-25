@@ -9,7 +9,7 @@
 // A selection is { groups: Set<groupId>, points: Map<groupId, Set<index>> } — whole groups, and
 // luminaires of groups of single luminaires.
 
-import { groupPoints, housingHalf, moveGroup, movePoints, turnLuminaires, turnArc } from './groups.js';
+import { groupPoints, housingHalf, housingExtent, moveGroup, movePoints, turnLuminaires, turnArc } from './groups.js';
 import { HM_MIN } from './ui.js';
 
 /**
@@ -42,8 +42,9 @@ export function planItems(m, sizeOf = () => null) {
   for (const g of m.groups) {
     const size = sizeOf(types.get(g.type)) ?? null;
     groupPoints(g, room, size).forEach((p, index) => {
-      const [hx, hy] = housingHalf(size, p.psi);
-      out.push({ group: g.id, kind: g.kind, type: g.type, index, x: p.x, y: p.y, hm: p.hm, psi: p.psi, hx, hy, a: size?.a ?? 0, b: size?.b ?? 0, h: size?.h ?? 0, la: size?.la ?? 0, lb: size?.lb ?? 0, round: !!size?.round });
+      // tilted (2.1a): the half sizes of the plan box of the turned housing about the mounting point
+      const [hx, hy] = p.tx || p.ty ? (([x0, x1, y0, y1]) => [Math.max(-x0, x1), Math.max(-y0, y1)])(housingExtent(size, p.psi, p.tx, p.ty)) : housingHalf(size, p.psi);
+      out.push({ group: g.id, kind: g.kind, type: g.type, index, x: p.x, y: p.y, hm: p.hm, psi: p.psi, tx: p.tx ?? 0, ty: p.ty ?? 0, hx, hy, a: size?.a ?? 0, b: size?.b ?? 0, h: size?.h ?? 0, la: size?.la ?? 0, lb: size?.lb ?? 0, round: !!size?.round });
     });
   }
   return out;
@@ -280,7 +281,7 @@ export function offsetLums(g, idx, d, fix = null) {
   const offs = { ...(g.offs ?? {}) };
   for (const k of idx) {
     let o = { ...(offs[k] ?? {}) };
-    for (const q of ['dx', 'dy', 'dz', 'dpsi']) if (d[q]) o[q] = Math.round(((o[q] ?? 0) + d[q]) * 1e9) / 1e9;
+    for (const q of ['dx', 'dy', 'dz', 'dpsi', 'dtx', 'dty']) if (d[q]) o[q] = Math.round(((o[q] ?? 0) + d[q]) * 1e9) / 1e9;
     if (fix) o = fix(o, k);
     for (const q of Object.keys(o)) if (!o[q]) delete o[q];
     if (Object.keys(o).length) offs[k] = o; else delete offs[k];
@@ -354,6 +355,43 @@ export function rotateSelection(m, s, dpsi) {
 }
 
 /**
+ * The model with the tilt of the selection about the luminaires' own x (axis 'tx') or y ('ty')
+ * changed (stage 2.1a): by d degrees, or set to d with `abs`; every tilt stays within −90…90°.
+ * A whole group carries one tilt for its luminaires; a luminaire within a group gets an offset;
+ * zero tilts are not kept.
+ */
+export function tiltSelection(m, s, axis, d, abs = false) {
+  if (!abs && !d) return m;
+  const cl = (v) => Math.round(Math.max(-TILT_MAX, Math.min(TILT_MAX, v)) * 1e9) / 1e9;
+  const put = (o, v) => { const r = { ...o, [axis]: v }; if (!r[axis]) delete r[axis]; return r; };
+  return {
+    ...m,
+    groups: m.groups.map((g) => {
+      const idx = s.points.get(g.id);
+      if (s.groups.has(g.id)) {
+        if (g.kind === 'single') return { ...g, points: g.points.map((p) => put(p, cl(abs ? d : (p[axis] ?? 0) + d))) };
+        return put(g, cl(abs ? d : (g[axis] ?? 0) + d));
+      }
+      if (!idx?.size) return g;
+      if (g.kind === 'single') return { ...g, points: g.points.map((p, k) => (idx.has(k) ? put(p, cl(abs ? d : (p[axis] ?? 0) + d)) : p)) };
+      // within a group: the offset from the group's tilt, the sum kept within −90…90°
+      const q = axis === 'tx' ? 'dtx' : 'dty', base = g[axis] ?? 0, offs = { ...(g.offs ?? {}) };
+      for (const k of idx) {
+        const o = { ...(offs[k] ?? {}) };
+        o[q] = Math.round((cl(abs ? d : base + (o[q] ?? 0) + d) - base) * 1e9) / 1e9;
+        if (!o[q]) delete o[q];
+        if (Object.keys(o).length) offs[k] = o; else delete offs[k];
+      }
+      const out = { ...g, offs };
+      if (!Object.keys(offs).length) delete out.offs;
+      return out;
+    }),
+  };
+}
+/** Largest tilt about x or y, degrees (decided on 25 Nov 2026). */
+export const TILT_MAX = 90;
+
+/**
  * The selection given another luminaire type (dialog "List", "Replace"): whole groups take the
  * type; selected single luminaires of a group move to a new group of single luminaires of that
  * type (the rest keep theirs). Returns { model, sel } with the selection of the same luminaires,
@@ -419,7 +457,7 @@ function inConvex(p, poly) {
 /**
  * The gizmo handle under the pointer p (view px), or null.
  *   move:   'xy' (the plane square), 'x' or 'y' (the arrows from o to x and to y)
- *   rotate: 'z' (the ring, a polyline of view points)
+ *   rotate: 'z' (the ring, a polyline of view points); 'x', 'y' — the tilt rings in 3D (2.1a)
  */
 export function gizmoHit(tool, p, g, hit = GIZMO.hit) {
   if (tool === 'move') {
@@ -430,9 +468,11 @@ export function gizmoHit(tool, p, g, hit = GIZMO.hit) {
     return d > hit ? null : axis;
   }
   if (tool === 'rotate' && g.ring) {
-    let d = Infinity;
-    for (let k = 0; k < g.ring.length; k++) d = Math.min(d, segDist(p, g.ring[k], g.ring[(k + 1) % g.ring.length]));
-    return d <= hit ? 'z' : null;
+    // the ring Z, and in 3D the tilt rings X and Y (2.1a): the nearest within the hit distance
+    const near = (ring) => { let d = Infinity; for (let k = 0; k < ring.length; k++) d = Math.min(d, segDist(p, ring[k], ring[(k + 1) % ring.length])); return d; };
+    const ds = [['z', near(g.ring)], ...(g.tilt ? [['x', near(g.tilt.x)], ['y', near(g.tilt.y)]] : [])];
+    const [axis, d] = ds.reduce((a, b) => (b[1] < a[1] ? b : a));
+    return d <= hit ? axis : null;
   }
   return null;
 }

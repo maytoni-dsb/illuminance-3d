@@ -11,7 +11,7 @@ import { createRoom, autoStep, rectOutline, outlineRect } from './geometry.js';
 import { buildKernel } from './kernel.js';
 import { solve, coarseData, energyBalance, sumpner, SOLVER_EPS } from './solver.js';
 import { createPhotometry, luminaireGrid } from './photometry.js';
-import { elementDirect, emittedFlux, faceFlux } from './direct.js';
+import { elementDirect, emittedFlux, faceFlux, isTilted, lumMatrix } from './direct.js';
 import { mixChecks } from './checksmix.js';
 import { pointInOutline } from './groups.js';
 import { stage3Checks } from './checks3.js';
@@ -29,7 +29,7 @@ const now = () => (typeof performance !== 'undefined' ? performance.now() : Date
  *                  rho: number[6] (faces 0…5), hwp?: number (height of the normative work plane, m),
  *                  types: [{ id, phot: 'cosine' | 'directIndirect' | 'file', flux, fUp?,
  *                            table?: PhotTable (photfile.js; phot = 'file'), fileKey?: string }],
- *                  lums: [{ type, pos: [x, y, z] (photometric centre, m), psi (rad) }],
+ *                  lums: [{ type, pos: [x, y, z] (photometric centre, m), psi (rad), tx?, ty? (tilt, rad, 2.1a) }],
  *                  checks?: boolean }
  * With a file the flux comes from the table (the flux of its interpolant), `flux` is ignored.
  *
@@ -52,15 +52,18 @@ function lumsKey(type, lums) {
   const isFile = type.phot === 'file';
   const head = [type.phot, isFile ? type.fileKey : type.flux, type.phot === 'directIndirect' ? type.fUp : 0].join('|');
   let s = head;
-  for (const l of lums) s += `;${l.pos[0]},${l.pos[1]},${l.pos[2]},${l.psi}`;
+  for (const l of lums) s += `;${l.pos[0]},${l.pos[1]},${l.pos[2]},${l.psi}` + (l.tx || l.ty ? `,${l.tx || 0},${l.ty || 0}` : '');
   return s;
 }
 
 /** Flux a set of luminaires of one type sends into the room (direct.emittedFlux per height). */
 function setEmitted(src, H) {
   const count = new Map();
-  for (const l of src.lums) count.set(l.pos[2], (count.get(l.pos[2]) ?? 0) + 1);
   let e = 0;
+  for (const l of src.lums) {
+    if (isTilted(l)) { e += emittedFlux(src.phot, l.pos[2], H, l); continue; }
+    count.set(l.pos[2], (count.get(l.pos[2]) ?? 0) + 1);
+  }
   for (const [z, n] of count) e += n * emittedFlux(src.phot, z, H);
   return e;
 }
@@ -127,7 +130,9 @@ export function createCalc() {
         if (!part) {
           const ty = st.type;
           const phot = createPhotometry({ type: ty.phot, flux: ty.flux, fUp: ty.fUp, table: ty.table });
-          const lums = st.lums.map((l) => Object.freeze({ pos: Object.freeze([l.pos[0], l.pos[1], l.pos[2]]), psi: l.psi }));
+          const lums = st.lums.map((l) => Object.freeze(isTilted(l)
+            ? { pos: Object.freeze([l.pos[0], l.pos[1], l.pos[2]]), psi: l.psi, tx: l.tx || 0, ty: l.ty || 0, R: Object.freeze(lumMatrix(l)) }
+            : { pos: Object.freeze([l.pos[0], l.pos[1], l.pos[2]]), psi: l.psi }));
           for (const l of lums) {
             if (!(l.pos[2] > 0 && l.pos[2] <= H)) throw new RangeError(`calc: a luminaire at z = ${l.pos[2]} is outside (0, H]`);
             if (!pointInOutline(p.outline, l.pos[0], l.pos[1])) throw new RangeError(`calc: a luminaire at (${l.pos[0]}, ${l.pos[1]}) is outside the room`);
@@ -209,7 +214,7 @@ export function createCalc() {
       Edir: Float64Array.from(Edir), Eind: Float64Array.from(s.Eind),
       iterations: s.iterations, converged: s.converged, change: s.change,
       balance, sumpner: sp, ms, reused,
-      lums: sources.flatMap((src) => src.lums.map((l) => ({ type: src.id, pos: [...l.pos], psi: l.psi }))),
+      lums: sources.flatMap((src) => src.lums.map((l) => (isTilted(l) ? { type: src.id, pos: [...l.pos], psi: l.psi, tx: l.tx, ty: l.ty } : { type: src.id, pos: [...l.pos], psi: l.psi }))),
       planes, flux: sources.length ? sources[0].phot.flux : 0, lost, types: typeFlux, directStats: dir.stats,
       fileKey: sources.length === 1 && sources[0].type.phot === 'file' ? sources[0].type.fileKey : null,
     };
@@ -218,7 +223,7 @@ export function createCalc() {
       // one type at one height and rotation (a grid of version 1): the stage 3 and 5 checks of
       // version 1; otherwise the flux of every type and of all of them (stage 2.1 criterion)
       const one = sources.length === 1 ? sources[0] : null;
-      const uniform = one && one.lums.every((l) => l.pos[2] === one.lums[0].pos[2] && l.psi === one.lums[0].psi);
+      const uniform = one && one.lums.every((l) => l.pos[2] === one.lums[0].pos[2] && l.psi === one.lums[0].psi && !isTilted(l));
       if (uniform) {
         out.checks3 = stage3Checks(room, one.lums, one.phot, Edir, { hc: H - one.lums[0].pos[2], psi: one.lums[0].psi });
         if (one.type.phot === 'file') out.checks5 = stage5Checks(room, one.lums, one.phot, Edir, one.type.table);

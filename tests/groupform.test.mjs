@@ -92,7 +92,7 @@ test('groups drawn on the plan: every kind with the draft; single luminaires one
 
 test('fields of a group: rows by kind, values, the grid as centre and size, the arc and its measure', () => {
   assert.deepEqual(Object.keys(GROUP_ROWS), ['single', 'grid', 'line', 'circle']);
-  assert.deepEqual(rowsOf('line').flatMap((r) => r.fields.map((f) => f.key)), ['n', 'x0', 'y0', 'hm', 'x1', 'y1', 'hm1', 'rx', 'ry', 'psi']);
+  assert.deepEqual(rowsOf('line').flatMap((r) => r.fields.map((f) => f.key)), ['n', 'x0', 'y0', 'hm', 'x1', 'y1', 'hm1', 'tx', 'ty', 'psi']);
   assert.deepEqual(rowsOf('grid').map((r) => r.extra ?? null), ['mx', 'my', 'fit', null, null]);
   const ctx = { H: 3, L: 6, W: 4, others: 6 };
   const raw = (g, over = {}, c = ctx) => ({ ...Object.fromEntries(Object.entries(fieldValues(g, c)).map(([k, v]) => [k, String(v)])), ...over });
@@ -131,7 +131,7 @@ test('fields of a group: rows by kind, values, the grid as centre and size, the 
   assert.equal(r.group.a0, undefined);
   assert.equal(validateGroup(circle, raw(circle, { psi: '0' }), ctx).group.psi, 0);
   const single = { id: 'g4', type: 't1', kind: 'single', points: [{ x: 1, y: 1, hm: 3, psi: 0 }, { x: 2, y: 2, hm: 2.5, psi: 30 }] };
-  assert.deepEqual(fieldValues(single, { ...ctx, at: 1 }), { x: 2, y: 2, hm: 2.5, psi: 30 });
+  assert.deepEqual(fieldValues(single, { ...ctx, at: 1 }), { x: 2, y: 2, hm: 2.5, psi: 30, tx: 0, ty: 0 });
   // several luminaires with different values: an empty field changes nothing
   assert.deepEqual(validateGroup(single, { x: '', y: '2', hm: '', psi: '' }, { ...ctx, at: 1, multi: true }).group.points[1], { x: 2, y: 2, hm: 2.5, psi: 30 });
   r = validateGroup(single, { x: '2,5', y: '2', hm: '2.4', psi: '45' }, { ...ctx, at: 1 });
@@ -140,9 +140,9 @@ test('fields of a group: rows by kind, values, the grid as centre and size, the 
 
 test('fields of the next group to draw: no geometry, the room height by default, the limit', () => {
   const ctx = { H: 3, L: 6, W: 4, others: 490 };
-  assert.deepEqual(draftValues('line', {}, ctx), { n: 3, hm: 3, hm1: 3, psi: 0 });
+  assert.deepEqual(draftValues('line', {}, ctx), { n: 3, hm: 3, hm1: 3, psi: 0, tx: 0, ty: 0 });
   let r = validateDraft('line', { n: '5', hm: '2.8', hm1: '2.6', psi: '90' }, ctx);
-  assert.deepEqual(r.draft, { n: 5, hm: 2.8, hm1: 2.6, psi: 90 });
+  assert.deepEqual(r.draft, { n: 5, hm: 2.8, hm1: 2.6, psi: 90, tx: 0, ty: 0 });
   r = validateDraft('grid', { nx: '4', ny: '3', hm: '3', psi: '0' }, ctx);
   assert.ok(!r.ok && r.errors.ny);
   r = validateDraft('single', { hm: '0.5', psi: '0' }, ctx);

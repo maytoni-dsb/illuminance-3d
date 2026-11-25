@@ -18,7 +18,49 @@
 
 import { pointToElement } from './formfactor.js';
 
+// ---------------------------------------------------------------------------------------------
+// Orientation of a luminaire (stage 2.1a, decided 25 Nov 2026)
+//
+// A luminaire { pos, psi, tx?, ty? } is turned by R = Rz(ψ)·Ry(β)·Rx(α), α = tx, β = ty (rad):
+// Euler XYZ as in 3ds Max — the tilts about the luminaire's own C0 (x) and C90 (y) axes first,
+// then ψ about the vertical. R maps the luminaire frame (C0 along x, γ = 0 along −z) to the room;
+// a direction d in the room is d_l = Rᵀ·d in the luminaire frame, and
+//   γ = atan2(√(d_lx² + d_ly²), −d_lz),  C = atan2(d_ly, d_lx).
+// Without tilt R = Rz(ψ) and the code takes the version 1 path unchanged (bit for bit).
+
+/** True when the luminaire is tilted about x or y. */
+export const isTilted = (s) => !!(s.tx || s.ty);
+
+/** R = Rz(ψ)·Ry(ty)·Rx(tx) row-major (9 numbers): the luminaire frame → the room. */
+export function lumMatrix(s) {
+  const a = s.tx || 0, b = s.ty || 0, c = s.psi || 0;
+  const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b), cc = Math.cos(c), sc = Math.sin(c);
+  return [
+    cc * cb, cc * sb * sa - sc * ca, cc * sb * ca + sc * sa,
+    sc * cb, sc * sb * sa + cc * ca, sc * sb * ca - cc * sa,
+    -sb, cb * sa, cb * ca,
+  ];
+}
+
+/** Photometric angles (C, γ) of a room direction d for the luminaire matrix R; out = [C, γ]. */
+export function tiltedAngles(R, dx, dy, dz, out = [0, 0]) {
+  const lx = R[0] * dx + R[3] * dy + R[6] * dz;
+  const ly = R[1] * dx + R[4] * dy + R[7] * dz;
+  const lz = R[2] * dx + R[5] * dy + R[8] * dz;
+  const h2 = lx * lx + ly * ly;
+  out[1] = Math.atan2(Math.sqrt(h2), -lz);
+  let C = h2 > 0 ? Math.atan2(ly, lx) : 0;
+  if (C < 0) C += TWO_PI;
+  if (C >= TWO_PI) C -= TWO_PI;
+  out[0] = C;
+  return out;
+}
+
+/** Lobe axis turned into the room: R·axis. */
+const turn = (R, a) => [R[0] * a[0] + R[1] * a[1] + R[2] * a[2], R[3] * a[0] + R[4] * a[1] + R[5] * a[2], R[6] * a[0] + R[7] * a[1] + R[8] * a[2]];
+
 const TWO_PI = 2 * Math.PI;
+const ANG = [0, 0];
 
 /**
  * Direct illuminance at a point from several luminaire sets of different photometry
@@ -50,6 +92,11 @@ export function directAtPoint(x, n, lums, phot) {
     const r = Math.sqrt(r2);
     const cosXi = -(n[0] * dx + n[1] * dy + n[2] * dz) / r; // n · (s − x) / r
     if (!(cosXi > 0)) continue;
+    if (s.tx || s.ty) { // tilted (stage 2.1a)
+      const a = tiltedAngles(s.R ?? lumMatrix(s), dx, dy, dz, ANG);
+      E += I(a[0], a[1]) * cosXi / r2;
+      continue;
+    }
     // photometricAngles inlined (no object per call): γ from the downward vertical, C in the
     // luminaire frame rotated by ψ
     const gamma = Math.atan2(Math.sqrt(rh2), -dz);
@@ -122,7 +169,7 @@ export function luminaireOrbits(lums, sym, L, W) {
   const byPos = new Map();
   lums.forEach((s, k) => byPos.set(key(s.pos[0], s.pos[1]), k));
   const psi0 = lums.length ? lums[0].psi : 0;
-  const same = lums.every((s) => s.psi === psi0 && s.pos[2] === lums[0].pos[2]);
+  const same = lums.every((s) => s.psi === psi0 && s.pos[2] === lums[0].pos[2] && !isTilted(s));
   const used = new Uint8Array(lums.length), out = [];
   lums.forEach((s, k) => {
     if (used[k]) return;
@@ -199,12 +246,14 @@ export function elementDirectExact(room, lums, phot, out = new Float64Array(room
   const { orbits, perms } = symmetryOf(room, lums, phot, symmetric);
   const tmp = new Float64Array(room.N);
   for (const { lum: s, images } of orbits) {
+    const R = isTilted(s) ? (s.R ?? lumMatrix(s)) : null;
+    const axes = phot.lobes.map((l) => (R ? turn(R, l.axis) : l.axis));
     for (const face of room.faces) {
       const inv = 1 / face.elementArea;
       for (let j = 0; j < face.nv; j++) {
         for (let i = 0; i < face.nu; i++) {
           let flux = 0;
-          for (const l of phot.lobes) flux += l.flux * pointToElement(room, face.id, i, j, s.pos, l.axis);
+          for (let q = 0; q < axes.length; q++) flux += phot.lobes[q].flux * pointToElement(room, face.id, i, j, s.pos, axes[q]);
           tmp[face.offset + i + j * face.nu] = flux * inv;
         }
       }
@@ -297,12 +346,48 @@ export const ADAPTIVE = Object.freeze({ order: 3, eps: 1e-3, abs: 1e-7, maxDepth
  * Flux a luminaire at z_s can send into the room: Φ, or only Φ_down when it lies in the ceiling
  * plane (a recessed or surface-mounted luminaire cannot light upwards).
  */
-export function emittedFlux(phot, zs, H) {
+export function emittedFlux(phot, zs, H, lum = null) {
   if (H - zs > 1e-12) return phot.flux;
+  if (lum && isTilted(lum)) return downwardFlux(phot, lum.R ?? lumMatrix(lum));
   if (phot.fluxDown !== undefined) return phot.fluxDown;
   if (phot.lobes) return phot.lobes.reduce((a, l) => a + (l.axis[2] < 0 ? l.flux : 0), 0);
   return phot.flux;
 }
+
+/**
+ * Flux of a tilted luminaire below its horizontal plane (stage 2.1a: a luminaire in the ceiling
+ * plane cannot light upwards), lm. Cosine lobes: a Lambertian lobe with axis a sends the fraction
+ * (1 − a_z)/2 of its flux below the horizontal (the factor of a tilted differential area to a
+ * half-space). Tables: ∫ I dΩ over the lower hemisphere of the room, a 4 × 4 Gauss rule on every
+ * 1° × 1° cell of (θ from the downward vertical, φ); the interpolant has kinks only along the
+ * tabulated angles, so the rule converges as fast as the flux of the table itself (~10⁻⁶).
+ * Cached on the photometry per matrix.
+ */
+export function downwardFlux(phot, R) {
+  if (phot.lobes) return phot.lobes.reduce((acc, l) => acc + l.flux * (1 - turn(R, l.axis)[2]) / 2, 0);
+  const key = R.join(',');
+  const cache = DOWN.get(phot) ?? new Map();
+  DOWN.set(phot, cache);
+  if (cache.has(key)) return cache.get(key);
+  const { x: gx, w: gw } = gaussLegendre01(4);
+  const nT = 90, nP = 360, dT = HALF_PI / nT, dP = TWO_PI / nP, ang = [0, 0];
+  let sum = 0;
+  for (let i = 0; i < nT; i++) for (let a = 0; a < 4; a++) {
+    const th = (i + gx[a]) * dT, st = Math.sin(th), ct = Math.cos(th);
+    let ring = 0;
+    for (let j = 0; j < nP; j++) for (let b = 0; b < 4; b++) {
+      const ph = (j + gx[b]) * dP;
+      tiltedAngles(R, st * Math.cos(ph), st * Math.sin(ph), -ct, ang);
+      ring += gw[b] * phot.intensity(ang[0], ang[1]);
+    }
+    sum += gw[a] * ring * st;
+  }
+  const v = sum * dT * dP;
+  cache.set(key, v);
+  return v;
+}
+const DOWN = new WeakMap();
+const HALF_PI = Math.PI / 2;
 
 /**
  * Element-average direct illuminance for any photometry by adaptive cubature.
@@ -321,7 +406,7 @@ export function elementDirectAdaptive(room, lums, phot, opts = {}) {
   const { orbits, perms } = symmetryOf(room, lums, phot, !!o.symmetric);
   const stats = { evals: 0, depth: 0, retries: 0, perLum: [], integrated: orbits.length, luminaires: lums.length };
   for (const { lum: s, images } of orbits) {
-    const em = emittedFlux(phot, s.pos[2], room.H);
+    const em = emittedFlux(phot, s.pos[2], room.H, s);
     let eps = o.eps, abs = o.abs, rel = 0;
     for (let attempt = 0; ; attempt++) {
       tmp.fill(0);
@@ -346,6 +431,7 @@ function integrateLuminaire(room, s, phot, o, E, stats) {
   const I = phot.intensity;
   const [sx, sy, sz] = s.pos;
   const cp = Math.cos(s.psi), sp = Math.sin(s.psi);
+  const R = isTilted(s) ? (s.R ?? lumMatrix(s)) : null, ang = [0, 0];
   const absTol = o.abs * phot.flux;
   let got = 0, evals = 0;
   for (const face of room.faces) {
@@ -362,6 +448,10 @@ function integrateLuminaire(room, s, phot, o, E, stats) {
       const dy = a * U[1] + b * V[1] - h * n[1];
       const dz = a * U[2] + b * V[2] - h * n[2];
       const rh2 = dx * dx + dy * dy, r2 = rh2 + dz * dz;
+      if (R) {
+        tiltedAngles(R, dx, dy, dz, ang);
+        return I(ang[0], ang[1]) * h / (r2 * Math.sqrt(r2));
+      }
       const gamma = Math.atan2(Math.sqrt(rh2), -dz);
       let C = 0;
       if (!rot) {

@@ -12,7 +12,7 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-      "./js/calc.js": "./js/calc.js?v=7fe23fc6",
+      "./js/calc.js": "./js/calc.js?v=c49ced9f",
       "./js/checks2.js": "./js/checks2.js?v=6c5f10f2",
       "./js/checks3.js": "./js/checks3.js?v=2413caec",
       "./js/checks4.js": "./js/checks4.js?v=a4a67988",
@@ -20,22 +20,22 @@
       "./js/checks6.js": "./js/checks6.js?v=b10cab3b",
       "./js/checksmix.js": "./js/checksmix.js?v=ac768a64",
       "./js/colorscale.js": "./js/colorscale.js?v=07318c6f",
-      "./js/direct.js": "./js/direct.js?v=ca118499",
+      "./js/direct.js": "./js/direct.js?v=93dd3f27",
       "./js/estimate.js": "./js/estimate.js?v=8e837379",
       "./js/formfactor.js": "./js/formfactor.js?v=2599e04b",
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
-      "./js/groupform.js": "./js/groupform.js?v=1985dcdd",
-      "./js/groups.js": "./js/groups.js?v=46816880",
+      "./js/groupform.js": "./js/groupform.js?v=31f6d289",
+      "./js/groups.js": "./js/groups.js?v=e0b40370",
       "./js/groupui.js": "./js/groupui.js?v=3b366b6f",
       "./js/help.js": "./js/help.js?v=98159935",
       "./js/hotkeys.js": "./js/hotkeys.js?v=1af19d09",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=650aaef6",
-      "./js/lang-en.js": "./js/lang-en.js?v=69143f96",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=f0ce9e69",
-      "./js/model.js": "./js/model.js?v=23fde215",
+      "./js/lang-de.js": "./js/lang-de.js?v=df8d65e5",
+      "./js/lang-en.js": "./js/lang-en.js?v=25ec9bde",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=243cfe83",
+      "./js/model.js": "./js/model.js?v=be166f40",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -43,16 +43,16 @@
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=51d36bb9",
-      "./js/planedit.js": "./js/planedit.js?v=9e28c61e",
-      "./js/planview.js": "./js/planview.js?v=c79e9a08",
+      "./js/planedit.js": "./js/planedit.js?v=51b1726d",
+      "./js/planview.js": "./js/planview.js?v=aecfb713",
       "./js/project.js": "./js/project.js?v=3155618c",
       "./js/report.js": "./js/report.js?v=f66adf22",
       "./js/reportsvg.js": "./js/reportsvg.js?v=23982fbf",
-      "./js/reportui.js": "./js/reportui.js?v=70ba0733",
+      "./js/reportui.js": "./js/reportui.js?v=20906c50",
       "./js/solver.js": "./js/solver.js?v=a5376c19",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=1cd77bb9",
-      "./js/view3d.js": "./js/view3d.js?v=fa295e0a",
+      "./js/view3d.js": "./js/view3d.js?v=2a26e8d7",
       "./js/worker.js": "./js/worker.js?v=a2071819",
       "./js/workplane.js": "./js/workplane.js?v=dc6a0497"
     }
@@ -622,7 +622,8 @@
     #inlum{margin:0 0 10px;padding:8px;border:1px solid var(--rule);border-radius:8px}
     #inlum .ilh{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;margin:0 0 6px}
     #inlum .ilh small{font-weight:400;color:var(--muted)}
-    #inlum .gcells{grid-template-columns:repeat(4,minmax(0,1fr))}
+    #inlum .gcells{grid-template-columns:repeat(3,minmax(0,1fr))}
+    #inlum .gcells + .gcells{margin-top:6px}
     #inlum .gf input{padding:0 6px 0 18px}
     .gdraw{margin-top:2px}
     .etools{position:absolute;top:16px;left:16px;display:flex;gap:6px;align-items:center;z-index:6}
@@ -1084,7 +1085,7 @@
   import { hotkeyAction, editorKey } from './js/hotkeys.js';
   import {
     planItems, pickAt, selectionOf, combine, boxSelection, selectedItems, isSelected, isEmpty, emptySelection,
-    clampDelta, moveSelection, deleteSelection, resetOffsets, resetLayout, snapPoint, snapNear, lumFeatures, rotateSelection, liftSelection, replaceType, gizmoHit, constrain, selectionCentre, GIZMO,
+    clampDelta, moveSelection, deleteSelection, resetOffsets, resetLayout, snapPoint, snapNear, lumFeatures, rotateSelection, tiltSelection, liftSelection, replaceType, gizmoHit, constrain, selectionCentre, GIZMO,
   } from './js/planedit.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
@@ -1396,7 +1397,9 @@
     const cell = (k, ax, unit, digits) => `<div class="gf"><span class="gax">${ax}</span><input data-il="${k}" inputmode="decimal" autocomplete="off" spellcheck="false" value="${same(k) ? esc(formatNumber(its[0][k], digits)) : ''}" title="${esc(unit)}"></div>`;
     const moved = its.some((it) => g.offs?.[it.index]);
     host.innerHTML = `<div class="ilh"><span>${esc(title)}</span>${moved ? `<small>${esc(t('lum.moved'))}</small>` : ''}</div>`
-      + `<div class="gcells">${cell('x', 'X', t('unit.m'), 3)}${cell('y', 'Y', t('unit.m'), 3)}${cell('hm', 'Z', t('unit.m'), 3)}${cell('psi', 'ψ', '°', 1)}</div>`;
+      + `<div class="gcells">${cell('x', 'X', t('unit.m'), 3)}${cell('y', 'Y', t('unit.m'), 3)}${cell('hm', 'Z', t('unit.m'), 3)}</div>`
+      // the rotation: the tilt about its own X and Y (2.1a) and ψ about Z, degrees
+      + `<div class="gcells" title="${esc(t('gform.tip.rot'))}">${cell('tx', 'X', '°', 1)}${cell('ty', 'Y', '°', 1)}${cell('psi', 'Z', '°', 1)}</div>`;
   }
   $('#inlum').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.dataset.il) { e.preventDefault(); e.target.blur(); } e.stopPropagation(); });
   $('#inlum').addEventListener('change', (e) => {
@@ -1405,6 +1408,7 @@
     const it0 = r.its[0];
     let next = m;
     if (k === 'psi') next = rotateSelection(m, sel, v - it0.psi);
+    else if (k === 'tx' || k === 'ty') next = tiltSelection(m, sel, k, v, true);
     else if (k === 'hm') next = liftSelection(m, sel, v - it0.hm, sizeOf);
     else {
       const [dx, dy] = clampDelta(r.its, k === 'x' ? v - it0.x : 0, k === 'y' ? v - it0.y : 0, m.room.shape.L, m.room.shape.W);
@@ -2297,16 +2301,30 @@
     if (!x || !y) return null;
     // Z only in 3D: the mounting height (decided on 21 Nov 2026)
     const z = mode === '3d' ? end(0, 0, 1) : null;
-    let ring = null;
+    let ring = null, tilt = null;
     if (tool === 'rotate') {
       const sx = P(c.x + 1, c.y, c.z), sy = P(c.x, c.y + 1, c.z);
       const ppm = mode === '3d' && view ? view.pxPerMetre(c.x, c.y, c.z) : (Math.hypot(sx[0] - o[0], sx[1] - o[1]) + Math.hypot(sy[0] - o[0], sy[1] - o[1])) / 2; // px per metre
       const r = GIZMO.ring / ppm;
       ring = Array.from({ length: 72 }, (_, k) => P(c.x + r * Math.cos(k * Math.PI / 36), c.y + r * Math.sin(k * Math.PI / 36), c.z)).filter(Boolean);
+      if (mode === '3d') {
+        // the tilt rings (2.1a) in the axes of the (first) selected luminaire, as Euler XYZ of 3ds Max:
+        // X turns about Rz(ψ)·Ry(ty)·x, Y about Rz(ψ)·y
+        const it0 = selectedItems(planItems(m, sizeOf), sel)[0], D = Math.PI / 180;
+        const ps = (it0?.psi ?? 0) * D, tyr = (it0?.ty ?? 0) * D;
+        const ax = [Math.cos(ps) * Math.cos(tyr), Math.sin(ps) * Math.cos(tyr), -Math.sin(tyr)], ay = [-Math.sin(ps), Math.cos(ps), 0];
+        const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+        const circle = (n) => {
+          const u = Math.abs(n[2]) < 0.9 ? cross(n, [0, 0, 1]) : cross(n, [1, 0, 0]), ul = Math.hypot(...u), uu = u.map((q) => q / ul), vv = cross(n, uu);
+          return Array.from({ length: 72 }, (_, k) => { const a = k * Math.PI / 36, ca = Math.cos(a) * r, sa = Math.sin(a) * r; return P(c.x + ca * uu[0] + sa * vv[0], c.y + ca * uu[1] + sa * vv[1], c.z + ca * uu[2] + sa * vv[2]); });
+        };
+        const rx = circle(ax), ry = circle(ay);
+        if (rx.every(Boolean) && ry.every(Boolean)) tilt = { x: rx, y: ry };
+      }
     }
     // the metres of height per px along the Z arrow (its drag)
     const zp = z && P(c.x, c.y, c.z + 1);
-    return { tool, o, x, y, z, ring, c, zv: zp ? [zp[0] - o[0], zp[1] - o[1]] : null };
+    return { tool, o, x, y, z, ring, tilt, c, zv: zp ? [zp[0] - o[0], zp[1] - o[1]] : null };
   }
   /** The luminaire nearest to the pointer in 3D (its top centre within 12 px). */
   function pickScreen(items, e) {
@@ -2623,9 +2641,11 @@
     queueMicrotask(placeTypeIn);
     const m = model(), items = selectedItems(planItems(m, sizeOf), sel), c = selectionCentre(items);
     const rot = typeinTool === 'rotate', f = (v) => (Number.isFinite(v) ? formatNumber(v, 3) : '');
-    const abs = rot ? [0, 0, items.length ? items[0].psi : NaN] : [c?.x, c?.y, c?.z];
+    // rotate: the tilt about the luminaires' own X and Y (2.1a) and ψ; a value shown when common
+    const common = (k) => (items.length && items.every((it) => Math.abs((it[k] ?? 0) - (items[0][k] ?? 0)) < 1e-9) ? items[0][k] ?? 0 : NaN);
+    const abs = rot ? [common('tx'), common('ty'), items.length ? items[0].psi : NaN] : [c?.x, c?.y, c?.z];
     const cell = (row, a, i, v) => {
-      const off = rot && i < 2;
+      const off = false;
       return `<div class="gf${off ? ' off' : ''}"><span class="gax">${a}</span><input data-ti="${row}${i}" value="${off ? '0' : f(v)}"${off || !items.length ? ' disabled' : ''}><span class="gu">${rot ? '°' : t('unit.m')}</span></div>`;
     };
     $('#tiabs').innerHTML = ['X', 'Y', 'Z'].map((a, i) => cell('a', a, i, abs[i])).join('');
@@ -2638,7 +2658,9 @@
     if (!items.length || !c) return;
     const row = el.dataset.ti[0], i = Number(el.dataset.ti[1]);
     let next = m;
-    if (typeinTool === 'rotate') {
+    if (typeinTool === 'rotate' && i < 2) {
+      next = tiltSelection(m, sel, i ? 'ty' : 'tx', v, row === 'a');
+    } else if (typeinTool === 'rotate') {
       const d = row === 'a' ? v - items[0].psi : v;
       if (d) next = rotateSelection(m, sel, d);
     } else if (i === 2) {
@@ -2720,7 +2742,7 @@
       rubber: drag?.mode === 'move' && drag.src ? { a: drag.src, b: { x: drag.src.x + drag.d[0], y: drag.src.y + drag.d[1] }, z: editZ(), snapped: !!snapMark?.snapped } : null,
       moveGhost: drag?.mode === 'move' && model() !== drag.base ? selectedItems(planItems(drag.base, sizeOf), sel) : null,
       axes: (() => { const eg = editGroup(m); return eg ? axesOf(m, eg).map((q) => ({ ...q, hot: hoverAxis === q.id || (drag?.mode === 'handle' && drag.h === q.id) })) : null; })(),
-      gizmo: gz && { ...gz, active: drag?.axis ?? null, hover: hoverHandle, angle: drag?.mode === 'rotate' ? drag.ang : null },
+      gizmo: gz && { ...gz, active: drag?.axis ?? null, hover: hoverHandle, angle: drag?.mode === 'rotate' || drag?.mode === 'tilt' ? drag.ang : null },
       handles: (() => { const eg = editGroup(m); return eg ? handlesOf(m, eg, P).filter((q) => q.shape !== 'none') : null; })(),
       dims: info.mode === '2d' ? (() => { const eg = editGroup(m); return eg ? dimsOf(m, eg, P) : null; })() : null,
       ghost: kssDrag?.in ? (() => { const ty = m.types.find((x) => x.id === selType), z2 = sizeOf(ty); return { x: kssDrag.x, y: kssDrag.y, hm: kssDrag.hm, psi: drafts.single.psi ?? 0, a: z2?.a ?? 0, b: z2?.b ?? 0, h: z2?.h ?? 0, round: !!z2?.round, color: typeColorOf(m, typeIndex(m, selType)) }; })() : null,
@@ -2728,32 +2750,34 @@
   }
   /** The next group of a kind takes the values of the last one drawn or edited (21 Nov 2026). */
   function keepDraft(g, at = selPoint) {
-    if (g.kind === 'single') { const p = g.points[Math.min(at, g.points.length - 1)]; if (p) drafts.single = { hm: p.hm, psi: p.psi }; return; }
-    const keys = { grid: ['nx', 'ny', 'hm', 'psi', 'mx', 'my'], line: ['n', 'hm', 'hm1', 'psi', 'm'], circle: ['n', 'hm', 'psi'] }[g.kind] ?? [];
+    if (g.kind === 'single') { const p = g.points[Math.min(at, g.points.length - 1)]; if (p) drafts.single = { hm: p.hm, psi: p.psi, tx: p.tx ?? 0, ty: p.ty ?? 0 }; return; }
+    const keys = { grid: ['nx', 'ny', 'hm', 'psi', 'tx', 'ty', 'mx', 'my'], line: ['n', 'hm', 'hm1', 'psi', 'tx', 'ty', 'm'], circle: ['n', 'hm', 'psi', 'tx', 'ty'] }[g.kind] ?? [];
     drafts[g.kind] = Object.fromEntries(keys.filter((k) => g[k] !== undefined).map((k) => [k, g[k]]));
   }
   // several single luminaires selected: one set of fields, the common values (21 Nov 2026)
-  const MULTI = '__several';
+  const MULTI = '__several', MULTI_KEYS = ['x', 'y', 'hm', 'psi', 'tx', 'ty'];
   function multiItems(m) {
     const its = selectedItems(planItems(m, sizeOf), sel);
     return its.length > 1 && its.every((it) => it.kind === 'single') ? its : null;
   }
   function multiGroup(its) {
     const same = (k) => its.every((it) => Math.abs(it[k] - its[0][k]) < 1e-9);
-    const p = Object.fromEntries(['x', 'y', 'hm', 'psi'].map((k) => [k, same(k) ? its[0][k] : NaN]));
-    return { group: { id: MULTI, type: its[0].type, kind: 'single', points: [p] }, blank: ['x', 'y', 'hm', 'psi'].filter((k) => !same(k)) };
+    const p = Object.fromEntries(MULTI_KEYS.map((k) => [k, same(k) ? its[0][k] : NaN]));
+    return { group: { id: MULTI, type: its[0].type, kind: 'single', points: [p] }, blank: MULTI_KEYS.filter((k) => !same(k)) };
   }
   function applyMulti(g) {
     const m = model(), its = multiItems(m);
     if (!its) return;
     const before = multiGroup(its).group.points[0], now = g.points[0];
-    const keys = ['x', 'y', 'hm', 'psi'].filter((k) => Number.isFinite(now[k]) && !(Math.abs(now[k] - before[k]) < 1e-12));
+    const keys = MULTI_KEYS.filter((k) => Number.isFinite(now[k]) && !(Math.abs(now[k] - before[k]) < 1e-12));
     if (!keys.length) return;
     const pick = new Map();
     for (const it of its) { if (!pick.has(it.group)) pick.set(it.group, new Set()); pick.get(it.group).add(it.index); }
     remember(m);
-    activeRoom().model = { ...m, groups: m.groups.map((x) => (pick.has(x.id) ? { ...x, points: x.points.map((q, k) => (pick.get(x.id).has(k) ? { ...q, ...Object.fromEntries(keys.map((key) => [key, now[key]])) } : q)) } : x)) };
-    if (keys.includes('hm') || keys.includes('psi')) drafts.single = { hm: now.hm ?? drafts.single.hm, psi: now.psi ?? drafts.single.psi };
+    // a tilt of zero is not kept (2.1a)
+    const put = (q) => { const r = { ...q, ...Object.fromEntries(keys.map((key) => [key, now[key]])) }; if (!r.tx && !r.ty) { delete r.tx; delete r.ty; } else { r.tx = r.tx || 0; r.ty = r.ty || 0; } return r; };
+    activeRoom().model = { ...m, groups: m.groups.map((x) => (pick.has(x.id) ? { ...x, points: x.points.map((q, k) => (pick.get(x.id).has(k) ? put(q) : q)) } : x)) };
+    if (keys.some((k) => ['hm', 'psi', 'tx', 'ty'].includes(k))) drafts.single = { hm: now.hm ?? drafts.single.hm, psi: now.psi ?? drafts.single.psi, tx: Number.isFinite(now.tx) ? now.tx : drafts.single.tx ?? 0, ty: Number.isFinite(now.ty) ? now.ty : drafts.single.ty ?? 0 };
     autosave(); refresh();
   }
   /** A group drawn: added with the type of the active luminaire and the fields of the draft. */
@@ -2862,6 +2886,14 @@
         view?.refresh(); return true;
       }
       if (h && tool === 'move') { startMove(h, { x: gz.c.x, y: gz.c.y }, true); view?.refresh(); return true; }
+      if ((h === 'x' || h === 'y') && tool === 'rotate' && gz.tilt) {
+        // a tilt ring (2.1a): the angle on the screen about the gizmo centre; its sense from the way
+        // the ring runs on the screen (the signed area of its polygon)
+        const R = gz.tilt[h]; let A = 0;
+        for (let k = 0; k < R.length; k++) { const p = R[k], q = R[(k + 1) % R.length]; A += p[0] * q[1] - q[0] * p[1]; }
+        drag = { mode: 'tilt', axis: h, o: gz.o, sign: A >= 0 ? 1 : -1, a0: Math.atan2(e.py - gz.o[1], e.px - gz.o[0]), base: m, ang: 0 };
+        view?.refresh(); return true;
+      }
       if (h && tool === 'rotate') {
         drag = { mode: 'rotate', axis: 'z', cx: gz.c.x, cy: gz.c.y, a0: Math.atan2(e.y - gz.c.y, e.x - gz.c.x), base: m, ang: 0 };
         view?.refresh(); return true;
@@ -2924,6 +2956,11 @@
           dz = Math.abs(z0 + dz - near) <= tolZ ? near - z0 : Math.round(dz / 0.05) * 0.05;
         }
         if (dz !== drag.dz) { drag.dz = dz; activeRoom().model = liftSelection(drag.base, sel, dz, sizeOf); previewLums(); }
+      } else if (drag.mode === 'tilt') {
+        let a = drag.sign * (Math.atan2(e.py - drag.o[1], e.px - drag.o[0]) - drag.a0) * 180 / Math.PI;
+        a = ((a + 540) % 360) - 180;
+        if (planGrid(m).snap) a = Math.round(a / 15) * 15;
+        if (a !== drag.ang) { drag.ang = a; activeRoom().model = tiltSelection(drag.base, sel, drag.axis === 'x' ? 'tx' : 'ty', a); previewLums(); }
       } else if (drag.mode === 'rotate') {
         if (!Number.isFinite(e.x)) return undefined;
         let a = (Math.atan2(e.y - drag.cy, e.x - drag.cx) - drag.a0) * 180 / Math.PI;
@@ -2935,7 +2972,7 @@
     }
     // released or cancelled
     const dr = drag; drag = null; snapMark = null; snapGuide = null;
-    if (dr.mode === 'move' || dr.mode === 'rotate' || dr.mode === 'lift' || dr.mode === 'handle') {
+    if (dr.mode === 'move' || dr.mode === 'rotate' || dr.mode === 'tilt' || dr.mode === 'lift' || dr.mode === 'handle') {
       if (type === 'cancel') { activeRoom().model = dr.base; previewLums(); return undefined; }
       if (model() !== dr.base) { remember(dr.base); autosave(); loadGroupForm(); refresh(); }
       else if (dr.click && type === 'up') selectAt(dr.click.it, dr.click.e);
