@@ -268,8 +268,16 @@ function buildLuminaires(r, lums, edgeColor, shape = null) {
     houGeo.scale(a, houH, b);
     houGeo.translate(0, houH / 2, 0);
   }
-  const houMat = new THREE.MeshBasicMaterial({ color: 0x8c8c8c });
-  const houEdges = houGeo ? new THREE.EdgesGeometry(houGeo, 30) : null;
+  // the housing shaded by its normals (a fixed light from above and the side): no edge lines needed
+  if (houGeo) {
+    const n = houGeo.attributes.normal, col = new Float32Array(n.count * 3), L = [0.35, 0.8, 0.48];
+    for (let i = 0; i < n.count; i++) {
+      const k = 0.52 + 0.4 * Math.max(0, n.getX(i) * L[0] + n.getY(i) * L[1] + n.getZ(i) * L[2]) + 0.08 * Math.abs(n.getX(i));
+      col[3 * i] = col[3 * i + 1] = col[3 * i + 2] = Math.min(1, k * 0.62);
+    }
+    houGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  }
+  const houMat = new THREE.MeshBasicMaterial({ vertexColors: true });
   const hangs = [];
   const zMark = pendant ? zs - 0.001 : Math.min(zs, r.H - 0.004); // just below the ceiling plane
   for (const s of lums) {
@@ -277,16 +285,13 @@ function buildLuminaires(r, lums, edgeColor, shape = null) {
     const m = new THREE.Mesh(lumGeo, fill);
     m.position.set(t[0], t[1], t[2]);
     m.rotation.y = s.psi; // Three.js +Y is room +Z: rotation about it is counterclockwise viewed from above
-    const e = new THREE.LineSegments(edges, edgeMat);
-    e.position.copy(m.position); e.rotation.copy(m.rotation);
-    group.add(m, e);
+    // no lines along the edges (25 Nov 2026): the housing is told by its shading
+    group.add(m);
     if (houGeo) {
       const hm = new THREE.Mesh(houGeo, houMat);
       const ht = toThree([s.pos[0], s.pos[1], zs]);
       hm.position.set(ht[0], ht[1], ht[2]); hm.rotation.y = s.psi;
-      const he = new THREE.LineSegments(houEdges, edgeMat);
-      he.position.copy(hm.position); he.rotation.copy(hm.rotation);
-      group.add(hm, he);
+      group.add(hm);
     }
     if (pendant && zs + houH < r.H - 1e-6) hangs.push(...toThree([s.pos[0], s.pos[1], r.H]), ...toThree([s.pos[0], s.pos[1], zs + houH]));
   }
@@ -337,6 +342,13 @@ export function createView(container, opts = {}) {
   });
   const neutralMaterial = new THREE.MeshLambertMaterial({
     color: 0xe6e3dd, side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
+  // 'shade': a room without luminaires lit from the camera, as the default lighting of 3ds Max or
+  // DIALux (25 Nov 2026): a face turned to the viewer is light, a face at an angle darker
+  const shadeMaterial = new THREE.ShaderMaterial({
+    side: THREE.FrontSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    vertexShader: 'varying vec3 vN; varying vec3 vP; void main(){ vec4 p = modelViewMatrix * vec4(position, 1.0); vP = p.xyz; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * p; }',
+    fragmentShader: 'varying vec3 vN; varying vec3 vP; void main(){ float k = abs(dot(normalize(vN), normalize(-vP))); vec3 c = vec3(0.9, 0.895, 0.88) * (0.42 + 0.58 * k); gl_FragColor = vec4(c, 1.0); }',
   });
   let faceParts = [];      // [{ face, mesh, grid, arrow, center, normal }]
   let showGrid = false, showNormals = false; // element grid and normals are developer aids, off by default
@@ -519,6 +531,7 @@ export function createView(container, opts = {}) {
       // 'wire': the room as its outline only (the plan without false colours, 21 Nov 2026)
       p.mesh.visible = colorMode !== 'wire';
       p.mesh.material = colorMode === 'faces' ? p.mesh.userData.plainMaterial
+        : colorMode === 'shade' ? shadeMaterial
         : colorMode === 'plain' ? plainMaterial
         : colorMode === 'false' && values ? fcMaterial
           : colorMode === 'real' && lum ? realMaterial : neutralMaterial;
@@ -1101,6 +1114,13 @@ export function createView(container, opts = {}) {
     isPlan: () => !!plan,
     /** Room point → view CSS px in the 3D view (null behind the camera); view px → room (x, y) at height z. */
     project,
+    /** CSS px per metre at a room point (3D: at its depth from the camera; plan: the scale). */
+    pxPerMetre(x, y, z) {
+      if (plan) return 1 / planTransform().k;
+      const p = v3(toThree([x, y, z])).applyMatrix4(camera.matrixWorldInverse);
+      const depth = Math.max(1e-6, -p.z);
+      return viewH / (2 * depth * Math.tan((camera.fov * Math.PI) / 360));
+    },
     /** The room point (x, y) under a page point (clientX, clientY): on the plan, or in 3D at height z; null outside. */
     roomAt(cx, cy, z = 0) {
       const r = el.getBoundingClientRect(), px = cx - r.left, py = cy - r.top;

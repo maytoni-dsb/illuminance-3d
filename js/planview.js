@@ -46,7 +46,9 @@ export function drawRoomPlan(ctx, T, size, d) {
   ctx.lineWidth = 1.4;
   ctx.strokeRect(x0, y1, x1 - x0, y0 - y1);
 
-  // dimensions: the grid chain next to the room, the overall size further out
+  // dimensions: the grid chain next to the room, the overall size further out (none in the view of
+  // version 2, 25 Nov 2026: d.dims === false)
+  if (d.dims === false) { ctx.restore(); return; }
   ctx.font = `500 11px ${FONT}`;
   ctx.fillStyle = d.ink; ctx.strokeStyle = d.ink; ctx.lineWidth = 0.9;
   const chain = (vals) => (vals.length <= 7 ? vals : [vals[0], vals[1], vals[2], vals[vals.length - 2], vals[vals.length - 1]]);
@@ -301,6 +303,22 @@ export function drawEditor(ctx, size, d) {
     ctx.stroke();
   }
   ctx.setLineDash([]);
+  // a line group: a guide with arrows at both ends along the line, seen on any background (25 Nov 2026)
+  for (const g of d.guides) {
+    if (!g.arrows) continue;
+    const [a, b] = g.segments[0], u = P(a[0], a[1], g.z ?? 0), v = P(b[0], b[1], g.z ?? 0);
+    if (!u || !v) continue;
+    const l = Math.hypot(v[0] - u[0], v[1] - u[1]);
+    if (l < 1) continue;
+    const ex = (v[0] - u[0]) / l, ey = (v[1] - u[1]) / l, head = (p, s) => {
+      ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] - s * 9 * ex + 4 * ey, p[1] - s * 9 * ey - 4 * ex);
+      ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] - s * 9 * ex - 4 * ey, p[1] - s * 9 * ey + 4 * ex);
+    };
+    for (const [w, c] of [[3, 'rgba(255,255,255,.9)'], [1, '#1f1f1f']]) {
+      ctx.beginPath(); ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); head(v, 1); head(u, -1);
+      ctx.lineWidth = w; ctx.strokeStyle = c; ctx.stroke();
+    }
+  }
   // luminaires: wireframes in the colour of their type, thicker under the pointer; the selected
   // white; misplaced red (decided on 21 Nov 2026). In 3D only the selected and the one under the
   // pointer: the silhouette of the whole housing.
@@ -380,25 +398,41 @@ export function drawEditor(ctx, size, d) {
       halo(ctx, `X ${f(g.x)} · Y ${f(g.y)}`, c[0] + 12, c[1] - 12, '#111');
     }
   }
-  // the snapped point
+  // the snapped point (25 Nov 2026, as in 3ds Max): grid — a cross in a square, vertex — a cross,
+  // middle — a triangle, centre — a circle; dark over white; its coordinates next to it
+  if (d.snapGuide) {
+    const [p0, p1] = d.snapGuide, a = P(p0.x, p0.y, p1.z ?? 0), b = P(p1.x, p1.y, p1.z ?? 0);
+    if (a && b) { ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]); }
+  }
   if (d.snap) {
     const v = P(d.snap.x, d.snap.y, d.snap.z ?? 0);
     if (v) {
-      const [x, y] = v;
-      ctx.strokeStyle = d.accent; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      if (d.snap.kind === 'vertex') ctx.rect(x - 5, y - 5, 10, 10);
-      else if (d.snap.kind === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
-      else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
-      ctx.stroke();
+      const [x, y] = v, k = d.snap.kind;
+      const path = () => {
+        ctx.beginPath();
+        if (k === 'grid') { ctx.rect(x - 5, y - 5, 10, 10); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); }
+        else if (k === 'vertex') { ctx.moveTo(x - 5, y - 5); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 5, y - 5); ctx.lineTo(x - 5, y + 5); }
+        else if (k === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
+        else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
+      };
+      path(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5; ctx.stroke();
+      path(); ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = 1.4; ctx.stroke();
+      if (d.snapText) {
+        ctx.font = `500 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        const f = (q) => q.toLocaleString(meta().locale, { maximumFractionDigits: 3 });
+        halo(ctx, `X ${f(d.snap.x)} · Y ${f(d.snap.y)}`, x + 11, y - 12, '#111');
+      }
     }
   }
   // the selection rectangle (plan)
   if (d.box && plan) {
     const [x0, y0, x1, y1] = d.box, a = P(Math.min(x0, x1), Math.max(y0, y1)), b = P(Math.max(x0, x1), Math.min(y0, y1));
-    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-    ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
-    ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    // dark over white, seen on any background; right to left (crossing) dashed, as in 3ds Max
+    const crossing = x1 < x0, w = b[0] - a[0], h = b[1] - a[1];
+    ctx.fillStyle = 'rgba(0,0,0,.04)'; ctx.fillRect(a[0], a[1], w, h);
+    ctx.lineWidth = 1; ctx.strokeStyle = '#ffffff'; ctx.strokeRect(a[0] + 0.5, a[1] + 0.5, w, h);
+    ctx.strokeStyle = '#1f1f1f'; if (crossing) ctx.setLineDash([4, 3]);
+    ctx.strokeRect(a[0] + 0.5, a[1] + 0.5, w, h);
     ctx.setLineDash([]);
   }
   if (d.gizmo) drawGizmo(ctx, d.gizmo);

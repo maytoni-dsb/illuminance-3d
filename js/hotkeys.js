@@ -38,6 +38,7 @@ export function editorKey(e, inField = false) {
     const z = e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z', y = e.code === 'KeyY' || e.key === 'y' || e.key === 'Y';
     if (z) return e.shiftKey ? 'redo' : 'undo';
     if (y && !e.shiftKey) return 'redo';
+    if ((e.code === 'KeyA' || e.key === 'a' || e.key === 'A') && !e.shiftKey) return 'all'; // select all (25 Nov 2026)
     return null;
   }
   if (mod || e.altKey) return null;

@@ -62,7 +62,7 @@ export default {
 
   lum: {
     tipGrid: 'grid {nx} × {ny}', tipLine: 'line, {n} pcs', tipCircle: 'circle, {n} pcs',
-    menu: { move: 'Move', rotate: 'Rotate', typeIn: 'Type in values', ungroup: 'Ungroup', selType: 'Select all of this type', del: 'Delete', abs: 'Absolute', off: 'Offset' },
+    menu: { move: 'Move', rotate: 'Rotate', typeIn: 'Type in values', ungroup: 'Ungroup', selType: 'Select all of this type', del: 'Delete', abs: 'Absolute', off: 'Offset', selAll: 'Select all', reset: 'Return to its place in the group' },
     kindOff: 'Add a luminaire first', pick: 'Pick the count', pickTip: 'The count by the utilisation factor method, as in version 1',
     colorMore: 'More colours', dropTitle: 'Drop an IES or LDT file', dropSub: 'or click to choose', dropAdd: 'Release to add the luminaire',
     dropList: 'Drop IES or LDT files here', modeRoom: 'Room', modeProject: 'Project', none: 'No luminaires yet', cosine: 'No file',
@@ -121,6 +121,8 @@ export default {
     snapCentre: 'Centre',
     prevLum: 'Previous luminaire',
     nextLum: 'Next luminaire',
+    lumsOf: 'Luminaires: {k} of {n}',
+    moved: 'moved',
     lumOf: 'Luminaire {k} of {n}',
     err: {
       outside: '{lums} outside the room: the housing goes through a wall.',

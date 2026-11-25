@@ -35,14 +35,19 @@ test('items, picking and the selection of one luminaire', () => {
   assert.equal(selectedItems(items, combine(both, s, 'toggle')).length, 1);
 });
 
-test('a rectangle selects single luminaires inside and groups wholly inside', () => {
+test('a rectangle: left to right a window, right to left crossing; a group whole by one of its luminaires', () => {
   const items = planItems(model(), size);
-  let s = boxSelection(items, 0, 0, 3.2, 4);                    // the left half: two grid columns, one single
-  assert.ok(!s.groups.has('g1'));
+  let s = boxSelection(items, 0, 0, 3.2, 4);                    // a window over the left half
+  assert.ok(s.groups.has('g1'));                                // a grid luminaire wholly inside: the whole grid
   assert.deepEqual([...s.points.get('g2')], [0]);
-  s = boxSelection(items, 6, 4, 0.8, 0.8);                      // the whole grid, the second single
-  assert.ok(s.groups.has('g1'));
-  assert.deepEqual([...s.points.get('g2')], [1]);
+  s = boxSelection(items, 0, 0, 0.05, 0.05);                    // a window too small for any housing
+  assert.ok(isEmpty(s));
+  const it = items.find((x) => x.group === 'g2' && x.index === 1);
+  // crossing: touching the housing is enough; a window around its centre only is not
+  s = boxSelection(items, it.x + it.hx - 0.01, it.y + 0.01, it.x + it.hx + 0.5, it.y - 0.01);
+  assert.ok(isEmpty(s) || !s.points.get('g2')?.has(1));
+  s = boxSelection(items, it.x + it.hx + 0.5, it.y + 0.01, it.x + it.hx - 0.01, it.y - 0.01);
+  assert.ok(s.points.get('g2')?.has(1));
 });
 
 test('snapping to the plan grid with its own steps and origin', () => {
@@ -161,4 +166,28 @@ test('gizmo: the arrows, the plane square and the ring in view pixels', async ()
   assert.deepEqual(constrain('xy', 0.3, 0.2), [0.3, 0.2]);
   assert.deepEqual(selectionCentre([{ x: 1, y: 1, hm: 3 }, { x: 3, y: 2, hm: 2 }]), { x: 2, y: 1.5, z: 2.5 });
   assert.equal(selectionCentre([]), null);
+});
+
+test('a luminaire moved within its group: an offset that follows the group, reset and cleaned (25 Nov 2026)', async () => {
+  const { offsetLums, resetOffsets, moveSelection } = await import('../js/planedit.js');
+  const room = { L: 6, W: 4 };
+  const g = { id: 'g', type: 't', kind: 'line', x0: 1, y0: 2, x1: 5, y1: 2, n: 3, hm: 3, hm1: 3, psi: 0 };
+  const g2 = offsetLums(g, new Set([1]), { dx: 0.5, dz: -0.2 });
+  assert.deepEqual(g2.offs, { 1: { dx: 0.5, dz: -0.2 } });
+  const p = groupPoints(g2, room);
+  assert.ok(Math.abs(p[1].x - 3.5) < 1e-9 && Math.abs(p[1].hm - 2.8) < 1e-9 && p[0].x === 1);
+  // the group moved: the luminaire keeps its offset from its own place
+  const m = { room: { H: 3, shape: { L: 6, W: 4 } }, types: [], groups: [g2] };
+  const moved = moveSelection(m, { groups: new Set(['g']), points: new Map() }, 0, 1).groups[0];
+  assert.ok(Math.abs(groupPoints(moved, room)[1].y - 3) < 1e-9 && Math.abs(groupPoints(moved, room)[1].x - 3.5) < 1e-9);
+  // within the group: the selection writes the offset
+  const within = moveSelection(m, { groups: new Set(), points: new Map([['g', new Set([1])]]) }, 0.5, 0).groups[0];
+  assert.deepEqual(within.offs, { 1: { dx: 1, dz: -0.2 } });
+  const back = resetOffsets(m, { groups: new Set(), points: new Map([['g', new Set([1])]]) });
+  assert.equal(back.groups[0].offs, undefined);
+  // a file: offsets of luminaires that do not exist go
+  const f = JSON.parse(JSON.stringify(modelFromValues(DEFAULTS)));
+  f.groups = [{ ...g, type: f.types[0].id, offs: { 1: { dx: 0.5 }, 7: { dx: 1 }, x: 2 } }];
+  const cm = cleanModel(f);
+  assert.deepEqual(cm.groups[0].offs, { 1: { dx: 0.5 } });
 });

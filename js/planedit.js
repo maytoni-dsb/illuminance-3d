@@ -25,7 +25,8 @@ export const isEmpty = (s) => !s.groups.size && ![...s.points.values()].some((x)
 
 /** True when the luminaire (group, index) of a group of kind `kind` is selected. */
 export function isSelected(s, group, index, kind) {
-  return s.groups.has(group) || (kind === 'single' && !!s.points.get(group)?.has(index));
+  // luminaires of any group may be selected one by one (25 Nov 2026: within a group)
+  return s.groups.has(group) || !!s.points.get(group)?.has(index);
 }
 
 /**
@@ -88,17 +89,21 @@ export function combine(a, b, mode = 'add') {
  * groups whose every luminaire lies inside.
  */
 export function boxSelection(items, x0, y0, x1, y1) {
+  // as in 3ds Max (25 Nov 2026): left to right a window — the housing wholly inside; right to left
+  // crossing — the housing touched; a group is selected whole when one of its luminaires is
   const [xa, xb] = x0 < x1 ? [x0, x1] : [x1, x0], [ya, yb] = y0 < y1 ? [y0, y1] : [y1, y0];
-  const inside = (it) => it.x >= xa && it.x <= xb && it.y >= ya && it.y <= yb;
-  const s = emptySelection(), all = new Map();
+  const crossing = x1 < x0;
+  const hit = (it) => {
+    const hx = it.hx ?? 0, hy = it.hy ?? 0;
+    return crossing ? it.x + hx >= xa && it.x - hx <= xb && it.y + hy >= ya && it.y - hy <= yb
+      : it.x - hx >= xa && it.x + hx <= xb && it.y - hy >= ya && it.y + hy <= yb;
+  };
+  const s = emptySelection();
   for (const it of items) {
-    if (it.kind === 'single') {
-      if (inside(it)) { if (!s.points.has(it.group)) s.points.set(it.group, new Set()); s.points.get(it.group).add(it.index); }
-    } else {
-      all.set(it.group, (all.get(it.group) ?? true) && inside(it));
-    }
+    if (!hit(it)) continue;
+    if (it.kind === 'single') { if (!s.points.has(it.group)) s.points.set(it.group, new Set()); s.points.get(it.group).add(it.index); }
+    else s.groups.add(it.group);
   }
-  for (const [g, ok] of all) if (ok) s.groups.add(g);
   return s;
 }
 
@@ -149,6 +154,7 @@ export function moveSelection(m, s, dx, dy) {
       if (s.groups.has(g.id)) return tidy(moveGroup(g, dx, dy, room));
       const idx = s.points.get(g.id);
       if (idx?.size && g.kind === 'single') return tidy(movePoints(g, [...idx], dx, dy));
+      if (idx?.size) return offsetLums(g, idx, { dx, dy });
       return g;
     }),
   };
@@ -202,12 +208,69 @@ export function snapPoint(x, y, grid, L, W, centres, tol) {
   const cand = [];
   if (m.vertex) for (const [a, b] of [[0, 0], [L, 0], [L, W], [0, W]]) cand.push([a, b, 'vertex']);
   if (m.mid) for (const [a, b] of [[L / 2, 0], [L, W / 2], [L / 2, W], [0, W / 2]]) cand.push([a, b, 'mid']);
-  if (m.centre) { cand.push([L / 2, W / 2, 'centre']); for (const c of centres) cand.push([c.x, c.y, 'centre']); }
+  if (m.centre) cand.push([L / 2, W / 2, 'centre']);
+  // the luminaires (25 Nov 2026): centres, the corners of the housing (round: 8 points every 45°
+  // from C0) and the middles of its sides
+  for (const c of centres) for (const f of lumFeatures(c)) if (m[f[2]]) cand.push(f);
   let best = null, bd = tol;
   for (const [a, b, kind] of cand) { const d = Math.hypot(a - x, b - y); if (d <= bd) { bd = d; best = { x: a, y: b, kind }; } }
   if (best) return best;
   if (m.grid) return { x: snapValue(x, grid.sx, grid.ox), y: snapValue(y, grid.sy, grid.oy), kind: 'grid' };
   return { x, y, kind: null };
+}
+
+/**
+ * Snap points of a luminaire of the plan: [x, y, kind]; kind 'centre' | 'vertex' | 'mid'. Without a
+ * housing (items of the cosine model or bare points): the centre only.
+ */
+export function lumFeatures(it) {
+  const out = [[it.x, it.y, 'centre']];
+  if (!(it.a > 0 && it.b > 0)) return out;
+  const r = ((it.psi ?? 0) * Math.PI) / 180, c = Math.cos(r), s = Math.sin(r);
+  const at = (u, v) => [it.x + u * c - v * s, it.y + u * s + v * c];
+  if (it.round) {
+    for (let k = 0; k < 8; k++) { const t = (k * Math.PI) / 4; out.push([...at((it.a / 2) * Math.cos(t), (it.b / 2) * Math.sin(t)), 'vertex']); }
+  } else {
+    const ha = it.a / 2, hb = it.b / 2;
+    for (const [u, v] of [[-ha, -hb], [ha, -hb], [ha, hb], [-ha, hb]]) out.push([...at(u, v), 'vertex']);
+    for (const [u, v] of [[0, -hb], [ha, 0], [0, hb], [-ha, 0]]) out.push([...at(u, v), 'mid']);
+  }
+  return out;
+}
+
+/**
+ * The group with the offsets of the luminaires `idx` changed by d ({ dx, dy, dz, dpsi }; 25 Nov 2026);
+ * fix(o, k) may correct an offset; zero offsets are dropped.
+ */
+export function offsetLums(g, idx, d, fix = null) {
+  const offs = { ...(g.offs ?? {}) };
+  for (const k of idx) {
+    let o = { ...(offs[k] ?? {}) };
+    for (const q of ['dx', 'dy', 'dz', 'dpsi']) if (d[q]) o[q] = Math.round(((o[q] ?? 0) + d[q]) * 1e9) / 1e9;
+    if (fix) o = fix(o, k);
+    for (const q of Object.keys(o)) if (!o[q]) delete o[q];
+    if (Object.keys(o).length) offs[k] = o; else delete offs[k];
+  }
+  const out = { ...g, offs };
+  if (!Object.keys(offs).length) delete out.offs;
+  return out;
+}
+
+/** The model with the luminaires of the selection back in their places in their groups (offsets dropped). */
+export function resetOffsets(m, s) {
+  let changed = false;
+  const groups = m.groups.map((g) => {
+    if (!g.offs) return g;
+    if (s.groups.has(g.id)) { changed = true; const { offs: _, ...r } = g; return r; }
+    const idx = s.points.get(g.id);
+    if (!idx?.size) return g;
+    const offs = { ...g.offs };
+    for (const k of idx) if (offs[k]) { delete offs[k]; changed = true; }
+    const out = { ...g, offs };
+    if (!Object.keys(offs).length) delete out.offs;
+    return out;
+  });
+  return changed ? { ...m, groups } : m;
 }
 
 /**
@@ -225,6 +288,15 @@ export function liftSelection(m, s, dz) {
         return g.kind === 'line' ? { ...g, hm: h(g.hm), hm1: h(g.hm1) } : { ...g, hm: h(g.hm) };
       }
       const idx = s.points.get(g.id);
+      if (idx?.size && g.kind !== 'single') {
+        // within a group: the offset, the height kept between HM_MIN and the ceiling
+        const base = g.kind === 'line' ? null : g.hm;
+        return offsetLums(g, idx, { dz }, (o, k) => {
+          const b = base ?? g.hm + (g.hm1 - g.hm) * 0.5; // a line: about its middle
+          const want = Math.min(H, Math.max(HM_MIN, b + (o.dz ?? 0))) - b;
+          return { ...o, dz: want };
+        });
+      }
       return idx?.size && g.kind === 'single' ? { ...g, points: g.points.map((p, k) => (idx.has(k) ? { ...p, hm: h(p.hm) } : p)) } : g;
     }),
   };
@@ -241,6 +313,7 @@ export function rotateSelection(m, s, dpsi) {
     groups: m.groups.map((g) => {
       if (s.groups.has(g.id)) return g.kind === 'circle' ? turnArc(g, dpsi) : turnLuminaires(g, dpsi);
       const idx = s.points.get(g.id);
+      if (idx?.size && g.kind !== 'single') return offsetLums(g, idx, { dpsi });
       return idx?.size && g.kind === 'single' ? turnLuminaires(g, dpsi, [...idx]) : g;
     }),
   };

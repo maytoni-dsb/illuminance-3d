@@ -175,6 +175,8 @@ export function validateGroup(g, raw, ctx) {
     const n = groupCount(out), total = n + (ctx.others ?? 0);
     if (total > 500) errors[{ grid: 'ny', line: 'n', circle: 'n', single: 'x' }[g.kind]] = t('gform.err.count', { max: MAX_LUMINAIRES, n, total });
   }
+  // luminaires moved within the group: another count numbers them anew, the offsets go (25 Nov 2026)
+  if (out.offs && groupCount(out) !== groupCount(g)) delete out.offs;
   return { ok: Object.keys(errors).length === 0, group: out, errors };
 }
 

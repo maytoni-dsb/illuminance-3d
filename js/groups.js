@@ -56,6 +56,20 @@ export const wrapDeg = (a) => { const r = a % 360; return r < 0 ? r + 360 : r + 
  * @returns {{ x, y, hm, psi }[]}
  */
 export function groupPoints(g, room, size = null) {
+  const pts = basePoints(g, room, size);
+  // luminaires moved within their group (25 Nov 2026): offsets from their own place
+  if (g.offs && g.kind !== 'single') {
+    for (const [k, o] of Object.entries(g.offs)) {
+      const p = pts[Number(k)];
+      if (!p) continue;
+      pts[Number(k)] = { x: p.x + (o.dx ?? 0), y: p.y + (o.dy ?? 0), hm: p.hm + (o.dz ?? 0), psi: wrapDeg(p.psi + (o.dpsi ?? 0)) };
+    }
+  }
+  return pts;
+}
+
+/** The places of the luminaires of a group, without the offsets of moved ones. */
+export function basePoints(g, room, size = null) {
   switch (g.kind) {
     case 'grid': {
       const out = [];

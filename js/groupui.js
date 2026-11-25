@@ -100,7 +100,7 @@ export function renderKinds(host, kind, drawing, off = false) {
   // lit: the kind being drawn, or the kind of the selected group (24 Nov 2026); kind null: none
   host.innerHTML = ['auto', 'single', 'grid', 'line', 'circle'].map((k) => {
     const on = !!kind && k === kind && (drawing || drawing === null);
-    return `<button type="button" data-kind="${k}" aria-pressed="${on}" class="tipl${on ? ' on' : ''}"${off ? ` disabled data-tip="${esc(t('lum.kindOff'))}"` : ` data-tip="${esc(t(`lum.kind.${k}`))}"`} aria-label="${esc(t(`lum.kind.${k}`))}">${KIND_ICON[k]}</button>`;
+    return `<button type="button" data-kind="${k}" aria-pressed="${on}" class="${k === 'line' || k === 'circle' ? 'tipr' : 'tipl'}${on ? ' on' : ''}"${off ? ` disabled data-tip="${esc(t('lum.kindOff'))}"` : ` data-tip="${esc(t(`lum.kind.${k}`))}"`} aria-label="${esc(t(`lum.kind.${k}`))}">${KIND_ICON[k]}</button>`;
   }).join('');
 }
 

@@ -408,6 +408,25 @@ function cleanGroup(g, id, type, room) {
   const { H } = room, L = room.shape.L, W = room.shape.W;
   const hm = (v) => num(v, HM_MIN, H, H);
   const base = { id, type, kind: g.kind };
+  const withOffs = (out) => {
+    // offsets of luminaires moved within the group (25 Nov 2026): index → { dx, dy, dz, dpsi }
+    if (!g.offs || typeof g.offs !== 'object' || out.kind === 'single') return out;
+    const n = groupCount(out), offs = {};
+    for (const [k, o] of Object.entries(g.offs)) {
+      const i = Number(k);
+      if (!Number.isInteger(i) || i < 0 || i >= n || !o || typeof o !== 'object') continue;
+      const v = Object.fromEntries(['dx', 'dy', 'dz', 'dpsi'].filter((q) => Number.isFinite(o[q]) && o[q] !== 0).map((q) => [q, Math.max(-1000, Math.min(1000, o[q]))]));
+      if (Object.keys(v).length) offs[i] = v;
+    }
+    if (Object.keys(offs).length) out.offs = offs;
+    return out;
+  };
+  return withOffs(cleanGroupKind(g, base, room));
+}
+
+function cleanGroupKind(g, base, room) {
+  const { H } = room, L = room.shape.L, W = room.shape.W;
+  const hm = (v) => num(v, HM_MIN, H, H);
   switch (g.kind) {
     case 'grid': {
       const out = { ...base, nx: int(g.nx, 1, 30, DEFAULTS.nx), ny: int(g.ny, 1, 30, DEFAULTS.ny), hm: hm(g.hm), psi: angle(g.psi) };
