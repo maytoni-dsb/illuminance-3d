@@ -25,7 +25,7 @@ export function typeName(ty, k, file = null) {
 }
 
 /** Mark of a type: a dot of its colour (no letters, decided on 21 Nov 2026). */
-export const typeMark = (color) => `<span class="tymark" style="--ty:${color}" aria-hidden="true"></span>`;
+export const typeMark = (color, no = null) => `<span class="tymark${no ? ' no' : ''}" style="--ty:${color}" aria-hidden="true">${no ?? ''}</span>`;
 
 /** The lamp set of a type's file in words ("LED / 7190"), when the file has several. */
 export function setText(file, set) {
@@ -34,9 +34,8 @@ export function setText(file, set) {
   return s[set].type || t('phot.set', { n: set + 1 });
 }
 
-/** The palette of the full choice of a colour (24, the first eight are TYPE_COLORS). */
-export const PALETTE = Object.freeze([...TYPE_COLORS, '#fa5252', '#e64980', '#be4bdb', '#7950f2', '#4c6ef5', '#228be6', '#15aabf', '#12b886',
-  '#40c057', '#82c91e', '#fab005', '#fd7e14', '#c92a2a', '#a61e4d', '#862e9c', '#364fc7']);
+/** The palette of the full choice of a colour. */
+export const PALETTE = TYPE_COLORS; // 25 Nov 2026: the ten colours, no colour of one's own
 
 /**
  * The colours of a luminaire in its card (21 Nov 2026): four colours of the palette no other
@@ -45,17 +44,19 @@ export const PALETTE = Object.freeze([...TYPE_COLORS, '#fa5252', '#e64980', '#be
  * @param {string} color — the colour of the luminaire
  * @param {Set<string>} used — the colours of the other luminaires of the project
  */
-export function swatchesHtml(color, used) {
+export function swatchesHtml(color, used, no = null) {
   const four = TYPE_COLORS.filter((c) => !used.has(c) || c === color).slice(0, 4);
-  const mine = four.includes(color);
-  return `<div class="swrow">${four.map((c) => `<button type="button" class="tsw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}" aria-pressed="${c === color}"></button>`).join('')}
-    <button type="button" class="tsw more${mine ? '' : ' sel'}" data-more="1" style="${mine ? '' : `--ty:${color}`}" aria-haspopup="true" aria-expanded="false" aria-label="${esc(t('lum.colorMore'))}" title="${esc(t('lum.colorMore'))}"></button></div>`;
+  const mine = four.includes(color), num = (c) => (c === color && no ? ' no' : '');
+  return `<div class="swrow">${four.map((c) => `<button type="button" class="tsw${c === color ? ' sel' : ''}${num(c)}" data-color="${c}" style="--ty:${c}" aria-label="${c}" aria-pressed="${c === color}">${c === color && no ? no : ''}</button>`).join('')}
+    <button type="button" class="tsw more${mine ? '' : ' sel'}${mine ? '' : num(color)}" data-more="1" style="${mine ? '' : `--ty:${color}`}" aria-haspopup="true" aria-expanded="false" aria-label="${esc(t('lum.colorMore'))}" title="${esc(t('lum.colorMore'))}">${!mine && no ? no : ''}</button></div>`;
 }
 
-/** The full choice of a colour: the palette without the colours of the other luminaires, and a colour of one's own (HEX or the picker). */
-export function paletteHtml(color, used) {
-  return `<div class="pal">${PALETTE.filter((c) => !used.has(c) || c === color).map((c) => `<button type="button" class="tsw${c === color ? ' sel' : ''}" data-color="${c}" style="--ty:${c}" aria-label="${c}"></button>`).join('')}</div>
-    <div class="palown"><span>${esc(t('lum.colorOwn'))}</span><input class="palhex" value="${color}" maxlength="7" spellcheck="false" aria-label="HEX"><input type="color" class="palpick" value="${color}" aria-label="${esc(t('lum.colorOwn'))}"></div>`;
+/**
+ * The full choice of a colour (25 Nov 2026): the ten colours; those of the other luminaires shown
+ * but not chosen, their luminaire in the tip (taken: Map colour → name). No colour of one's own.
+ */
+export function paletteHtml(color, taken) {
+  return `<div class="pal">${PALETTE.map((c) => { const who = c === color ? null : taken.get(c); return `<button type="button" class="tsw${c === color ? ' sel' : ''}${who ? ' taken' : ''}" ${who ? `disabled title="${esc(t('lum.colorTaken', { name: who }))}"` : `data-color="${c}"`} style="--ty:${c}" aria-label="${esc(who ? t('lum.colorTaken', { name: who }) : c)}"></button>`; }).join('')}</div>`;
 }
 
 const SVG = (d, extra = '') => `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"${extra}>${d}</svg>`;
@@ -247,7 +248,7 @@ export function renderLumList(host, m, o) {
     const file = f ? `${esc(f.name)}${st ? ` · ${esc(st)}` : ''}` : esc(t('rui.noFileLum'));
     const flux = `${formatNumber(f ? f.phot.flux : ty.flux, 0)} ${t('unit.lm')}`;
     return `<tr class="${on ? 'on' : ''}" data-type="${ty.id}">
-      <td>${typeMark(typeColorOf(m, k))}</td>
+      <td>${typeMark(typeColorOf(m, k), o.noOf?.(ty) ?? null)}</td>
       <td><input class="lname" data-name="${ty.id}" value="${esc(ty.name ?? '')}" placeholder="${esc(typeName({ ...ty, name: undefined }, k, f))}" maxlength="80" aria-label="${esc(t('lum.typeName'))}"><small>${file} · ${esc(flux)}</small></td>
       <td class="n">${n}</td>
       <td class="acts">${o.canReplace ? `<button type="button" class="gschipb sm" data-replace="${ty.id}" data-tip="${esc(t('lum.replaceTip'))}">${esc(t('lum.replace'))}</button>` : ''}

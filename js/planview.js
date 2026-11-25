@@ -444,6 +444,21 @@ export function drawEditor(ctx, size, d) {
     ctx.strokeRect(a[0] + 0.5, a[1] + 0.5, w, h);
     ctx.setLineDash([]);
   }
+  // more than ten luminaire types (25 Nov 2026): the types of a repeated colour show their number at
+  // the top right of the housing, in their colour, over the colour of the background
+  if (d.typeNo) {
+    ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    for (const it of d.items) {
+      const no = d.typeNo(it.type);
+      if (!no) continue;
+      const c = P(it.x, it.y, it.hm);
+      if (!c) continue;
+      const r = plan ? Math.max(5, Math.max(it.a, it.b) / 2 / d.k) : 7;
+      const x = c[0] + r * 0.75 + 2, y = c[1] - r * 0.75 - 4;
+      ctx.lineWidth = 3; ctx.strokeStyle = d.dark ? '#1b1b1b' : '#ffffff'; ctx.strokeText(String(no), x, y);
+      ctx.fillStyle = d.color(it.type); ctx.fillText(String(no), x, y);
+    }
+  }
   if (d.gizmo) drawGizmo(ctx, d.gizmo);
   ctx.restore();
 }

@@ -68,7 +68,7 @@ export function summaryRows(v, file, norm = null, zc = null, lums = {}) {
   const hmText = hms.length > 1 ? `${n2(hms[0])}…${n2(hms[hms.length - 1])}${NB}${m}` : `${n2(hms[0])}${NB}${m}`;
   if (lums.types?.length > 1) {
     // several types: a row per type (colour and article: count and flux), the total and the heights
-    const lumRows = lums.types.map((ty) => [`${ty.color ? `<i class="tyc" style="background:${esc(ty.color)}"></i>` : ''}${esc(ty.article)}`,
+    const lumRows = lums.types.map((ty) => [`${ty.color ? `<i class="tyc${ty.no ? ' no' : ''}" style="background:${esc(ty.color)}">${ty.no ?? ''}</i>` : ''}${esc(ty.article)}`,
       `${ty.count}${NB}${t('unit.pcsDot')} · ${formatNumber(ty.flux, 0)}${NB}${t('unit.lm')}`]);
     lumRows.push([t('rui.count'), `${n}${NB}${t('unit.pcsDot')}`], [t('rui.hm'), hmText]);
     return { roomRows, normRows, lumRows };
@@ -107,7 +107,7 @@ export function lumOf(v, file, o = {}) {
   return {
     maker: tb?.manufacturer?.trim() || '', article: tb ? (tb.catalog || tb.name || '').trim() || t('rui.lum') : (o.name || t('rui.noFileLum')),
     flux: v.flux, power: tb ? v.power : null, cct: tb ? v.cct : null, count: o.count ?? v.nx * v.ny, kit: lampKit(tb, file?.set ?? 0),
-    color: o.color ?? '',
+    color: o.color ?? '', no: o.no ?? null,
   };
 }
 
@@ -126,9 +126,9 @@ export function prepareRoom(rd) {
   const typeOf = new Map((types ?? []).map((ty) => [ty.id, ty]));
   const marks = grid ? null : rd.params.lums.map((l) => {
     const ty = typeOf.get(l.type);
-    return { x: l.pos[0], y: l.pos[1], psi: l.psi, shape: ty?.file?.shape ?? null, side: 0.25, color: many ? ty?.color ?? '' : '' };
+    return { x: l.pos[0], y: l.pos[1], psi: l.psi, shape: ty?.file?.shape ?? null, side: 0.25, color: many ? ty?.color ?? '' : '', no: many ? ty?.no ?? null : null };
   });
-  const lums = types ? types.map((ty) => lumOf(ty.values, ty.file, { count: ty.count, color: many ? ty.color : '', name: ty.name })) : [lumOf(v, rd.file)];
+  const lums = types ? types.map((ty) => lumOf(ty.values, ty.file, { count: ty.count, color: many ? ty.color : '', no: many ? ty.no : null, name: ty.name })) : [lumOf(v, rd.file)];
   const count = types ? types.reduce((a, ty) => a + ty.count, 0) : v.nx * v.ny;
   const hm = types ? types.flatMap((ty) => ty.hm) : [v.hm];
   const planes = res.planes.map((pl) => {

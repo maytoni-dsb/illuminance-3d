@@ -26,16 +26,16 @@
       "./js/geometry.js": "./js/geometry.js?v=3fd1d39b",
       "./js/groupform.js": "./js/groupform.js?v=1985dcdd",
       "./js/groups.js": "./js/groups.js?v=46816880",
-      "./js/groupui.js": "./js/groupui.js?v=12a6ea3c",
+      "./js/groupui.js": "./js/groupui.js?v=3b366b6f",
       "./js/help.js": "./js/help.js?v=98159935",
       "./js/hotkeys.js": "./js/hotkeys.js?v=1af19d09",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=e6e89d81",
-      "./js/lang-en.js": "./js/lang-en.js?v=1d5b2706",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=780026d6",
-      "./js/model.js": "./js/model.js?v=9714a867",
+      "./js/lang-de.js": "./js/lang-de.js?v=650aaef6",
+      "./js/lang-en.js": "./js/lang-en.js?v=69143f96",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=f0ce9e69",
+      "./js/model.js": "./js/model.js?v=23fde215",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -44,11 +44,11 @@
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=51d36bb9",
       "./js/planedit.js": "./js/planedit.js?v=9e28c61e",
-      "./js/planview.js": "./js/planview.js?v=3a2006ba",
+      "./js/planview.js": "./js/planview.js?v=c79e9a08",
       "./js/project.js": "./js/project.js?v=3155618c",
-      "./js/report.js": "./js/report.js?v=82058f86",
-      "./js/reportsvg.js": "./js/reportsvg.js?v=aee5f3b6",
-      "./js/reportui.js": "./js/reportui.js?v=68656ae9",
+      "./js/report.js": "./js/report.js?v=f66adf22",
+      "./js/reportsvg.js": "./js/reportsvg.js?v=23982fbf",
+      "./js/reportui.js": "./js/reportui.js?v=70ba0733",
       "./js/solver.js": "./js/solver.js?v=a5376c19",
       "./js/tonemap.js": "./js/tonemap.js?v=81d1bacb",
       "./js/ui.js": "./js/ui.js?v=1cd77bb9",
@@ -633,12 +633,12 @@
     .ecap > button.on svg{stroke-width:1.8}
     .ecap sub,.epill sub{position:absolute;right:4px;bottom:3px;font-size:9px;line-height:1;color:var(--muted)}
     .epill{position:relative;display:flex;align-items:center;gap:2px;padding:3px;background:var(--card);border:1px solid var(--rule);border-radius:999px}
-    .epill > button{position:relative;height:30px;min-width:34px;border:0;border-radius:999px;background:transparent;color:var(--ink2);cursor:pointer;display:grid;place-items:center;padding:0}
+    .epill > button{position:relative;height:30px;min-width:38px;border:0;border-radius:999px;background:transparent;color:var(--ink2);cursor:pointer;display:grid;place-items:center;padding:0}
     .epill > button:hover{background:var(--soft)}
     .epill > button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel)}
     .epill > button[aria-pressed="true"] sub{color:rgba(255,255,255,.7)}
-    .epill > .earr{min-width:22px;width:22px}
-    .earr[aria-expanded="true"]::after{display:none}
+    .epill > button[aria-expanded="true"]::after,.epill > button[aria-expanded="true"]::before{display:none}
+    .epill > button .earc{position:absolute;inset:0;width:100%;height:100%;opacity:.7;pointer-events:none}
     .epop{position:absolute;top:calc(100% + 8px);left:0;z-index:20;width:240px;padding:14px 16px;background:var(--card);border:1px solid var(--rule);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.10)}
     .eplab{font-size:12px;color:var(--muted);margin:0 0 6px}
     .eprow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
@@ -666,7 +666,11 @@
     .tsw.more.sel{background:var(--ty)}
     .colpop{width:auto;padding:12px 14px}
     #colorpop{top:auto;left:0}
-    .pal{display:grid;grid-template-columns:repeat(8,20px);gap:7px}
+    .pal{display:grid;grid-template-columns:repeat(5,20px);gap:9px}
+    .tsw.taken{cursor:not-allowed;opacity:.28}
+    .tsw.no,.tymark.no{display:inline-grid;place-items:center;color:#fff;font:600 9px/1 var(--font, inherit);font-variant-numeric:tabular-nums}
+    .tymark.no{width:16px;height:16px;font-size:9px}
+    .colpop{z-index:60}
     .palown{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--ink3)}
     .palhex{width:84px;height:26px;border:1px solid var(--rule);border-radius:5px;padding:0 8px;font:12px ui-monospace,monospace;color:var(--ink);background:var(--card)}
     .palpick{width:26px;height:26px;padding:0;border:0;background:none;cursor:pointer}
@@ -872,17 +876,15 @@
       <div class="etools" id="etools" hidden>
         <div class="ecap" id="etool" role="group" data-i18n-attr="aria-label:lum.tools">
           <button type="button" class="tipl on" data-tool="select" aria-pressed="true" data-i18n-attr="aria-label:lum.tool.select;data-tip:lum.tool.select" data-key="Q">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M3.5 2.5 12 8.2l-3.8.7 2.2 4.4-1.6.8-2.2-4.4L3.5 12z"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5l10.5 6.2-4.6 1.1 2.7 5.2-1.9 1-2.7-5.2-3.3 3.3z"/></svg></button>
           <button type="button" class="tipl" data-tool="move" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.move;data-tip:lum.tool.move" data-key="W">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M1.5 8h13M6 3.5l2-2 2 2M6 12.5l2 2 2-2M3.5 6l-2 2 2 2M12.5 6l2 2-2 2"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5v15M2.5 10h15"/><path d="M7.8 4.7L10 2.5l2.2 2.2M7.8 15.3L10 17.5l2.2-2.2M4.7 7.8L2.5 10l2.2 2.2M15.3 7.8l2.2 2.2-2.2 2.2"/></svg></button>
           <button type="button" class="tipl" data-tool="rotate" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.rotate;data-tip:lum.tool.rotate" data-key="E">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M11.8 1.8v2.8H9"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.8 8.2A6.2 6.2 0 1 0 16 12"/><path d="M16.2 3.8v4.6h-4.6"/></svg></button>
         </div>
         <div class="epill">
-          <button type="button" class="tipl" id="gridon" aria-pressed="true" data-i18n-attr="aria-label:lum.gridShow;data-tip:lum.gridShow" data-key="G">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M6 2v12M10 2v12M2 6h12M2 10h12"/></svg></button>
-          <button type="button" class="earr tipl" id="gridset" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:lum.gridSet;data-tip:lum.gridSet">
-            <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
+          <button type="button" class="tipl" id="gridon" aria-pressed="true" aria-haspopup="true" data-i18n-attr="aria-label:lum.gridShow;data-tip:lum.gridTip" data-key="G">
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7.7 3v14M12.3 3v14M3 7.7h14M3 12.3h14"/></svg><svg class="earc" viewBox="0 0 38 34" aria-hidden="true"><path d="M33.5 21.5A16 16 0 0 1 26 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
           <div class="epop" id="gridpop" hidden>
             <div class="eplab" data-i18n="lum.step"></div>
             <div class="eprow"><label><span>X</span><input id="pg-sx" inputmode="decimal" autocomplete="off"></label><label><span>Y</span><input id="pg-sy" inputmode="decimal" autocomplete="off"></label></div>
@@ -892,10 +894,8 @@
           </div>
         </div>
         <div class="epill">
-          <button type="button" class="tipl" id="snapon" aria-pressed="true" data-i18n-attr="aria-label:lum.snap;data-tip:lum.snap" data-key="S">
-            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3.5 2.5v5a4.5 4.5 0 0 0 9 0v-5"/><path d="M3.5 5h2.5M10 5h2.5" stroke-width="2.2"/></svg></button>
-          <button type="button" class="earr tipl" id="snapset" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:lum.snapSet;data-tip:lum.snapSet">
-            <svg viewBox="0 0 8 5" width="8" height="5" aria-hidden="true"><path d="M0 0h8L4 5z" fill="currentColor"/></svg></button>
+          <button type="button" class="tipl" id="snapon" aria-pressed="true" aria-haspopup="true" data-i18n-attr="aria-label:lum.snap;data-tip:lum.snapTip" data-key="S">
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v6.2a5 5 0 0 0 10 0V3.5"/><path d="M5 3.5h3v6.2a2 2 0 0 0 4 0V3.5h3"/><path d="M5 6.5h3M12 6.5h3"/></svg><svg class="earc" viewBox="0 0 38 34" aria-hidden="true"><path d="M33.5 21.5A16 16 0 0 1 26 30" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
           <div class="epop" id="snappop" hidden>
             <label class="eck"><input type="checkbox" data-mode="grid"> <span data-i18n="lum.snapGrid"></span></label>
             <label class="eck"><input type="checkbox" data-mode="vertex"> <span data-i18n="lum.snapVertex"></span></label>
@@ -1075,7 +1075,7 @@
   import { createPhotometry } from './js/photometry.js';
   import {
     formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors, ungroupGroup,
+    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors, ungroupGroup, assignColors, typeNumbers, TYPE_COLORS,
   } from './js/model.js';
   import { groupPoints, basePoints, groupCount, fullCircle } from './js/groups.js';
   import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, swatchesHtml, paletteHtml, PALETTE } from './js/groupui.js';
@@ -1853,17 +1853,36 @@
   const projectTypes = () => project.rooms.flatMap((r) => r.model.types.map((ty, k) => ({ ty, room: r, color: typeColorOf(r.model, k), ident: identOf(ty) })));
   /** The colours of the other luminaires of the project. */
   const usedColors = (ident) => new Set(projectTypes().filter((x) => x.ident !== ident).map((x) => x.color));
-  /** The colour of a new luminaire: the one it has in another room, else the first free one. */
+  /** The colours of the other luminaires with the name of their luminaire (the palette shows them taken). */
+  const takenColors = (ident) => new Map(projectTypes().filter((x) => x.ident !== ident).map((x) => [x.color, lumLabel(x.ty)]));
+  /** The colour of a new luminaire: the one it has in another room, else the first free one; all taken — the colours repeat. */
   function colorForNew(ident) {
     const same = projectTypes().find((x) => x.ident === ident);
     if (same) return same.color;
-    const used = usedColors(ident);
-    return PALETTE.find((c) => !used.has(c)) ?? PALETTE[projectTypes().length % PALETTE.length];
+    const used = usedColors(ident), n = new Set(projectTypes().map((x) => x.ident)).size;
+    return PALETTE.find((c) => !used.has(c)) ?? PALETTE[n % PALETTE.length];
   }
+  /**
+   * One colour per luminaire of the project, from the palette (25 Nov 2026): a project of an older
+   * palette, a colour of one's own or two luminaires of one colour get the nearest free colours.
+   */
+  function normalizeColors(p = project) {
+    if (!p) return;
+    const list = p.rooms.flatMap((r) => r.model.types.map((ty, k) => ({ r, ty, ident: identOf(ty), color: typeColorOf(r.model, k) })));
+    const map = assignColors(list);
+    for (const r of p.rooms) {
+      if (r.model.types.every((ty, k) => typeColorOf(r.model, k) === map.get(identOf(ty)) && ty.color)) continue;
+      r.model = { ...r.model, types: r.model.types.map((ty) => ({ ...ty, color: map.get(identOf(ty)) })) };
+    }
+  }
+  /** The numbers of the luminaires that share a colour with another one (more than ten): Map ident → number. */
+  const typeNos = () => typeNumbers(new Map(projectTypes().map((x) => [x.ident, x.color])));
+  /** The number of the luminaire type `id` of the active room, or null. */
+  const typeNoOf = (id) => { const ty = model()?.types.find((x) => x.id === id); return ty ? typeNos().get(identOf(ty)) ?? null : null; };
   function colorsHtml() {
     const m = activeRoom()?.model, k = m ? m.types.findIndex((ty) => ty.id === selType) : -1;
     if (k < 0) return '';
-    return swatchesHtml(typeColorOf(m, k), usedColors(identOf(m.types[k])));
+    return swatchesHtml(typeColorOf(m, k), usedColors(identOf(m.types[k])), typeNos().get(identOf(m.types[k])) ?? null);
   }
   function showColors() { const h = $('#tycolors'); if (h) h.innerHTML = colorsHtml(); }
   /** The colour of a luminaire, in every room where it is (the same file and lamp set). */
@@ -1883,20 +1902,18 @@
     const m = model(), k = m.types.findIndex((x) => x.id === id);
     if (k < 0) return;
     const color = typeColorOf(m, k);
-    pop.innerHTML = paletteHtml(color, usedColors(identOf(m.types[k])));
-    const host = pop.offsetParent ?? pop.parentElement, a = anchor.getBoundingClientRect(), h = host.getBoundingClientRect();
-    pop.style.left = `${Math.max(0, a.left - h.left - 4)}px`; pop.style.top = `${a.bottom - h.top + 8}px`;
-    pop.hidden = false; colorFor = { id, pop, anchor };
+    pop.innerHTML = paletteHtml(color, takenColors(identOf(m.types[k])));
+    // above the panel (25 Nov 2026): on the page, at the swatch; at the edge of the window it opens the other way
+    if (pop.parentElement !== document.body) document.body.append(pop);
+    pop.style.position = 'fixed'; pop.hidden = false;
+    const a = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    const left = Math.min(Math.max(8, a.left - 4), innerWidth - w - 8), below = a.bottom + 8 + h <= innerHeight - 8;
+    pop.style.left = `${left}px`; pop.style.top = `${below ? a.bottom + 8 : Math.max(8, a.top - 8 - h)}px`;
+    colorFor = { id, pop, anchor };
   }
   function closeColors() { if (colorFor) { colorFor.pop.hidden = true; colorFor = null; } }
   function colorPopEvents(pop) {
     pop.addEventListener('click', (e) => { const b = e.target.closest('[data-color]'); if (b && colorFor) { setColorOf(colorFor.id, b.dataset.color); openColors(colorFor.id, pop, colorFor.anchor.isConnected ? colorFor.anchor : pop); } });
-    pop.addEventListener('input', (e) => {
-      e.stopPropagation();
-      if (!colorFor) return;
-      if (e.target.matches('.palpick')) setColorOf(colorFor.id, e.target.value);
-      if (e.target.matches('.palhex') && /^#[0-9a-f]{6}$/i.test(e.target.value.trim())) setColorOf(colorFor.id, e.target.value.trim().toLowerCase());
-    });
     pop.addEventListener('change', (e) => e.stopPropagation());
   }
   colorPopEvents($('#colorpop')); colorPopEvents($('#lumcolorpop'));
@@ -2117,8 +2134,9 @@
       rows = [...by.values()].map((r) => ({ ...r, on: !!act && identOf(act) === r.id }));
     }
     const ph = (ty) => fileOfType(ty)?.phot ?? createPhotometry({ type: 'cosine', flux: 1000 });
+    const nos = typeNos();
     $('#lumlist').innerHTML = rows.length ? rows.map((r) => `<div class="lrow${r.on ? ' on' : ''}" data-row="${esc(r.id)}">
-        <button type="button" class="tsw" style="--ty:${r.color}" data-col="${esc(r.id)}" aria-label="${esc(t('lum.color'))}"></button>${miniPolar(ph(r.ty))}
+        <button type="button" class="tsw${nos.get(identOf(r.ty)) ? ' no' : ''}" style="--ty:${r.color}" data-col="${esc(r.id)}" aria-label="${esc(t('lum.color'))}">${nos.get(identOf(r.ty)) ?? ''}</button>${miniPolar(ph(r.ty))}
         <div class="lnm"><b>${esc(lumLabel(r.ty))}</b><small>${esc(lumParams(r.ty))}</small></div><span class="lcnt">${r.count}</span></div>`).join('')
       : `<div class="lnone">${esc(t('lum.none'))}</div>`;
     const act = m.types.find((ty) => ty.id === selType);
@@ -2167,8 +2185,7 @@
       if (!r) return;
       remember(m);
       // a copy is another luminaire (another lamp set to choose): its own colour
-      const used = usedColors('none');
-      const color = PALETTE.find((c) => !used.has(c)) ?? r.model.types.find((ty) => ty.id === r.id).color;
+      const color = colorForNew('copy:' + r.id);
       activeRoom().model = setTypeColor({ ...r.model, types: r.model.types.map((ty) => (ty.id === r.id ? { ...ty, copy: true } : ty)) }, r.id, color);
       autosave(); showType(r.id); refresh();
     } else if (a === 'replace') {
@@ -2588,12 +2605,21 @@
     typeinTool = kind;
     $('#tititle').textContent = t(kind === 'move' ? 'lum.menu.move' : 'lum.menu.rotate');
     typein.hidden = false;
-    const host = $('#view');
-    typein.style.left = '12px'; typein.style.top = `${Math.max(56, host.clientHeight - typein.offsetHeight - 60)}px`;
     fillTypeIn();
   }
+  /** The type-in at the right edge of the view, above the false-colour scale (25 Nov 2026), else at the bottom. */
+  function placeTypeIn() {
+    if (typein.hidden) return;
+    const host = $('#view').getBoundingClientRect(), lg = $('#legend'), r = lg?.getBoundingClientRect();
+    const shown = lg && getComputedStyle(lg).visibility !== 'hidden' && lg.offsetParent && r.height > 0;
+    const bottom = shown ? r.top - host.top - 10 : host.height - 16;
+    typein.style.left = 'auto'; typein.style.right = '16px';
+    typein.style.top = `${Math.max(56, bottom - typein.offsetHeight)}px`;
+  }
+  addEventListener('resize', placeTypeIn);
   function fillTypeIn() {
     if (!typeinTool || typein.hidden) return;
+    queueMicrotask(placeTypeIn);
     const m = model(), items = selectedItems(planItems(m, sizeOf), sel), c = selectionCentre(items);
     const rot = typeinTool === 'rotate', f = (v) => (Number.isFinite(v) ? formatNumber(v, 3) : '');
     const abs = rot ? [0, 0, items.length ? items[0].psi : NaN] : [c?.x, c?.y, c?.z];
@@ -2686,7 +2712,7 @@
     const gz = gizmoGeom(m, P, info.mode);
     return {
       mode: info.mode, P, k: info.mode === '2d' ? info.T.k : 0.01,
-      items: planItems(m, sizeOf), color: (ty) => typeColorOf(m, kOf.get(ty) ?? 0),
+      items: planItems(m, sizeOf), color: (ty) => typeColorOf(m, kOf.get(ty) ?? 0), typeNo: (() => { const nos = typeNos(); return (ty) => { const x = m.types.find((q) => q.id === ty); return x ? nos.get(identOf(x)) ?? null : null; }; })(),
       selected: (it) => isSelected(sel, it.group, it.index, it.kind), hovered: (it) => hoverItem === `${it.group}:${it.index}` || hoverItem === `${it.group}:*`, grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
       guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad, snap: snapMark, snapGuide, dark: isDark(),
       // the move as in 3ds Max: the rubber band from the start point and the ghost of the selection
@@ -3034,19 +3060,21 @@
   $('#snappop').addEventListener('change', (e) => { const c = e.target.closest('input[data-mode]'); if (c) setPlanGrid({ modes: { [c.dataset.mode]: c.checked } }); });
   $('#gridon').addEventListener('click', () => setPlanGrid({ show: !planGrid(model()).show }));
   $('#snapon').addEventListener('click', () => setPlanGrid({ snap: !planGrid(model()).snap }));
-  for (const [btn, pop] of [['#gridset', '#gridpop'], ['#snapset', '#snappop']]) {
-    $(btn).addEventListener('click', (e) => {
-      e.stopPropagation();
-      const open = $(pop).hidden;
-      for (const p of ['#gridpop', '#snappop']) $(p).hidden = true;
-      for (const b of ['#gridset', '#snapset']) $(b).setAttribute('aria-expanded', 'false');
-      $(pop).hidden = !open; $(btn).setAttribute('aria-expanded', String(open));
-    });
+  // the settings of the grid and the snaps (25 Nov 2026): the right button or a long press on the
+  // button, an arc at its edge tells of them; a click switches
+  const closeEPops = () => { for (const p of ['#gridpop', '#snappop']) $(p).hidden = true; for (const b of ['#gridon', '#snapon']) $(b).setAttribute('aria-expanded', 'false'); };
+  for (const [btn, pop] of [['#gridon', '#gridpop'], ['#snapon', '#snappop']]) {
+    const b = $(btn);
+    const openPop = () => { const was = !$(pop).hidden; closeEPops(); if (!was) { $(pop).hidden = false; b.setAttribute('aria-expanded', 'true'); } };
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); openPop(); });
+    let timer = null;
+    b.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; b.dataset.long = ''; timer = setTimeout(() => { b.dataset.long = '1'; openPop(); }, 500); });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(timer));
+    b.addEventListener('click', (e) => { if (b.dataset.long) { e.stopImmediatePropagation(); b.dataset.long = ''; } }, true);
   }
   document.addEventListener('pointerdown', (e) => {
     if (e.target.closest('.epill')) return;
-    for (const p of ['#gridpop', '#snappop']) $(p).hidden = true;
-    for (const b of ['#gridset', '#snapset']) $(b).setAttribute('aria-expanded', 'false');
+    closeEPops();
   });
   $('#view').addEventListener('pointerleave', () => hoverOn(null));
   $('#suggest').addEventListener('click', suggestGrid);
@@ -3315,6 +3343,7 @@
     toastTimer = setTimeout(() => { el.hidden = true; }, 6000);
   }
   function useProject(p, stageAfter) {
+    normalizeColors(p);
     project = p;
     savedText = serializeProject(p);
     infoTouched.clear(); infoForce = false; $('#infomsg').hidden = true;
@@ -3353,6 +3382,7 @@
   function startProject() {
     const saved = restoreProject();
     project = saved ?? createProject();
+    normalizeColors(project);
     savedText = serializeProject(project); // what this browser keeps counts as saved
     renderInfo();
     loadRoom(activeRoom());
@@ -3447,7 +3477,7 @@
     const types = m.types.map((ty, k) => {
       const gs = m.groups.filter((g) => g.type === ty.id);
       const hm = gs.flatMap((g) => groupPoints(g, size).map((pt) => pt.hm));
-      return { id: ty.id, color: typeColorOf(m, k), name: nameOfType(ty, k), file: fileOfType(ty), values: typeValues(ty), count: hm.length, hm };
+      return { id: ty.id, color: typeColorOf(m, k), no: typeNos().get(identOf(ty)) ?? null, name: nameOfType(ty, k), file: fileOfType(ty), values: typeValues(ty), count: hm.length, hm };
     }).filter((ty) => ty.count);
     // a room with misplaced luminaires is not calculated: the report says where to fix it
     if (placementErrors(m, sizeOf).length) throw new Error(t('lum.reportBad', { name: r.name || t('app.untitled') }));

@@ -39,6 +39,8 @@ function luminaires(T, d, style = {}) {
   for (const mk of d.marks) {
     const own = mk.color ? { stroke: mk.color, width: Math.max(style.width ?? 0.22, 0.45) } : {};
     out += gridLuminaires(T, { L: d.L, W: d.W, xs: [mk.x], ys: [mk.y], psi: mk.psi, shape: mk.shape, side: mk.side }, { ...style, ...own, opacity: 1, group: false });
+    // the number of a type whose colour another type shares (more than ten types, 25 Nov 2026)
+    if (mk.no) { const r = Math.max(mk.shape?.housing ? Math.max(mk.shape.housing.a, mk.shape.housing.b) / 2 : 0.12, 0.08) * T.k; out += `<text x="${r2(T.x(mk.x) + r * 0.8 + 0.4)}" y="${r2(T.y(mk.y) - r * 0.8 - 0.4)}" font-size="2.4" font-weight="600" fill="${mk.color}" stroke="#fff" stroke-width="0.5" paint-order="stroke">${mk.no}</text>`; }
   }
   return `${out}</g>`;
 }

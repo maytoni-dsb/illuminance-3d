@@ -126,8 +126,48 @@ export function renameType(m, id, name) {
  * letters). A type keeps the colour chosen for it (ty.color); a type without one takes the colour
  * of its place in the list.
  */
-export const TYPE_COLORS = Object.freeze(['#e8590c', '#1971c2', '#2f9e44', '#9c36b5', '#c2255c', '#0c8599', '#e67700', '#5f3dc4']);
 const isColor = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
+// 25 Nov 2026: ten colours told apart in normal vision and in the three kinds of colour blindness
+// (ΔE ≥ 16 in simulation), seen on white (paper) and on the dark theme (contrast ≥ 2.8:1): after
+// Okabe–Ito, P. Tol and IBM. A colour belongs to one luminaire of the project; from the eleventh the
+// colours repeat and the luminaires of a repeated colour show their number.
+export const TYPE_COLORS = Object.freeze(['#0072b2', '#ee7733', '#009e73', '#cc3311', '#785ef0', '#cc79a7', '#9b5b3b', '#aa3377', '#e024c7', '#f64c6e']);
+const lab = (hex) => {
+  const lin = (c) => { const v = parseInt(c, 16) / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const [r, g, b] = [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map(lin);
+  const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const X = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047), Y = f(0.2126 * r + 0.7152 * g + 0.0722 * b), Z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+  return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
+};
+const nearestOf = (c, list) => { const q = lab(c); let best = list[0], bd = Infinity; for (const x of list) { const p = lab(x), d = Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); if (d < bd) { bd = d; best = x; } } return best; };
+/**
+ * The colours of the luminaires of a project (25 Nov 2026): entries [{ ident, color }] in the order
+ * of the project; a colour of the palette kept unless an earlier luminaire has it; another colour
+ * (an older palette, a colour of one's own) or a taken one → the nearest free colour of the palette;
+ * all taken → the colours repeat in their order. Returns Map ident → colour.
+ */
+export function assignColors(entries) {
+  const out = new Map(), used = new Set();
+  let round = 0;
+  for (const { ident, color } of entries) {
+    if (out.has(ident)) continue;
+    const c = typeof color === 'string' ? color.toLowerCase() : '';
+    const free = TYPE_COLORS.filter((x) => !used.has(x));
+    let pick;
+    if (free.length) pick = free.includes(c) ? c : isColor(c) ? nearestOf(c, free) : free[0];
+    else pick = TYPE_COLORS[round++ % TYPE_COLORS.length];
+    used.add(pick); out.set(ident, pick);
+  }
+  return out;
+}
+/** Numbers of the luminaires whose colour another one shares (more than ten): Map ident → number (1…). */
+export function typeNumbers(colors) {
+  const by = new Map();
+  for (const c of colors.values()) by.set(c, (by.get(c) ?? 0) + 1);
+  const out = new Map();
+  [...colors.keys()].forEach((id, k) => { if (by.get(colors.get(id)) > 1) out.set(id, k + 1); });
+  return out;
+}
 /** Colour of the k-th type of a model. */
 export const typeColorOf = (m, k) => m.types[k]?.color ?? TYPE_COLORS[k % TYPE_COLORS.length];
 /** The first colour of the palette no type of the model shows (the first one when all are used). */

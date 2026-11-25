@@ -34,8 +34,8 @@ test('types: add, values, file, name, remove only when unused', () => {
 test('types: a colour of their own, a copy for another lamp set (21 Nov 2026)', () => {
   let m = modelFromValues(DEFAULTS);
   assert.equal(typeColorOf(m, 0), TYPE_COLORS[0]);          // no colour stored: the palette by place
-  m = setTypeColor(m, 't1', '#1971C2');
-  assert.equal(m.types[0].color, '#1971c2');
+  m = setTypeColor(m, 't1', TYPE_COLORS[1].toUpperCase());
+  assert.equal(m.types[0].color, TYPE_COLORS[1]);
   assert.equal(setTypeColor(m, 't1', 'red'), m);            // not a colour: unchanged
   m = addType(m).model;                                     // the first colour nobody shows
   assert.equal(m.types[1].color, TYPE_COLORS[0]);
@@ -147,4 +147,21 @@ test('fields of the next group to draw: no geometry, the room height by default,
   assert.ok(!r.ok && r.errors.ny);
   r = validateDraft('single', { hm: '0.5', psi: '0' }, ctx);
   assert.ok(r.errors.hm);
+});
+
+test('colours of a project: one per luminaire, the nearest free one, numbers past ten (25 Nov 2026)', async () => {
+  const { assignColors, typeNumbers } = await import('../js/model.js');
+  const C = TYPE_COLORS;
+  // kept; a taken one and one of an older palette → the nearest free colour
+  let a = assignColors([{ ident: 'a', color: C[3] }, { ident: 'b', color: C[3] }, { ident: 'c', color: '#1971c2' }]);
+  assert.equal(a.get('a'), C[3]);
+  assert.notEqual(a.get('b'), C[3]);
+  assert.equal(a.get('c'), C[0]);                     // old blue → the blue of the palette
+  assert.equal(new Set(a.values()).size, 3);
+  // twelve luminaires: ten colours, then they repeat; the pairs get numbers
+  a = assignColors(Array.from({ length: 12 }, (_, k) => ({ ident: `t${k}`, color: null })));
+  assert.equal(new Set(a.values()).size, 10);
+  assert.equal(a.get('t10'), C[0]);
+  const no = typeNumbers(a);
+  assert.deepEqual([...no.entries()], [['t0', 1], ['t1', 2], ['t10', 11], ['t11', 12]]);
 });
