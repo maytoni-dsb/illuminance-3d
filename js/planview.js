@@ -292,7 +292,8 @@ export function drawEditor(ctx, size, d) {
     }
   }
   // guides
-  ctx.setLineDash([6, 4]); ctx.strokeStyle = d.accent; ctx.lineWidth = 1;
+  // dashed: the groups themselves (25 Nov 2026), seen in both themes
+  ctx.setLineDash([6, 4]); ctx.strokeStyle = d.dark === false ? 'rgba(30,30,30,.8)' : d.accent; ctx.lineWidth = 1;
   for (const g of d.guides) {
     const z = g.z ?? 0;
     if (g.kind === 'circle') poly(ctx, P, Array.from({ length: 64 }, (_, k) => [g.cx + g.r * Math.cos(k * Math.PI / 32), g.cy + g.r * Math.sin(k * Math.PI / 32), z]));
@@ -303,21 +304,27 @@ export function drawEditor(ctx, size, d) {
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  // a line group: a guide with arrows at both ends along the line, seen on any background (25 Nov 2026)
-  for (const g of d.guides) {
-    if (!g.arrows) continue;
-    const [a, b] = g.segments[0], u = P(a[0], a[1], g.z ?? 0), v = P(b[0], b[1], g.z ?? 0);
-    if (!u || !v) continue;
-    const l = Math.hypot(v[0] - u[0], v[1] - u[1]);
-    if (l < 1) continue;
-    const ex = (v[0] - u[0]) / l, ey = (v[1] - u[1]) / l, head = (p, s) => {
-      ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] - s * 9 * ex + 4 * ey, p[1] - s * 9 * ey - 4 * ex);
-      ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] - s * 9 * ex - 4 * ey, p[1] - s * 9 * ey + 4 * ex);
-    };
-    for (const [w, c] of [[3, 'rgba(255,255,255,.9)'], [1, '#1f1f1f']]) {
-      ctx.beginPath(); ctx.moveTo(u[0], u[1]); ctx.lineTo(v[0], v[1]); head(v, 1); head(u, -1);
-      ctx.lineWidth = w; ctx.strokeStyle = c; ctx.stroke();
+  // the axes of the luminaires of the edited group (25 Nov 2026): dash-dot, dragged by the line; the
+  // one under the pointer thicker, in the colour of the dimensions
+  for (const q of d.axes ?? []) {
+    const a = P(q.a[0], q.a[1], q.z), b = P(q.b[0], q.b[1], q.z);
+    if (!a || !b) continue;
+    ctx.setLineDash([12, 3, 2, 3]);
+    ctx.strokeStyle = q.hot ? '#1971c2' : d.dark ? 'rgba(255,255,255,.7)' : 'rgba(40,40,40,.65)';
+    ctx.lineWidth = q.hot ? 2.4 : 1;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  // the selection where it was before the move (as in 3ds Max): its outlines, pale
+  if (d.moveGhost) {
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = d.dark ? '#ffffff' : '#1f1f1f'; ctx.lineWidth = 1.2;
+    for (const it of d.moveGhost) {
+      const c = P(it.x, it.y, it.hm);
+      if (!c) continue;
+      if (it.a > 0 && it.b > 0 && (!plan || Math.min(it.a, it.b) / d.k >= 3) && poly(ctx, P, outline(it.x, it.y, it.hm, it.a, it.b, it.psi, it.round))) ctx.stroke();
+      else { ctx.beginPath(); ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI); ctx.stroke(); }
     }
+    ctx.restore();
   }
   // luminaires: wireframes in the colour of their type, thicker under the pointer; the selected
   // white; misplaced red (decided on 21 Nov 2026). In 3D only the selected and the one under the
@@ -398,30 +405,32 @@ export function drawEditor(ctx, size, d) {
       halo(ctx, `X ${f(g.x)} · Y ${f(g.y)}`, c[0] + 12, c[1] - 12, '#111');
     }
   }
-  // the snapped point (25 Nov 2026, as in 3ds Max): grid — a cross in a square, vertex — a cross,
-  // middle — a triangle, centre — a circle; dark over white; its coordinates next to it
+  // the snap (25 Nov 2026, as in 3ds Max): green — the point it will snap to, yellow — snapped; no
+  // outline, no coordinates; a darker tone in the light theme. Grid — a cross in a square, vertex — a
+  // cross, middle — a triangle, centre — a circle
+  const SNAP = d.dark ? { on: '#ffd43b', near: '#8ce99a' } : { on: '#c27c00', near: '#2b8a3e' };
+  if (d.rubber) {
+    const a = P(d.rubber.a.x, d.rubber.a.y, d.rubber.z), b = P(d.rubber.b.x, d.rubber.b.y, d.rubber.z);
+    if (a && b) {
+      ctx.strokeStyle = d.rubber.snapped ? SNAP.on : SNAP.near; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.arc(a[0], a[1], 2.5, 0, 2 * Math.PI); ctx.fill();
+    }
+  }
   if (d.snapGuide) {
     const [p0, p1] = d.snapGuide, a = P(p0.x, p0.y, p1.z ?? 0), b = P(p1.x, p1.y, p1.z ?? 0);
-    if (a && b) { ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]); }
+    if (a && b) { ctx.strokeStyle = SNAP.on; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]); }
   }
   if (d.snap) {
     const v = P(d.snap.x, d.snap.y, d.snap.z ?? 0);
     if (v) {
       const [x, y] = v, k = d.snap.kind;
-      const path = () => {
-        ctx.beginPath();
-        if (k === 'grid') { ctx.rect(x - 5, y - 5, 10, 10); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); }
-        else if (k === 'vertex') { ctx.moveTo(x - 5, y - 5); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 5, y - 5); ctx.lineTo(x - 5, y + 5); }
-        else if (k === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
-        else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
-      };
-      path(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3.5; ctx.stroke();
-      path(); ctx.strokeStyle = '#1f1f1f'; ctx.lineWidth = 1.4; ctx.stroke();
-      if (d.snapText) {
-        ctx.font = `500 11px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        const f = (q) => q.toLocaleString(meta().locale, { maximumFractionDigits: 3 });
-        halo(ctx, `X ${f(d.snap.x)} · Y ${f(d.snap.y)}`, x + 11, y - 12, '#111');
-      }
+      ctx.beginPath();
+      if (k === 'grid') { ctx.rect(x - 5, y - 5, 10, 10); ctx.moveTo(x - 3.5, y - 3.5); ctx.lineTo(x + 3.5, y + 3.5); ctx.moveTo(x + 3.5, y - 3.5); ctx.lineTo(x - 3.5, y + 3.5); }
+      else if (k === 'vertex') { ctx.moveTo(x - 5, y - 5); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 5, y - 5); ctx.lineTo(x - 5, y + 5); }
+      else if (k === 'mid') { ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y + 4); ctx.lineTo(x - 6, y + 4); ctx.closePath(); }
+      else ctx.arc(x, y, 5.5, 0, 2 * Math.PI);
+      ctx.strokeStyle = d.snap.snapped === false ? SNAP.near : SNAP.on; ctx.lineWidth = d.dark ? 1.5 : 1.8; ctx.stroke();
     }
   }
   // the selection rectangle (plan)

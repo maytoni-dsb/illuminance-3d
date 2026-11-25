@@ -220,6 +220,40 @@ export function snapPoint(x, y, grid, L, W, centres, tol) {
 }
 
 /**
+ * The snap point near (x, y) as in 3ds Max (25 Nov 2026): the nearest of the room points, the
+ * luminaires `centres` and the node of the plan grid within rPrev (m); snapped when within rSnap.
+ * A point of an object wins over a grid node a little nearer. null: nothing near, or snaps off.
+ */
+export function snapNear(x, y, grid, L, W, centres, rPrev, rSnap) {
+  if (!grid.snap) return null;
+  const m = grid.modes ?? PLAN_GRID.modes;
+  const cand = [];
+  if (m.vertex) for (const [a, b] of [[0, 0], [L, 0], [L, W], [0, W]]) cand.push([a, b, 'vertex']);
+  if (m.mid) for (const [a, b] of [[L / 2, 0], [L, W / 2], [L / 2, W], [0, W / 2]]) cand.push([a, b, 'mid']);
+  if (m.centre) cand.push([L / 2, W / 2, 'centre']);
+  for (const c of centres) for (const f of lumFeatures(c)) if (m[f[2]]) cand.push(f);
+  let best = null, bd = rPrev;
+  for (const [a, b, kind] of cand) { const d = Math.hypot(a - x, b - y); if (d <= bd) { bd = d; best = { x: a, y: b, kind }; } }
+  if (m.grid) {
+    const gx = snapValue(x, grid.sx, grid.ox), gy = snapValue(y, grid.sy, grid.oy), d = Math.hypot(gx - x, gy - y);
+    if (gx >= -1e-9 && gx <= L + 1e-9 && gy >= -1e-9 && gy <= W + 1e-9 && d <= rPrev && (!best || d < bd - 0.2 * rSnap)) { best = { x: gx, y: gy, kind: 'grid' }; bd = d; }
+  }
+  return best && { ...best, snapped: bd <= rSnap };
+}
+
+/** The model with the luminaires of the selected groups back in their places by the rule of the group. */
+export function resetLayout(m, s) {
+  let changed = false;
+  const groups = m.groups.map((g) => {
+    if (!s.groups.has(g.id) || g.kind === 'single' || !(g.offs || g.ts || g.xs || g.ys)) return g;
+    changed = true;
+    const { offs: _o, ts: _t, xs: _x, ys: _y, ...r } = g;
+    return r;
+  });
+  return changed ? { ...m, groups } : m;
+}
+
+/**
  * Snap points of a luminaire of the plan: [x, y, kind]; kind 'centre' | 'vertex' | 'mid'. Without a
  * housing (items of the cosine model or bare points): the centre only.
  */

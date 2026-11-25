@@ -32,9 +32,9 @@
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=e5666aa6",
-      "./js/lang-en.js": "./js/lang-en.js?v=c7a9a022",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=11b322ed",
+      "./js/lang-de.js": "./js/lang-de.js?v=e6e89d81",
+      "./js/lang-en.js": "./js/lang-en.js?v=1d5b2706",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=780026d6",
       "./js/model.js": "./js/model.js?v=9714a867",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
@@ -43,8 +43,8 @@
       "./js/photfile.js": "./js/photfile.js?v=3f93201e",
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=51d36bb9",
-      "./js/planedit.js": "./js/planedit.js?v=7ebfca99",
-      "./js/planview.js": "./js/planview.js?v=72530820",
+      "./js/planedit.js": "./js/planedit.js?v=9e28c61e",
+      "./js/planview.js": "./js/planview.js?v=3a2006ba",
       "./js/project.js": "./js/project.js?v=3155618c",
       "./js/report.js": "./js/report.js?v=82058f86",
       "./js/reportsvg.js": "./js/reportsvg.js?v=aee5f3b6",
@@ -913,6 +913,7 @@
         <div class="cmi" role="menuitem" data-cm="ungroup"><span data-i18n="lum.menu.ungroup"></span></div>
         <div class="cmi" role="menuitem" data-cm="selall"><span data-i18n="lum.menu.selAll"></span><kbd>Ctrl+A</kbd></div>
         <div class="cmi" role="menuitem" data-cm="seltype"><span data-i18n="lum.menu.selType"></span></div>
+        <div class="cmi" role="menuitem" data-cm="layout"><span data-i18n="lum.menu.layout"></span></div>
         <div class="cmi" role="menuitem" data-cm="reset"><span data-i18n="lum.menu.reset"></span></div>
         <div class="cmsep"></div>
         <div class="cmi" role="menuitem" data-cm="del"><span data-i18n="lum.menu.del"></span><kbd>Del</kbd></div>
@@ -1082,7 +1083,7 @@
   import { hotkeyAction, editorKey } from './js/hotkeys.js';
   import {
     planItems, pickAt, selectionOf, combine, boxSelection, selectedItems, isSelected, isEmpty, emptySelection,
-    clampDelta, moveSelection, deleteSelection, resetOffsets, snapPoint, lumFeatures, rotateSelection, liftSelection, replaceType, gizmoHit, constrain, selectionCentre, GIZMO,
+    clampDelta, moveSelection, deleteSelection, resetOffsets, resetLayout, snapPoint, snapNear, lumFeatures, rotateSelection, liftSelection, replaceType, gizmoHit, constrain, selectionCentre, GIZMO,
   } from './js/planedit.js';
   import { initNormDialog } from './js/normui.js';
   import { normMatches, normSource } from './js/norms.js';
@@ -2250,22 +2251,15 @@
     return selectionCentre(selectedItems(planItems(m, sizeOf), sel))?.z ?? m.room.H;
   }
   /** The gizmo of the selection in view px for the projection P (room → px), or null. */
-  /**
-   * Local axes of luminaires selected within a line group (25 Nov 2026): u along the line, v across;
-   * null for any other selection (the axes of the room).
-   */
-  function selFrame(m) {
-    if (sel.groups.size || sel.points.size !== 1) return null;
-    const [gid, idx] = [...sel.points][0];
-    const g = m.groups.find((x) => x.id === gid);
-    if (!g || g.kind !== 'line') return null;
-    const dx = g.x1 - g.x0, dy = g.y1 - g.y0, len = Math.hypot(dx, dy);
-    return len > 1e-9 ? { g, idx, u: [dx / len, dy / len], v: [-dy / len, dx / len], len } : null;
-  }
-  /** The model with the luminaires idx of a line group slid along it by d metres: their own distances ts. */
-  function slideOnLine(m, f, d) {
-    const ts = lineDists(m, f.g).map((t0, k) => (f.idx.has(k) ? Math.min(f.len, Math.max(0, t0 + d)) : t0)).map((v) => Math.round(v * 1e6) / 1e6);
-    return { ...m, groups: m.groups.map((g) => (g.id === f.g.id ? { ...g, ts } : g)) };
+  /** True in the dark theme (the colours of the snap marks, 25 Nov 2026). */
+  const isDark = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+  /** The snap point near the pointer, as in 3ds Max: preview within 30 px, snapped within 20 px (25 Nov 2026). */
+  function snapAt(x, y, k, except = null) {
+    const m = model();
+    const others = except ? itemsNow().filter((it) => !isSelected(except, it.group, it.index, it.kind)) : itemsNow();
+    const p = snapNear(x, y, planGrid(m), m.room.shape.L, m.room.shape.W, others, 30 * k, 20 * k);
+    snapMark = p ? { ...p, z: editZ() } : null;
+    return p;
   }
   function gizmoGeom(m, P, mode) {
     if (drawing || isEmpty(sel)) return null;
@@ -2281,8 +2275,7 @@
     // perspective and do not "breathe" when the view turns; on the plan the arrows are px long
     const L3 = mode === '3d' && view ? GIZMO.arrow / Math.max(1e-9, view.pxPerMetre(c.x, c.y, c.z)) : null;
     const end = (dx, dy, dz) => (L3 ? P(c.x + dx * L3, c.y + dy * L3, c.z + dz * L3) : towards(P(c.x + dx, c.y + dy, c.z + dz), GIZMO.arrow));
-    const fr = selFrame(m), U = fr ? fr.u : [1, 0], V = fr ? fr.v : [0, 1];
-    const x = end(U[0], U[1], 0), y = end(V[0], V[1], 0);
+    const x = end(1, 0, 0), y = end(0, 1, 0);
     if (!x || !y) return null;
     // Z only in 3D: the mounting height (decided on 21 Nov 2026)
     const z = mode === '3d' ? end(0, 0, 1) : null;
@@ -2323,7 +2316,7 @@
     return best ?? near;
   }
   // ---- handles and dimensions of the selected group on the view (25 Nov 2026) ----
-  let hoverDim = null;
+  let hoverDim = null, hoverAxis = null;
   /** The one group (grid, line, circle) selected with W: it shows its handles and dimensions. */
   function editGroup(m) {
     if (tool !== 'move' || drawing || isEmpty(sel) || sel.points.size || sel.groups.size !== 1) return null;
@@ -2342,6 +2335,38 @@
     const pts = basePoints(g, { L: m.room.shape.L, W: m.room.shape.W }, sizeOf(m.types.find((ty) => ty.id === g.type)));
     return pts.map((p) => Math.hypot(p.x - g.x0, p.y - g.y0));
   }
+  /**
+   * Axes of the luminaires of the group being edited (25 Nov 2026), dragged by the line itself: a
+   * grid — its rows and columns across the area; a line — short axes across it. { id, a, b, z, cursor }
+   */
+  function axesOf(m, g) {
+    const out = [];
+    if (g.kind === 'grid') {
+      const { xs, ys, a } = gridAxes(m, g), e = 0.15;
+      xs.forEach((x, i) => out.push({ id: `ax:${i}`, a: [a.x0 + x, a.y0 - e], b: [a.x0 + x, a.y1 + e], z: g.hm, cursor: 'ew-resize' }));
+      ys.forEach((y, j) => out.push({ id: `ay:${j}`, a: [a.x0 - e, a.y0 + y], b: [a.x1 + e, a.y0 + y], z: g.hm, cursor: 'ns-resize' }));
+    } else if (g.kind === 'line') {
+      const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);
+      if (len < 1e-9) return out;
+      const ux = (g.x1 - g.x0) / len, uy = (g.y1 - g.y0) / len, h = 0.35;
+      lineDists(m, g).forEach((d, i) => {
+        const x = g.x0 + ux * d, y = g.y0 + uy * d, z = g.hm + (g.hm1 - g.hm) * d / len;
+        out.push({ id: `lt:${i}`, a: [x + uy * h, y - ux * h], b: [x - uy * h, y + ux * h], z, cursor: 'grab' });
+      });
+    }
+    return out;
+  }
+  /** The axis under the pointer (view px), within 5 px of its line and away from the housings. */
+  function axisAt(m, g, P, px, py, items) {
+    for (const q of axesOf(m, g)) {
+      const A = P(q.a[0], q.a[1], q.z), B = P(q.b[0], q.b[1], q.z);
+      if (!A || !B) continue;
+      const vx = B[0] - A[0], vy = B[1] - A[1], l2 = vx * vx + vy * vy || 1;
+      const t = Math.max(0, Math.min(1, ((px - A[0]) * vx + (py - A[1]) * vy) / l2));
+      if (Math.hypot(A[0] + t * vx - px, A[1] + t * vy - py) <= 5) return q;
+    }
+    return null;
+  }
   /** Handles: { id, at: view px, shape, cursor }. */
   function handlesOf(m, g, P) {
     const out = [], z = g.hm, add = (id, x, y, shape, cursor, zz = z) => { const q = P(x, y, zz); if (q) out.push({ id, at: q, shape, cursor }); };
@@ -2350,8 +2375,6 @@
       for (const [i, x] of [[0, a.x0], [1, a.x1]]) for (const [j, y] of [[0, a.y0], [1, a.y1]]) add(`c:${i}${j}`, x, y, 'sq', (i === j) ? 'nesw-resize' : 'nwse-resize');
       add('sx:0', a.x0, (a.y0 + a.y1) / 2, 'dot', 'ew-resize'); add('sx:1', a.x1, (a.y0 + a.y1) / 2, 'dot', 'ew-resize');
       add('sy:0', (a.x0 + a.x1) / 2, a.y0, 'dot', 'ns-resize'); add('sy:1', (a.x0 + a.x1) / 2, a.y1, 'dot', 'ns-resize');
-      xs.forEach((x, i) => add(`ax:${i}`, a.x0 + x, a.y1, 'tri-d', 'ew-resize'));
-      ys.forEach((y, j) => add(`ay:${j}`, a.x0, a.y0 + y, 'tri-r', 'ns-resize'));
     } else if (g.kind === 'line') {
       add('p0', g.x0, g.y0, 'sq', 'move', g.hm); add('p1', g.x1, g.y1, 'sq', 'move', g.hm1);
     } else if (g.kind === 'circle') {
@@ -2387,10 +2410,14 @@
       const ds = lineDists(m, g), len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1, ux = (g.x1 - g.x0) / len, uy = (g.y1 - g.y0) / len;
       const A0 = P(g.x0, g.y0, g.hm), B0 = P(g.x1, g.y1, g.hm1);
       const sx = B0 && A0 ? B0[0] - A0[0] : 1, sy = B0 && A0 ? B0[1] - A0[1] : 0, sl = Math.hypot(sx, sy) || 1;
-      for (let k = 0; k < ds.length - 1; k++) {
-        const A = P(g.x0 + ux * ds[k], g.y0 + uy * ds[k], g.hm), B = P(g.x0 + ux * ds[k + 1], g.y0 + uy * ds[k + 1], g.hm);
-        if (A && B && ds[k + 1] - ds[k] > 1e-6) pill(`dl:${k}`, A, B, [sy / sl * 22, -sx / sl * 22], ds[k + 1] - ds[k], k);
+      // from the start to the first luminaire, between them, from the last to the end; the length
+      // of the line on the other side (25 Nov 2026)
+      const ch = [0, ...ds, len];
+      for (let k = 0; k < ch.length - 1; k++) {
+        const A = P(g.x0 + ux * ch[k], g.y0 + uy * ch[k], g.hm), B = P(g.x0 + ux * ch[k + 1], g.y0 + uy * ch[k + 1], g.hm);
+        if (A && B) pill(`dl:${k}`, A, B, [sy / sl * 44, -sx / sl * 44], ch[k + 1] - ch[k], k);
       }
+      if (A0 && B0) pill('len', A0, B0, [-sy / sl * 44, sx / sl * 44], len, 0);
     } else if (g.kind === 'circle') {
       const h = handlesOf(m, g, P).find((q) => q.id === 'r'), c = P(g.cx, g.cy, g.hm);
       if (h && c) pill('dr', c, h.at, [0, 0], g.r, 0);
@@ -2437,7 +2464,8 @@
   }
   /** A dimension typed: the axis or luminaire after it moves (the last one: the one before it). */
   function applyDim(m, g, d, v) {
-    if (!(v > 0)) return m;
+    // a distance from an end of a line may be 0 (the way "axis"), the rest are lengths
+    if (!(v > 0) && !(g.kind === 'line' && d.id.startsWith('dl:') && v === 0)) return m;
     const r6 = (x) => Math.round(x * 1e6) / 1e6, k = d.seg;
     let ng = null;
     const setSeg = (pts, inner) => { // pts with the ends; inner: indices that may move
@@ -2452,11 +2480,18 @@
       const p = setSeg([0, ...list, len], list.map((_, i) => i + 1));
       if (!p) return m;
       ng = { ...g, [dx ? 'xs' : 'ys']: p.slice(1, -1).map(r6) };
+    } else if (g.kind === 'line' && d.id === 'len') {
+      // the length: the start stays, the end moves along the line; own distances kept within it
+      const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1, ux = (g.x1 - g.x0) / len, uy = (g.y1 - g.y0) / len;
+      ng = { ...g, x1: r6(g.x0 + ux * v), y1: r6(g.y0 + uy * v) };
+      if (ng.x1 < -1e-9 || ng.y1 < -1e-9 || ng.x1 > m.room.shape.L + 1e-9 || ng.y1 > m.room.shape.W + 1e-9) return m;
+      if (g.ts) ng.ts = g.ts.map((t) => r6(Math.min(t, v)));
     } else if (g.kind === 'line') {
+      // the chain with the ends: an edge or a gap moves only the luminaire after it (the last: before)
       const ds = lineDists(m, g), len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);
-      const p = setSeg(ds, ds.map((_, i) => i));
-      if (!p || p[p.length - 1] > len + 1e-9 || p[0] < -1e-9) return m;
-      ng = { ...g, ts: p.map(r6) };
+      const p = setSeg([0, ...ds, len], ds.map((_, i) => i + 1));
+      if (!p) return m;
+      ng = { ...g, ts: p.slice(1, -1).map(r6) };
     } else if (g.kind === 'circle') ng = { ...g, r: r6(v) };
     return ng ? replaceGroup(m, g.id, ng) : m;
   }
@@ -2492,7 +2527,13 @@
     if (it && !isSelected(sel, it.group, it.index, it.kind)) selectAt(it, {});
     const has = !isEmpty(sel), groupsSel = has && selectedItems(items, sel).some((x) => x.kind !== 'single');
     const off = has && selectedItems(items, sel).some((x) => m.groups.find((g) => g.id === x.group)?.offs?.[x.index]);
-    for (const [k, on] of [['move', has], ['rotate', has], ['ungroup', groupsSel], ['selall', m.groups.length > 0], ['seltype', has], ['reset', off], ['del', has]]) cmenu.querySelector(`[data-cm="${k}"]`).classList.toggle('off', !on);
+    // "Reset layout" for whole groups, "Return to its place" for luminaires within a group (25 Nov 2026)
+    const wholeGroups = m.groups.filter((g) => sel.groups.has(g.id) && g.kind !== 'single');
+    const within = [...sel.points.keys()].some((id) => m.groups.find((g) => g.id === id)?.kind !== 'single');
+    cmenu.querySelector('[data-cm="layout"]').hidden = !wholeGroups.length;
+    cmenu.querySelector('[data-cm="reset"]').hidden = !within;
+    const laid = wholeGroups.some((g) => g.offs || g.ts || g.xs || g.ys);
+    for (const [k, on] of [['move', has], ['rotate', has], ['ungroup', groupsSel], ['selall', m.groups.length > 0], ['seltype', has], ['layout', laid], ['reset', off], ['del', has]]) cmenu.querySelector(`[data-cm="${k}"]`).classList.toggle('off', !on);
     const host = $('#view').getBoundingClientRect();
     cmenu.hidden = false;
     const w = cmenu.offsetWidth, h = cmenu.offsetHeight;
@@ -2520,7 +2561,10 @@
       const f = firstOf(sel); if (f) focusGroup(f.group, 0);
       loadGroupForm(); refresh();
     } else if (k === 'selall') selectAll();
-    else if (k === 'reset') {
+    else if (k === 'layout') {
+      const next = resetLayout(m, sel);
+      if (next !== m) { remember(m); activeRoom().model = next; previewLums(); autosave(); loadGroupForm(); refresh(); }
+    } else if (k === 'reset') {
       const next = resetOffsets(m, sel);
       if (next !== m) { remember(m); activeRoom().model = next; autosave(); loadGroupForm(); refresh(); }
     } else if (k === 'seltype') {
@@ -2631,7 +2675,7 @@
           guides.push({ kind: 'line', z: g.hm, segments: Array.from({ length: n }, (_, k) => [pt(k), pt(k + 1)]) });
         }
       }
-      else if (g.kind === 'line') guides.push({ kind: 'line', segments: [[[g.x0, g.y0], [g.x1, g.y1]]], z: g.hm, arrows: true });
+      else if (g.kind === 'line') guides.push({ kind: 'line', segments: [[[g.x0, g.y0], [g.x1, g.y1]]], z: g.hm });
       else if (g.kind === 'grid' && g.area) { const a = g.area; guides.push({ kind: 'line', z: g.hm, segments: [[[a.x0, a.y0], [a.x1, a.y0]], [[a.x1, a.y0], [a.x1, a.y1]], [[a.x1, a.y1], [a.x0, a.y1]], [[a.x0, a.y1], [a.x0, a.y0]]] }); }
     }
     if (drawing && pend) {
@@ -2644,7 +2688,11 @@
       mode: info.mode, P, k: info.mode === '2d' ? info.T.k : 0.01,
       items: planItems(m, sizeOf), color: (ty) => typeColorOf(m, kOf.get(ty) ?? 0),
       selected: (it) => isSelected(sel, it.group, it.index, it.kind), hovered: (it) => hoverItem === `${it.group}:${it.index}` || hoverItem === `${it.group}:*`, grid: planGrid(m), L: m.room.shape.L, W: m.room.shape.W,
-      guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad, snap: snapMark, snapGuide, snapText: true,
+      guides, box: drag?.mode === 'box' ? [drag.x0, drag.y0, drag.x1, drag.y1] : null, accent, bad, snap: snapMark, snapGuide, dark: isDark(),
+      // the move as in 3ds Max: the rubber band from the start point and the ghost of the selection
+      rubber: drag?.mode === 'move' && drag.src ? { a: drag.src, b: { x: drag.src.x + drag.d[0], y: drag.src.y + drag.d[1] }, z: editZ(), snapped: !!snapMark?.snapped } : null,
+      moveGhost: drag?.mode === 'move' && model() !== drag.base ? selectedItems(planItems(drag.base, sizeOf), sel) : null,
+      axes: (() => { const eg = editGroup(m); return eg ? axesOf(m, eg).map((q) => ({ ...q, hot: hoverAxis === q.id || (drag?.mode === 'handle' && drag.h === q.id) })) : null; })(),
       gizmo: gz && { ...gz, active: drag?.axis ?? null, hover: hoverHandle, angle: drag?.mode === 'rotate' ? drag.ang : null },
       handles: (() => { const eg = editGroup(m); return eg ? handlesOf(m, eg, P).filter((q) => q.shape !== 'none') : null; })(),
       dims: info.mode === '2d' ? (() => { const eg = editGroup(m); return eg ? dimsOf(m, eg, P) : null; })() : null,
@@ -2740,18 +2788,22 @@
     if (eg && (type === 'hover' || type === 'down')) {
       const dm = e.mode === '2d' ? dimsOf(m, eg, e.project).find((d) => e.px >= d.r[0] && e.px <= d.r[0] + d.r[2] && e.py >= d.r[1] && e.py <= d.r[1] + d.r[3]) : null;
       const hd = dm ? null : handlesOf(m, eg, e.project).find((q) => Math.hypot(q.at[0] - e.px, q.at[1] - e.py) <= 8);
+      // an axis of the luminaires, away from their housings (the housing first)
+      const ax = dm || hd || pick() ? null : axisAt(m, eg, e.project, e.px, e.py);
       if (type === 'hover') {
         const hid = dm?.id ?? null;
         if (hid !== hoverDim) { hoverDim = hid; view?.refresh(); }
+        if ((ax?.id ?? null) !== hoverAxis) { hoverAxis = ax?.id ?? null; view?.refresh(); }
         if (dm) { hoverOn(null); return 'pointer'; }
         if (hd) { hoverOn(null); return hd.cursor ?? 'move'; }
+        if (ax) { hoverOn(null); if (snapMark) { snapMark = null; view?.refresh(); } return ax.cursor; }
       } else if (dm) { openDimEdit(dm, eg); return true; }
-      else if (hd) { hoverOn(null); drag = { mode: 'handle', h: hd.id, g: eg.id, base: m }; return true; }
+      else if (hd || ax) { hoverOn(null); drag = { mode: 'handle', h: (hd ?? ax).id, g: eg.id, base: m }; return true; }
     }
     if (type === 'hover') {
-      if (hoverDim) { hoverDim = null; view?.refresh(); }
+      if (hoverDim || hoverAxis) { hoverDim = null; hoverAxis = null; view?.refresh(); }
       // the mark of the snap under the pointer with W (25 Nov 2026)
-      if (tool === 'move' && planGrid(m).snap && Number.isFinite(e.x)) { const before = snapMark; snapped(e.x, e.y, e.k, sel); if (JSON.stringify(before) !== JSON.stringify(snapMark)) view?.refresh(); }
+      if (tool === 'move' && planGrid(m).snap && Number.isFinite(e.x)) { const before = snapMark; snapAt(e.x, e.y, e.k); if (JSON.stringify(before) !== JSON.stringify(snapMark)) view?.refresh(); }
       else if (snapMark) { snapMark = null; view?.refresh(); }
       const h = gz ? gizmoHit(tool, [e.px, e.py], gz) : null;
       if (h !== hoverHandle) { hoverHandle = h; view?.refresh(); }
@@ -2766,25 +2818,23 @@
     if (type === 'click') { selectAt(pick(), e); return undefined; }   // 3D: a click without a drag
     if (type === 'down') {
       const h = gz ? gizmoHit(tool, [e.px, e.py], gz) : null;
-      const startMove = (axis, anchor0) => {
-        // the base point: a corner or point of a selected housing under the pointer, else the centre
-        let anchor = anchor0;
-        if (axis === 'xy' && planGrid(m).snap) {
-          let bd = 8 * e.k;
-          for (const it of selectedItems(itemsNow(), sel)) for (const f of lumFeatures(it)) {
-            const q = e.mode === '2d' ? [f[0], f[1]] : null;
-            const d2 = q ? Math.hypot(q[0] - e.x, q[1] - e.y) : Infinity;
-            if (d2 < bd) { bd = d2; anchor = { x: f[0], y: f[1] }; }
-          }
+      const startMove = (axis, anchor0, fromGizmo = false) => {
+        // as in 3ds Max (25 Nov 2026): from the gizmo its centre; else the snap point of the
+        // selection (or the grid node) within 20 px of the press, else the point pressed itself
+        let src = fromGizmo ? anchor0 : { x: e.x, y: e.y };
+        if (!fromGizmo && planGrid(m).snap) {
+          const own = selectedItems(itemsNow(), sel);
+          const p = snapNear(e.x, e.y, planGrid(m), m.room.shape.L, m.room.shape.W, own, 20 * e.k, 20 * e.k);
+          if (p) src = { x: p.x, y: p.y };
         }
-        drag = { mode: 'move', axis, x0: e.x, y0: e.y, anchor, base: model(), items: selectedItems(itemsNow(), sel), d: [0, 0], frame: selFrame(model()) };
+        drag = { mode: 'move', axis, src, base: model(), items: selectedItems(itemsNow(), sel), d: [0, 0] };
       };
       hoverOn(null);
       if (h === 'z' && tool === 'move') {
         drag = { mode: 'lift', axis: 'z', px0: e.px, py0: e.py, zv: gz.zv, base: m, dz: 0 };
         view?.refresh(); return true;
       }
-      if (h && tool === 'move') { startMove(h, { x: gz.c.x, y: gz.c.y }); view?.refresh(); return true; }
+      if (h && tool === 'move') { startMove(h, { x: gz.c.x, y: gz.c.y }, true); view?.refresh(); return true; }
       if (h && tool === 'rotate') {
         drag = { mode: 'rotate', axis: 'z', cx: gz.c.x, cy: gz.c.y, a0: Math.atan2(e.y - gz.c.y, e.x - gz.c.x), base: m, ang: 0 };
         view?.refresh(); return true;
@@ -2806,33 +2856,33 @@
     }
     if (!drag) return undefined;
     if (type === 'move') {
-      if (drag.mode === 'move' && drag.frame && drag.axis !== 'xy') {
-        // a luminaire of a line: along the line its distance ts, across an offset (25 Nov 2026)
+      if (drag.mode === 'move') {
         if (!Number.isFinite(e.x)) return undefined;
-        const f = drag.frame, w = drag.axis === 'x' ? f.u : f.v;
-        snapMark = null;
-        let a = (e.x - drag.x0) * w[0] + (e.y - drag.y0) * w[1];
-        if (planGrid(m).snap) a = Math.round(a / 0.05) * 0.05;
-        if (a !== drag.a) {
-          drag.a = a;
-          activeRoom().model = drag.axis === 'x' ? slideOnLine(drag.base, f, a) : moveSelection(drag.base, sel, a * w[0], a * w[1]);
-          previewLums(); if (drag.axis === 'x') loadGroupForm();
-        }
-      } else if (drag.mode === 'move') {
-        if (!Number.isFinite(e.x)) return undefined;
-        let [dx, dy] = constrain(drag.axis, e.x - drag.x0, e.y - drag.y0);
-        snapGuide = null;
-        if (planGrid(m).snap) {
-          // as in 3ds Max: the free pointer snaps (the base point follows it), an arrow keeps its axis
-          const p = snapped(drag.anchor.x + e.x - drag.x0, drag.anchor.y + e.y - drag.y0, e.k, sel);
-          [dx, dy] = constrain(drag.axis, p.x - drag.anchor.x, p.y - drag.anchor.y);
-          if (drag.axis !== 'xy' && p.kind && p.kind !== 'grid') snapGuide = [p, { x: drag.anchor.x + dx, y: drag.anchor.y + dy, z: editZ() }];
-        }
+        // the target: the snap point within 20 px of the pointer, else the pointer; an arrow keeps
+        // its axis, with a dashed line from the snap point (25 Nov 2026)
+        let tx = e.x, ty = e.y;
+        snapGuide = null; snapMark = null;
+        if (planGrid(m).snap) { const p = snapAt(e.x, e.y, e.k, sel); if (p?.snapped) { tx = p.x; ty = p.y; } }
+        const [dx, dy] = constrain(drag.axis, tx - drag.src.x, ty - drag.src.y);
+        if (snapMark?.snapped && drag.axis !== 'xy') snapGuide = [snapMark, { x: drag.src.x + dx, y: drag.src.y + dy, z: editZ() }];
         const d = clampDelta(drag.items, dx, dy, m.room.shape.L, m.room.shape.W);
         if (d[0] !== drag.d[0] || d[1] !== drag.d[1]) { drag.d = d; activeRoom().model = moveSelection(drag.base, sel, d[0], d[1]); previewLums(); }
+        else view?.refresh();
       } else if (drag.mode === 'handle') {
         if (!Number.isFinite(e.x)) return undefined;
-        const p = planGrid(m).snap ? snapped(e.x, e.y, e.k) : { x: e.x, y: e.y };
+        let p = { x: e.x, y: e.y };
+        if (/^(ax|ay|lt):/.test(drag.h)) {
+          // an axis: the snap point within 20 px (not of its own group), else the pointer; a line — 5 cm
+          snapMark = null;
+          const q = planGrid(m).snap ? snapAt(e.x, e.y, e.k, { groups: new Set([drag.g]), points: new Map() }) : null;
+          if (q?.snapped && !(drag.h.startsWith('lt') && q.kind === 'grid')) p = q;
+          else if (drag.h.startsWith('lt') && planGrid(m).snap) {
+            if (snapMark?.kind === 'grid') snapMark = null;
+            const g = drag.base.groups.find((x) => x.id === drag.g), len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) || 1;
+            const t = Math.round((((e.x - g.x0) * (g.x1 - g.x0) + (e.y - g.y0) * (g.y1 - g.y0)) / len) / 0.05) * 0.05;
+            p = { x: g.x0 + (g.x1 - g.x0) * t / len, y: g.y0 + (g.y1 - g.y0) * t / len };
+          }
+        } else if (planGrid(m).snap) p = snapped(e.x, e.y, e.k);
         const next = applyHandle(drag.base, drag.g, drag.h, p.x, p.y);
         if (next !== model()) { activeRoom().model = next; previewLums(); }
       } else if (drag.mode === 'lift') {

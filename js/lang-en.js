@@ -62,7 +62,7 @@ export default {
 
   lum: {
     tipGrid: 'grid {nx} × {ny}', tipLine: 'line, {n} pcs', tipCircle: 'circle, {n} pcs',
-    menu: { move: 'Move', rotate: 'Rotate', typeIn: 'Type in values', ungroup: 'Ungroup', selType: 'Select all of this type', del: 'Delete', abs: 'Absolute', off: 'Offset', selAll: 'Select all', reset: 'Return to its place in the group' },
+    menu: { move: 'Move', rotate: 'Rotate', typeIn: 'Type in values', ungroup: 'Ungroup', selType: 'Select all of this type', del: 'Delete', abs: 'Absolute', off: 'Offset', selAll: 'Select all', reset: 'Return to its place in the group', layout: 'Reset layout' },
     kindOff: 'Add a luminaire first', pick: 'Pick the count', pickTip: 'The count by the utilisation factor method, as in version 1',
     colorMore: 'More colours', dropTitle: 'Drop an IES or LDT file', dropSub: 'or click to choose', dropAdd: 'Release to add the luminaire',
     dropList: 'Drop IES or LDT files here', modeRoom: 'Room', modeProject: 'Project', none: 'No luminaires yet', cosine: 'No file',

@@ -191,3 +191,19 @@ test('a luminaire moved within its group: an offset that follows the group, rese
   const cm = cleanModel(f);
   assert.deepEqual(cm.groups[0].offs, { 1: { dx: 0.5 } });
 });
+
+test('snaps as in 3ds Max: preview within 30 px, snapped within 20 px; reset of a layout (25 Nov 2026)', async () => {
+  const { snapNear, resetLayout, PLAN_GRID } = await import('../js/planedit.js');
+  const grid = { ...PLAN_GRID, modes: { grid: false, vertex: true, mid: true, centre: true } };
+  const lum = { x: 2, y: 2, a: 0.4, b: 0.2, psi: 0 };
+  // 1 px = 0.01 m: 30 px = 0.3 m, 20 px = 0.2 m
+  assert.deepEqual(snapNear(2.25, 2, grid, 6, 4, [lum], 0.3, 0.2), { x: 2.2, y: 2, kind: 'mid', snapped: true });
+  assert.equal(snapNear(2.45, 2.0, grid, 6, 4, [lum], 0.3, 0.2).snapped, false);
+  assert.equal(snapNear(3.5, 1, grid, 6, 4, [lum], 0.3, 0.2), null);
+  const gridOn = { ...PLAN_GRID };
+  assert.equal(snapNear(3.51, 1.02, gridOn, 6, 4, [], 0.3, 0.2).kind, 'grid');
+  const m = { groups: [{ id: 'g', kind: 'line', ts: [1], offs: { 0: { dx: 1 } } }, { id: 'h', kind: 'grid', xs: [1, 2] }] };
+  const r = resetLayout(m, { groups: new Set(['g']), points: new Map() });
+  assert.deepEqual(r.groups[0], { id: 'g', kind: 'line' });
+  assert.equal(r.groups[1], m.groups[1]);
+});
