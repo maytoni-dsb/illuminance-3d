@@ -110,6 +110,7 @@ export default {
     tool: { select: 'Select', move: 'Select and move', rotate: 'Select and rotate' },
     gridTip: 'Plan grid. Settings: right click',
     snapTip: 'Snap. Settings: right click',
+    settings: 'Settings',
     gridShow: 'Plan grid',
     gridSet: 'Grid settings',
     step: 'Step, m',
@@ -283,7 +284,7 @@ export default {
     label: 'Help: {title}',
     keys: '<b>F1</b> — help on the field (outside a field — on the stage); <b>F2</b> — plan (2D); <b>F3</b> — 3D view; ' +
       '<b>F4</b> — show or hide the calculation surface; <b>F5</b> — calculate (when the automatic calculation is off); ' +
-      '<b>F9</b> — false colours; <b>F10</b> — initial view; <b>Ctrl+S</b> — save the project.',
+      '<b>F8</b> — photometric body; <b>F9</b> — false colours; <b>F10</b> — initial view; <b>Ctrl+S</b> — save the project.',
     topics: {
       stage1: {
         title: 'Stage 1. Project',
@@ -368,7 +369,7 @@ export default {
           '<b>Plan:</b> right or middle button — pan, wheel — zoom; the left button does nothing.<br>' +
           'Double click with the wheel — fit the current view into the window. “Initial view” returns the initial angle (on the plan — fits the plan).<br>' +
           'On a touch screen: one finger — rotate (on the plan — pan), two — pan and zoom.<br>' +
-          '<b>F2</b> — plan, <b>F3</b> — 3D, <b>F4</b> — surface, <b>F9</b> — false colours, <b>F10</b> — initial view.',
+          '<b>F2</b> — plan, <b>F3</b> — 3D, <b>F4</b> — surface, <b>F8</b> — photometric body, <b>F9</b> — false colours, <b>F10</b> — initial view.',
       },
       'f:roomname': { title: 'Room name', text: 'Under this name the room appears in the list of rooms, in the contents and the headings of the report.' },
       'f:L': { title: 'Length L', text: 'The size of the room along the X axis, 1…50 m.' },
@@ -437,7 +438,7 @@ export default {
     plane: 'Calculation surface', planeShow: 'Show the calculation surface', planePick: 'Choose the calculation surface',
     showPlane: 'Show {name}', hidePlane: 'Hide {name}', noPlane: 'Do not show',
     normative: 'assessed', noResult: 'No calculation result',
-    falseColors: 'False colours', plan: 'Plan', planTip: '2D view (plan)', view3d: '3D view', reset: 'Initial view',
+    falseColors: 'False colours', ldc: 'Photometric body', ldcSize: 'Size', ldcScale: 'Scale', ldcScaleI: 'By luminous intensity', ldcScaleEq: 'Equally large', ldcWho: 'Show', ldcAll: 'For all luminaires', ldcSel: 'Only for the selected', plan: 'Plan', planTip: '2D view (plan)', view3d: '3D view', reset: 'Initial view',
     helpView: 'Help: view controls',
     legend: 'Illuminance scale', legendUnit: 'E, lx', andAbove: '{v} and above',
     results: 'Results', helpResults: 'Help: results',

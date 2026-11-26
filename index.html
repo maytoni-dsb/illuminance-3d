@@ -28,14 +28,15 @@
       "./js/groups.js": "./js/groups.js?v=e0b40370",
       "./js/groupui.js": "./js/groupui.js?v=3b366b6f",
       "./js/help.js": "./js/help.js?v=98159935",
-      "./js/hotkeys.js": "./js/hotkeys.js?v=1af19d09",
+      "./js/hotkeys.js": "./js/hotkeys.js?v=d8f7848c",
       "./js/i18n.js": "./js/i18n.js?v=7978e7e6",
       "./js/isolines.js": "./js/isolines.js?v=d6c3ab74",
       "./js/kernel.js": "./js/kernel.js?v=fe245a95",
-      "./js/lang-de.js": "./js/lang-de.js?v=df8d65e5",
-      "./js/lang-en.js": "./js/lang-en.js?v=25ec9bde",
-      "./js/lang-ru.js": "./js/lang-ru.js?v=243cfe83",
-      "./js/model.js": "./js/model.js?v=be166f40",
+      "./js/lang-de.js": "./js/lang-de.js?v=36227899",
+      "./js/lang-en.js": "./js/lang-en.js?v=39b7fe63",
+      "./js/lang-ru.js": "./js/lang-ru.js?v=4c068196",
+      "./js/ldcbody.js": "./js/ldcbody.js?v=f9f533f7",
+      "./js/model.js": "./js/model.js?v=1262f230",
       "./js/norms-data.js": "./js/norms-data.js?v=33cc3a38",
       "./js/norms.js": "./js/norms.js?v=e013f781",
       "./js/normui.js": "./js/normui.js?v=0bd551f6",
@@ -44,7 +45,7 @@
       "./js/photometry.js": "./js/photometry.js?v=5ea77d42",
       "./js/photui.js": "./js/photui.js?v=51d36bb9",
       "./js/planedit.js": "./js/planedit.js?v=51b1726d",
-      "./js/planview.js": "./js/planview.js?v=aecfb713",
+      "./js/planview.js": "./js/planview.js?v=16aecfff",
       "./js/project.js": "./js/project.js?v=3155618c",
       "./js/report.js": "./js/report.js?v=f66adf22",
       "./js/reportsvg.js": "./js/reportsvg.js?v=23982fbf",
@@ -640,7 +641,21 @@
     .epill > button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
     .epill > button[aria-pressed="true"] sub{color:rgba(255,255,255,.7)}
     .epill > button[aria-expanded="true"]::after,.epill > button[aria-expanded="true"]::before{display:none}
-    .epill > button .earc{position:absolute;inset:-1px;width:34px;height:34px;opacity:.7;pointer-events:none}
+    /* the sign of settings (26 Nov 2026): a dot at the bottom of the button, on hover a gear there
+       (a click on it opens the settings); the right button and a long press still open them */
+    .edot{position:absolute;left:50%;bottom:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.6;pointer-events:none}
+    .egear{position:absolute;left:50%;bottom:-7px;width:17px;height:17px;margin-left:-8.5px;border-radius:50%;background:var(--card);border:1px solid var(--rule);color:var(--ink);display:none;place-items:center;cursor:pointer;z-index:2}
+    .egear:hover{border-color:var(--ink)}
+    button:hover > .egear,button[aria-expanded="true"] > .egear{display:grid}
+    button:hover > .edot,button[aria-expanded="true"] > .edot{display:none}
+    @media (hover:none){ .egear{display:none !important} .edot{display:block !important} }
+    /* the photometric body (2.1b): a round button of the view with its settings below it */
+    .ldcw{position:relative;display:flex}
+    .ldcw .epop{left:auto;right:0;width:250px}
+    .ldcw > button[aria-expanded="true"]::after{display:none}
+    .eprad{display:flex;align-items:center;gap:8px;height:28px;font-size:13px;cursor:pointer}
+    .eprange{width:100%;margin:0 0 10px}
+    body.nolums .ldcw{visibility:hidden}
     .epop{position:absolute;top:calc(100% + 8px);left:0;z-index:20;width:240px;padding:14px 16px;background:var(--card);border:1px solid var(--rule);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.10)}
     .eplab{font-size:12px;color:var(--muted);margin:0 0 6px}
     .eprow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
@@ -873,6 +888,20 @@
           <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M10 2.8 16.5 6.4v7.2L10 17.2 3.5 13.6V6.4z"/><path d="M3.5 6.4 10 10l6.5-3.6M10 10v7.2"/></svg></button>
         <button type="button" class="vbtn" id="reset" data-i18n-attr="aria-label:app.reset;data-tip:app.reset" data-key="F10">
           <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 1 0 2-4.7"/><path d="M3.5 3.5v3h3"/></svg></button>
+        <div class="ldcw">
+          <button type="button" class="vbtn" id="ldcon" aria-pressed="false" aria-haspopup="true" aria-expanded="false" data-i18n-attr="aria-label:app.ldc;data-tip:app.ldc" data-key="F8">
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h16"/><path d="M10 4.5c3.6 0 5.6 4.5 4.6 8.1-.8 3-3 4.9-4.6 4.9s-3.8-1.9-4.6-4.9C4.4 9 6.4 4.5 10 4.5z"/><path d="M10 4.5v13" stroke-width="1" opacity=".55"/></svg><span class="edot" aria-hidden="true"></span><span class="egear" data-i18n-attr="title:lum.settings"><svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></svg></span></button>
+          <div class="epop" id="ldcpop" hidden>
+            <div class="eplab" data-i18n="app.ldcSize"></div>
+            <input type="range" class="eprange" id="ldcsize" min="0.3" max="2" step="0.05" data-i18n-attr="aria-label:app.ldcSize">
+            <div class="eplab" data-i18n="app.ldcScale"></div>
+            <label class="eprad"><input type="radio" name="ldcscale" value="I"> <span data-i18n="app.ldcScaleI"></span></label>
+            <label class="eprad"><input type="radio" name="ldcscale" value="eq"> <span data-i18n="app.ldcScaleEq"></span></label>
+            <div class="eplab" style="margin-top:8px" data-i18n="app.ldcWho"></div>
+            <label class="eprad"><input type="radio" name="ldcwho" value="all"> <span data-i18n="app.ldcAll"></span></label>
+            <label class="eprad"><input type="radio" name="ldcwho" value="sel"> <span data-i18n="app.ldcSel"></span></label>
+          </div>
+        </div>
         <button type="button" class="vbtn help" data-help="view" data-i18n-attr="aria-label:app.helpView" aria-expanded="false">?</button>
       </div>
       <div class="etools" id="etools" hidden>
@@ -880,13 +909,13 @@
           <button type="button" class="tipl on" data-tool="select" aria-pressed="true" data-i18n-attr="aria-label:lum.tool.select;data-tip:lum.tool.select" data-key="Q">
             <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5l10.5 6.2-4.6 1.1 2.7 5.2-1.9 1-2.7-5.2-3.3 3.3z"/></svg></button>
           <button type="button" class="tipl" data-tool="move" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.move;data-tip:lum.tool.move" data-key="W">
-            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5v15M2.5 10h15"/><path d="M7.8 4.7L10 2.5l2.2 2.2M7.8 15.3L10 17.5l2.2-2.2M4.7 7.8L2.5 10l2.2 2.2M15.3 7.8l2.2 2.2-2.2 2.2"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5v15M2.5 10h15"/><path d="M7.8 4.7L10 2.5l2.2 2.2M7.8 15.3L10 17.5l2.2-2.2M4.7 7.8L2.5 10l2.2 2.2M15.3 7.8l2.2 2.2-2.2 2.2"/></svg><span class="edot" aria-hidden="true"></span><span class="egear" data-i18n-attr="title:lum.settings"><svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></svg></span></button>
           <button type="button" class="tipl" data-tool="rotate" aria-pressed="false" data-i18n-attr="aria-label:lum.tool.rotate;data-tip:lum.tool.rotate" data-key="E">
-            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.8 8.2A6.2 6.2 0 1 0 16 12"/><path d="M16.2 3.8v4.6h-4.6"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.8 8.2A6.2 6.2 0 1 0 16 12"/><path d="M16.2 3.8v4.6h-4.6"/></svg><span class="edot" aria-hidden="true"></span><span class="egear" data-i18n-attr="title:lum.settings"><svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></svg></span></button>
         </div>
         <div class="epill">
           <button type="button" class="tipl" id="gridon" aria-pressed="true" aria-haspopup="true" data-i18n-attr="aria-label:lum.gridShow;data-tip:lum.gridTip" data-key="G">
-            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7.7 3v14M12.3 3v14M3 7.7h14M3 12.3h14"/></svg><svg class="earc" viewBox="0 0 34 34" aria-hidden="true"><path d="M29.5 21.5A13 13 0 0 1 21.5 29.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7.7 3v14M12.3 3v14M3 7.7h14M3 12.3h14"/></svg><span class="edot" aria-hidden="true"></span><span class="egear" data-i18n-attr="title:lum.settings"><svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></svg></span></button>
           <div class="epop" id="gridpop" hidden>
             <div class="eplab" data-i18n="lum.step"></div>
             <div class="eprow"><label><span>X</span><input id="pg-sx" inputmode="decimal" autocomplete="off"></label><label><span>Y</span><input id="pg-sy" inputmode="decimal" autocomplete="off"></label></div>
@@ -897,7 +926,7 @@
         </div>
         <div class="epill">
           <button type="button" class="tipl" id="snapon" aria-pressed="true" aria-haspopup="true" data-i18n-attr="aria-label:lum.snap;data-tip:lum.snapTip" data-key="S">
-            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v6.2a5 5 0 0 0 10 0V3.5"/><path d="M5 3.5h3v6.2a2 2 0 0 0 4 0V3.5h3"/><path d="M5 6.5h3M12 6.5h3"/></svg><svg class="earc" viewBox="0 0 34 34" aria-hidden="true"><path d="M29.5 21.5A13 13 0 0 1 21.5 29.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+            <svg class="ti" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v6.2a5 5 0 0 0 10 0V3.5"/><path d="M5 3.5h3v6.2a2 2 0 0 0 4 0V3.5h3"/><path d="M5 6.5h3M12 6.5h3"/></svg><span class="edot" aria-hidden="true"></span><span class="egear" data-i18n-attr="title:lum.settings"><svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M3.6 12.4l1.2-1.2M11.2 4.8l1.2-1.2"/></svg></span></button>
           <div class="epop" id="snappop" hidden>
             <label class="eck"><input type="checkbox" data-mode="grid"> <span data-i18n="lum.snapGrid"></span></label>
             <label class="eck"><input type="checkbox" data-mode="vertex"> <span data-i18n="lum.snapVertex"></span></label>
@@ -1071,13 +1100,14 @@
   import { initHelp } from './js/help.js';
   import { levelStatus, bilinear, cellStats } from './js/workplane.js';
   import { isolineSet } from './js/isolines.js';
-  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D, drawEditor, silhouettePoly } from './js/planview.js';
+  import { drawRoomPlan, drawPlaneOnPlan, drawPlane3D, drawEditor, silhouettePoly, drawBodies } from './js/planview.js';
   import { stage6Checks } from './js/checks6.js';
   import { meanCurve, estimate, gridFor } from './js/estimate.js';
   import { createPhotometry } from './js/photometry.js';
+  import { bodyLines, maxIntensity, bodyScales, cleanLdc } from './js/ldcbody.js';
   import {
     formValues, roomValues, typeValues, applyRoomValues, applyTypeValues, withTypeFile, renameType, addType, removeType,
-    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors, ungroupGroup, assignColors, typeNumbers, TYPE_COLORS,
+    addGroup, addPoint, replaceGroup, placementErrors, lumCount, calcParams as modelCalcParams, lumInstances, planGrid, typeColorOf, setTypeColor, duplicateType, freeColors, ungroupGroup, assignColors, typeNumbers, TYPE_COLORS,
   } from './js/model.js';
   import { groupPoints, basePoints, groupCount, fullCircle } from './js/groups.js';
   import { renderKinds, renderLumList as renderLumListHost, initGroupForm, typeName, typeMark, swatchesHtml, paletteHtml, PALETTE } from './js/groupui.js';
@@ -1160,6 +1190,7 @@
         // the empty room (no luminaires) is shown lit from the camera: kept in step on every draw
         if (activeRoom() && document.body.classList.contains('nolums') !== (stage === 2 && !model().groups.length)) queueMicrotask(applyColorMode);
         $('#etools').hidden = stage !== 2;
+        $('.ldcw').style.visibility = stage === 2 ? '' : 'hidden'; // the photometric body: the editor's stage only
         const accent = getComputedStyle($('.viewcard')).getPropertyValue('--accent').trim() || '#7C54FE';
         if (info.mode === '2d') {
           // the axes of the selected grid (stage 2.1; the plan editor draws every luminaire)
@@ -1169,11 +1200,11 @@
           const css = getComputedStyle($('.viewcard'));
           drawRoomPlan(ctx, info.T, size, { L: room.L, W: room.W, xs, ys, dims: false, ink: css.getPropertyValue('--ink2').trim() || '#2e2e2e' });
           if (planDraw) drawPlaneOnPlan(ctx, info.T, size, planDraw);
-          if (m) drawEditor(ctx, size, editorDraw(m, '#ffffff', info));
+          if (m) { drawLdc(ctx, m, info); drawEditor(ctx, size, editorDraw(m, '#ffffff', info)); }
         } else {
           if (planDraw) drawPlane3D(ctx, info.project, size, planDraw);
           const m = activeRoom()?.model;
-          if (m && stage === 2) drawEditor(ctx, size, editorDraw(m, '#ffffff', info));
+          if (m && stage === 2) { drawLdc(ctx, m, info); drawEditor(ctx, size, editorDraw(m, '#ffffff', info)); }
         }
       },
       onPlanPointer: (type, e) => planPointer(type, e),
@@ -3098,22 +3129,85 @@
   $('#snappop').addEventListener('change', (e) => { const c = e.target.closest('input[data-mode]'); if (c) setPlanGrid({ modes: { [c.dataset.mode]: c.checked } }); });
   $('#gridon').addEventListener('click', () => setPlanGrid({ show: !planGrid(model()).show }));
   $('#snapon').addEventListener('click', () => setPlanGrid({ snap: !planGrid(model()).snap }));
-  // the settings of the grid and the snaps (25 Nov 2026): the right button or a long press on the
-  // button, an arc at its edge tells of them; a click switches
-  const closeEPops = () => { for (const p of ['#gridpop', '#snappop']) $(p).hidden = true; for (const b of ['#gridon', '#snapon']) $(b).setAttribute('aria-expanded', 'false'); };
-  for (const [btn, pop] of [['#gridon', '#gridpop'], ['#snapon', '#snappop']]) {
+  // the settings of the grid, the snaps and the photometric body (25 Nov 2026): the right button or a
+  // long press on the button; a click switches
+  // (26 Nov 2026) the sign is a dot at the bottom of the button, a gear there on hover: a click on the gear opens them
+  const POPS = [['#gridon', '#gridpop'], ['#snapon', '#snappop'], ['#ldcon', '#ldcpop']];
+  const closeEPops = () => { for (const [b, p] of POPS) { $(p).hidden = true; $(b).setAttribute('aria-expanded', 'false'); } };
+  for (const [btn, pop] of POPS) {
     const b = $(btn);
-    const openPop = () => { const was = !$(pop).hidden; closeEPops(); if (!was) { $(pop).hidden = false; b.setAttribute('aria-expanded', 'true'); } };
+    const openPop = () => { const was = !$(pop).hidden; closeEPops(); if (!was) { if (btn === '#ldcon') fillLdcPop(); $(pop).hidden = false; b.setAttribute('aria-expanded', 'true'); } };
     b.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); openPop(); });
+    b.addEventListener('click', (e) => { if (e.target.closest('.egear')) { e.preventDefault(); e.stopImmediatePropagation(); openPop(); } }, true);
     let timer = null;
     b.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; b.dataset.long = ''; timer = setTimeout(() => { b.dataset.long = '1'; openPop(); }, 500); });
     for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(timer));
     b.addEventListener('click', (e) => { if (b.dataset.long) { e.stopImmediatePropagation(); b.dataset.long = ''; } }, true);
   }
   document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.epill')) return;
+    if (e.target.closest('.epill') || e.target.closest('.ldcw')) return;
     closeEPops();
   });
+  // the gears of the tools move and rotate (26 Nov 2026): the tool and its type-in window
+  for (const b of $('#etool').querySelectorAll('button[data-tool="move"],button[data-tool="rotate"]')) {
+    b.addEventListener('click', (e) => {
+      if (!e.target.closest('.egear')) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      setTool(b.dataset.tool); openTypeIn(b.dataset.tool);
+    }, true);
+  }
+  // ---- the photometric body (stage 2.1b): button, F8, settings kept in this browser ----
+  const LDC_STORE = 'lcalc.v2.ldc';
+  let ldc = (() => { try { return cleanLdc(JSON.parse(localStorage.getItem(LDC_STORE) ?? 'null')); } catch (e) { return cleanLdc(null); } })();
+  function setLdc(v) {
+    ldc = cleanLdc({ ...ldc, ...v });
+    try { localStorage.setItem(LDC_STORE, JSON.stringify(ldc)); } catch (e) { /* full or blocked */ }
+    $('#ldcon').setAttribute('aria-pressed', String(ldc.on));
+    view?.refresh();
+  }
+  function fillLdcPop() {
+    $('#ldcsize').value = String(ldc.size);
+    for (const r of $('#ldcpop').querySelectorAll('input[type=radio]')) r.checked = r.value === (r.name === 'ldcscale' ? ldc.scale : ldc.who);
+  }
+  $('#ldcon').setAttribute('aria-pressed', String(ldc.on));
+  $('#ldcon').addEventListener('click', () => setLdc({ on: !ldc.on }));
+  $('#ldcsize').addEventListener('input', (e) => setLdc({ size: Number(e.target.value) }));
+  $('#ldcpop').addEventListener('change', (e) => {
+    const r = e.target.closest('input[type=radio]');
+    if (r) setLdc(r.name === 'ldcscale' ? { scale: r.value } : { who: r.value });
+  });
+  /** The bodies of the room (lines in room coordinates), kept until the model or the size changes. */
+  const ldcCache = { m: null, key: '', bodies: [] };
+  const photCache = new Map(); // type signature → { phot, imax }
+  function ldcBodies(m) {
+    const key = `${ldc.size}|${ldc.scale}|${m.room.H}`;
+    if (ldcCache.m === m && ldcCache.key === key) return ldcCache.bodies;
+    const p = modelCalcParams(m, fileOfType), imax = new Map(), phots = new Map();
+    for (const ty of p.types) {
+      const sig = `${ty.phot}|${ty.fileKey ?? ''}|${ty.flux}|${ty.fUp ?? ''}`;
+      if (!photCache.has(sig)) {
+        const phot = createPhotometry({ type: ty.phot, flux: ty.flux, fUp: ty.fUp, table: ty.table });
+        photCache.set(sig, { phot, imax: maxIntensity(phot) });
+      }
+      const c = photCache.get(sig);
+      phots.set(ty.id, c.phot); imax.set(ty.id, c.imax);
+    }
+    const scales = bodyScales(imax, m.room.H, ldc.size, ldc.scale);
+    const kind = new Map(m.groups.map((g) => [g.id, g.kind])), kOf = new Map(m.types.map((ty, k) => [ty.id, k]));
+    const bodies = lumInstances(m, fileOfType).map((l) => ({
+      group: l.group, index: l.index, kind: kind.get(l.group), color: typeColorOf(m, kOf.get(l.type) ?? 0),
+      lines: phots.has(l.type) ? bodyLines(phots.get(l.type), l, scales.get(l.type) ?? 0) : [],
+    }));
+    Object.assign(ldcCache, { m, key, bodies });
+    return bodies;
+  }
+  /** Draws the bodies on the overlay: the mesh in 3D, its projection on the plan (26 Nov 2026). */
+  function drawLdc(ctx, m, info) {
+    if (!ldc.on || stage !== 2 || !m?.groups.length) return;
+    const P = info.mode === '2d' ? (x, y) => [info.T.x(x), info.T.y(y)] : (x, y, z) => info.project(x, y, z);
+    const list = ldcBodies(m).map((b) => ({ ...b, sel: isSelected(sel, b.group, b.index, b.kind) })).filter((b) => ldc.who === 'all' || b.sel);
+    drawBodies(ctx, P, list);
+  }
   $('#view').addEventListener('pointerleave', () => hoverOn(null));
   $('#suggest').addEventListener('click', suggestGrid);
   $('#planes').addEventListener('click', (e) => {
@@ -3477,6 +3571,7 @@
     else if (a === 'plane') togglePlaneShown();
     else if (a === 'calc') { if (!autoCalc) calculate(); }
     else if (a === 'falsecolors') $('#falsecolors').click();
+    else if (a === 'ldc') $('#ldcon').click();
     else if (a === 'reset') view?.resetView();
   });
 

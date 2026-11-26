@@ -130,8 +130,9 @@ test('file name from the project name', () => {
 });
 
 test('hot keys', () => {
-  assert.deepEqual(Object.keys(HOTKEYS), ['F1', 'F2', 'F3', 'F4', 'F5', 'F9', 'F10']);
+  assert.deepEqual(Object.keys(HOTKEYS), ['F1', 'F2', 'F3', 'F4', 'F5', 'F8', 'F9', 'F10']);
   assert.equal(hotkeyAction({ key: 'F2' }), 'plan');
+  assert.equal(hotkeyAction({ key: 'F8' }), 'ldc');
   assert.equal(hotkeyAction({ key: 'F5', ctrlKey: true }), null); // Ctrl+F5 stays the browser's
   assert.equal(hotkeyAction({ key: 's', ctrlKey: true }), 'save');
   assert.equal(hotkeyAction({ key: 'x', code: 'KeyS', metaKey: true }), 'save'); // another keyboard layout

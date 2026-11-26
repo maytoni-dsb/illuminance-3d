@@ -8,6 +8,7 @@ export const HOTKEYS = Object.freeze({
   F3: 'view3d',      // 3D view
   F4: 'plane',       // show / hide the work plane (left part of the plane pill)
   F5: 'calc',        // calculate, when the automatic calculation is off
+  F8: 'ldc',         // the photometric body on / off (stage 2.1b, 26 Nov 2026)
   F9: 'falsecolors', // false colors on / off
   F10: 'reset',      // initial view
 });

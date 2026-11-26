@@ -112,6 +112,7 @@ export default {
     tool: { select: 'Auswahl', move: 'Auswählen und verschieben', rotate: 'Auswählen und drehen' },
     gridTip: 'Planraster. Einstellungen: Rechtsklick',
     snapTip: 'Fangen. Einstellungen: Rechtsklick',
+    settings: 'Einstellungen',
     gridShow: 'Planraster',
     gridSet: 'Rastereinstellungen',
     step: 'Schritt, m',
@@ -285,7 +286,7 @@ export default {
     label: 'Hilfe: {title}',
     keys: '<b>F1</b> — Hilfe zum Feld (außerhalb eines Feldes — zur Phase); <b>F2</b> — Grundriss (2D); <b>F3</b> — 3D-Ansicht; ' +
       '<b>F4</b> — Berechnungsfläche ein- oder ausblenden; <b>F5</b> — berechnen (wenn die automatische Berechnung aus ist); ' +
-      '<b>F9</b> — Falschfarben; <b>F10</b> — Ausgangsansicht; <b>Strg+S</b> — Projekt speichern.',
+      '<b>F8</b> — photometrischer Körper; <b>F9</b> — Falschfarben; <b>F10</b> — Ausgangsansicht; <b>Strg+S</b> — Projekt speichern.',
     topics: {
       stage1: {
         title: 'Phase 1. Projekt',
@@ -370,7 +371,7 @@ export default {
           '<b>Grundriss:</b> rechte oder mittlere Taste — Verschieben, Rad — Zoomen; die linke Taste bewirkt nichts.<br>' +
           'Doppelklick mit dem Rad — die aktuelle Ansicht in das Fenster einpassen. „Ausgangsansicht“ stellt den Anfangsblick wieder her (im Grundriss — passt ihn ein).<br>' +
           'Auf einem Touchscreen: ein Finger — Drehen (im Grundriss — Verschieben), zwei — Verschieben und Zoomen.<br>' +
-          '<b>F2</b> — Grundriss, <b>F3</b> — 3D, <b>F4</b> — Fläche, <b>F9</b> — Falschfarben, <b>F10</b> — Ausgangsansicht.',
+          '<b>F2</b> — Grundriss, <b>F3</b> — 3D, <b>F4</b> — Fläche, <b>F8</b> — photometrischer Körper, <b>F9</b> — Falschfarben, <b>F10</b> — Ausgangsansicht.',
       },
       'f:roomname': { title: 'Raumname', text: 'Unter diesem Namen steht der Raum in der Raumliste, im Inhaltsverzeichnis und in den Überschriften des Berichts.' },
       'f:L': { title: 'Länge L', text: 'Die Abmessung des Raums entlang der X-Achse, 1…50 m.' },
@@ -439,7 +440,7 @@ export default {
     plane: 'Berechnungsfläche', planeShow: 'Berechnungsfläche einblenden', planePick: 'Berechnungsfläche wählen',
     showPlane: '{name} einblenden', hidePlane: '{name} ausblenden', noPlane: 'Nicht anzeigen',
     normative: 'bewertet', noResult: 'Kein Berechnungsergebnis',
-    falseColors: 'Falschfarben', plan: 'Grundriss', planTip: '2D-Ansicht (Grundriss)', view3d: '3D-Ansicht', reset: 'Ausgangsansicht',
+    falseColors: 'Falschfarben', ldc: 'Photometrischer Körper', ldcSize: 'Größe', ldcScale: 'Maßstab', ldcScaleI: 'Nach Lichtstärke', ldcScaleEq: 'Gleich groß', ldcWho: 'Anzeigen', ldcAll: 'Bei allen Leuchten', ldcSel: 'Nur bei den ausgewählten', plan: 'Grundriss', planTip: '2D-Ansicht (Grundriss)', view3d: '3D-Ansicht', reset: 'Ausgangsansicht',
     helpView: 'Hilfe: Ansichtssteuerung',
     legend: 'Beleuchtungsstärkeskala', legendUnit: 'E, lx', andAbove: '{v} und mehr',
     results: 'Ergebnisse', helpResults: 'Hilfe: Ergebnisse',

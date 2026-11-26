@@ -577,3 +577,33 @@ function planeSquareOf(g, share = 0.32) {
   const ux = [(g.x[0] - g.o[0]) * share, (g.x[1] - g.o[1]) * share], uy = [(g.y[0] - g.o[0]) * share, (g.y[1] - g.o[1]) * share];
   return [g.o, [g.o[0] + ux[0], g.o[1] + ux[1]], [g.o[0] + ux[0] + uy[0], g.o[1] + ux[1] + uy[1]], [g.o[0] + uy[0], g.o[1] + uy[1]]];
 }
+
+/**
+ * The photometric bodies (stage 2.1b, 26 Nov 2026): polylines in room coordinates projected by P
+ * (3D: the mesh; plan: its projection), in the colour of the luminaire; the selected ones brighter
+ * and thicker. A point P cannot show (behind the camera) breaks the line.
+ * @param {(x, y, z) => [number, number] | null} P
+ * @param {{ lines: number[][][], color: string, sel: boolean }[]} bodies
+ */
+export function drawBodies(ctx, P, bodies) {
+  ctx.save();
+  ctx.lineJoin = 'round';
+  for (const b of bodies) {
+    if (!b.lines.length) continue;
+    ctx.strokeStyle = b.color;
+    ctx.globalAlpha = b.sel ? 0.95 : 0.5;
+    ctx.lineWidth = b.sel ? 1.5 : 1;
+    ctx.beginPath();
+    for (const l of b.lines) {
+      let pen = false;
+      for (const q of l) {
+        const s = P(q[0], q[1], q[2]);
+        if (!s) { pen = false; continue; }
+        if (pen) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]);
+        pen = true;
+      }
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}

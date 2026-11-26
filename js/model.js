@@ -303,18 +303,28 @@ export function placementErrors(m, sizeOf = () => null) {
  * @param {(type) => ({ key: string, table: object }|null)} fileOf — the parsed file of a type with a
  *   photometric file chosen (null — the file does not read: the type is calculated as cosine)
  */
-export function calcParams(m, fileOf = () => null) {
+/**
+ * The luminaires of the model as the calculation places them (instances with the housing heights
+ * and plan sizes of the files): { type, group, index, pos, psi, tx?, ty? } — calcParams keeps type,
+ * pos and the angles; the photometric body of the view (2.1b) also needs group and index.
+ */
+export function lumInstances(m, fileOf = () => null) {
   const files = new Map(m.types.map((ty) => [ty.id, ty.photometry === 'file' ? fileOf(ty) : null]));
   const housing = (ty) => files.get(ty.id)?.table?.luminaire?.height || 0;
   // the housing in plan: the way 'edge' of grids and lines keeps it inside (21 Nov 2026)
   const plan = (ty) => { const t = files.get(ty.id)?.table; return t ? luminaireShape(t).housing : null; };
+  return instances(m, housing, plan);
+}
+
+export function calcParams(m, fileOf = () => null) {
+  const files = new Map(m.types.map((ty) => [ty.id, ty.photometry === 'file' ? fileOf(ty) : null]));
   // label: the name of the type in the checks of the calculation (not part of the result)
   const types = m.types.map((ty, k) => {
     const f = files.get(ty.id);
     const label = ty.name || String(f?.table?.catalog || f?.table?.name || '').trim() || `#${k + 1}`;
     return f ? { id: ty.id, label, phot: 'file', flux: ty.flux, fileKey: f.key, table: f.table } : { id: ty.id, label, phot: 'cosine', flux: ty.flux };
   });
-  const lums = instances(m, housing, plan).map(({ type, pos, psi, tx, ty }) => (tx || ty ? { type, pos: [...pos], psi, tx, ty } : { type, pos: [...pos], psi }));
+  const lums = lumInstances(m, fileOf).map(({ type, pos, psi, tx, ty }) => (tx || ty ? { type, pos: [...pos], psi, tx, ty } : { type, pos: [...pos], psi }));
   return { outline: outlineOf(m), H: m.room.H, rho: modelRho(m), hwp: m.design.hwp, types, lums };
 }
 
